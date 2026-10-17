@@ -35,6 +35,19 @@ export async function zipCreate(opts: ZipCreateOptions): Promise<ZipResult> {
   const out = path.resolve(opts.output);
   if (!out.toLowerCase().endsWith('.zip')) throw new Error('输出文件名需以 .zip 结尾');
 
+  // Windows：优先 PowerShell/.NET（写 UTF-8 文件名 + Unicode 标志位）。
+  // 系统自带 tar 按本机 ANSI 代码页编码文件名——中文 Windows 上是 GBK，
+  // 英文系统（CP1252）上非 ASCII 全变 '?'，且不设 UTF-8 标志，跨语言环境必坏。
+  if (isWindows() && !opts.chdir) {
+    const psSources = opts.sources.map((s) => `'${path.resolve(s).replace(/'/g, "''")}'`).join(',');
+    const script = `$OutputEncoding=[Console]::OutputEncoding=[Text.Encoding]::UTF8; Compress-Archive -Force -Path ${psSources} -DestinationPath '${out.replace(/'/g, "''")}'`;
+    const r = await runCommand('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], {
+      timeoutMs: 120000,
+    });
+    if (r.code === 0) return { ok: true, output: out, message: 'Compress-Archive 打包完成' };
+    throw new Error(`打包失败: ${r.stderr.trim() || r.stdout.trim()}`);
+  }
+
   // 公共基准目录：让包内是干净相对路径（不含盘符/绝对路径前缀）
   let base: string | null = null;
   let rels: string[] = [];
@@ -115,12 +128,7 @@ export async function zipExtract(zipFile: string, destDir: string): Promise<ZipR
   const absZip = path.resolve(zipFile);
   const absDest = path.resolve(destDir);
 
-  const tar = await which('tar');
-  if (tar) {
-    const r = await runCommand('tar', ['-xf', absZip, '-C', absDest], { timeoutMs: 120000 });
-    if (r.code === 0) return { ok: true, output: absDest, message: '解压完成' };
-  }
-
+  // Windows：优先 .NET 解压（读 UTF-8 标志位文件名），与 zipCreate 保持一致
   if (isWindows()) {
     const script = `Expand-Archive -Force -Path '${absZip.replace(/'/g, "''")}' -DestinationPath '${absDest.replace(/'/g, "''")}'`;
     const r = await runCommand('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], {
@@ -128,6 +136,12 @@ export async function zipExtract(zipFile: string, destDir: string): Promise<ZipR
     });
     if (r.code === 0) return { ok: true, output: absDest, message: '解压完成' };
     throw new Error(`解压失败: ${r.stderr.trim() || r.stdout.trim()}`);
+  }
+
+  const tar = await which('tar');
+  if (tar) {
+    const r = await runCommand('tar', ['-xf', absZip, '-C', absDest], { timeoutMs: 120000 });
+    if (r.code === 0) return { ok: true, output: absDest, message: '解压完成' };
   }
 
   const unzipBin = await which('unzip');
@@ -141,12 +155,24 @@ export async function zipExtract(zipFile: string, destDir: string): Promise<ZipR
 export async function zipList(zipFile: string): Promise<string[]> {
   if (!(await exists(zipFile))) throw new Error(`压缩包不存在: ${zipFile}`);
   const absZip = path.resolve(zipFile);
+
+  // Windows：.NET 读条目名（按 UTF-8 标志位），并强制控制台输出 UTF-8，
+  // 否则系统 tar 输出走本机 ANSI 代码页，中文文件名在英文系统上变 '?'。
+  if (isWindows()) {
+    const script = `$OutputEncoding=[Console]::OutputEncoding=[Text.Encoding]::UTF8; Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue; [IO.Compression.ZipFile]::OpenRead('${absZip.replace(/'/g, "''")}').Entries | ForEach-Object { $_.FullName }`;
+    const r = await runCommand('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], {
+      timeoutMs: 60000,
+    });
+    if (r.code !== 0) throw new Error(`读取清单失败: ${r.stderr.trim()}`);
+    return r.stdout.replace(/^﻿/, '').split(/\r?\n/).filter(Boolean);
+  }
+
   const tar = await which('tar');
   if (tar) {
     const r = await runCommand('tar', ['-tf', absZip], { timeoutMs: 60000 });
     if (r.code === 0) return r.stdout.split(/\r?\n/).filter(Boolean);
   }
-  if (!isWindows()) {
+  {
     // GNU tar 不认 zip → unzip 的 zipinfo 模式（-Z1：每行一个条目名）
     const unzipBin = await which('unzip');
     if (unzipBin) {
@@ -155,10 +181,4 @@ export async function zipList(zipFile: string): Promise<string[]> {
     }
     throw new Error('读取清单失败：tar / unzip 均不可用');
   }
-  const script = `[IO.Compression.ZipFile]::OpenRead('${absZip.replace(/'/g, "''")}') | % { $_.FullName }`;
-  const r = await runCommand('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], {
-    timeoutMs: 60000,
-  });
-  if (r.code !== 0) throw new Error(`读取清单失败: ${r.stderr.trim()}`);
-  return r.stdout.split(/\r?\n/).filter(Boolean);
 }

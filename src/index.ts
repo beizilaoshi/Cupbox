@@ -22,8 +22,20 @@ import { clipRead, clipWrite } from './core/clip.js';
 import { screenshot } from './core/shot.js';
 import { zipCreate, zipExtract, zipList } from './core/zip.js';
 import { safeRun } from './core/run.js';
+import { isWindows } from './util/platform.js';
 import { listProcesses, killProcess } from './core/proc.js';
 import { VERSION } from './version.js';
+
+/**
+ * 按词加 shell 引号（POSIX）：命令经 shell 执行时，括号/引号/重定向等
+ * 元字符会被 sh 解析（如 `console.log(40+2)` 在 sh 中是语法错误）。
+ * Windows cmd 保持原样（现有行为已在测试中验证）。
+ */
+function quoteShellWord(word: string): string {
+  if (isWindows()) return word;
+  if (/^[A-Za-z0-9_\-./:=,@%+]+$/.test(word)) return word;
+  return `'${word.replace(/'/g, `'\\''`)}'`;
+}
 
 const HELP = `cupbox v${VERSION} — 把杂活儿交给命令行和 AI
 
@@ -428,7 +440,7 @@ async function main(): Promise<void> {
         allow = (parsed.values.allow as string | undefined)?.split(',').map((s) => s.trim()).filter(Boolean);
       }
       if (commandWords.length === 0) die('用法: cupbox run [--timeout 60000] [--allow npm,git] -- <命令...>');
-      const r = await safeRun(commandWords.join(' '), {
+      const r = await safeRun(commandWords.map(quoteShellWord).join(' '), {
         ...(timeoutMs ? { timeoutMs } : {}),
         ...(cwd ? { cwd: relOrAbs(cwd) } : {}),
         ...(allow ? { allowPrefixes: allow } : {}),

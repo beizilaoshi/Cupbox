@@ -39,20 +39,35 @@ export async function runCommand(
       shell: opts.shell ?? false,
       windowsHide: true,
       stdio: ['pipe', 'pipe', 'pipe'],
+      // POSIX：shell 会派生孙进程（如 `sh -c 'node ...'`），孙进程继承管道。
+      // 独立进程组，超时时整组杀死，否则 close 要等孙进程自然退出才触发。
+      ...(!isWindows() && opts.shell ? { detached: true } : {}),
       ...(opts.cwd ? { cwd: opts.cwd } : {}),
     });
     const outChunks: Buffer[] = [];
     const errChunks: Buffer[] = [];
     let timedOut = false;
+    const killTree = (signal: NodeJS.Signals) => {
+      if (isWindows() && child.pid !== undefined) {
+        // Windows 上必须杀整棵进程树，否则孙进程持有管道导致挂起
+        spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { windowsHide: true }).on('error', () => {});
+      } else if (!isWindows() && opts.shell && child.pid !== undefined) {
+        // detached 的子进程是新进程组组长，负 pid 杀掉整组（含孙进程）
+        try {
+          process.kill(-child.pid, signal);
+        } catch {
+          child.kill(signal);
+        }
+      } else {
+        child.kill(signal);
+      }
+    };
     const timer = opts.timeoutMs
       ? setTimeout(() => {
           timedOut = true;
-          if (isWindows() && child.pid !== undefined) {
-            // Windows 上必须杀整棵进程树，否则孙进程持有管道导致挂起
-            spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { windowsHide: true }).on('error', () => {});
-          } else {
-            child.kill('SIGTERM');
-            const force = setTimeout(() => child.kill('SIGKILL'), 2000);
+          killTree('SIGTERM');
+          if (!isWindows()) {
+            const force = setTimeout(() => killTree('SIGKILL'), 2000);
             force.unref?.();
           }
         }, opts.timeoutMs)
