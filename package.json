@@ -33,8 +33,9 @@
     "dist",
     "examples",
     "README.md",
-    "README.zh-CN.md",
+    "README.en.md",
     "CHANGELOG.md",
+    "CHANGELOG.en.md",
     "LICENSE"
   ],
   "scripts": {
