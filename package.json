@@ -1,0 +1,72 @@
+{
+  "name": "cupbox",
+  "version": "1.0.0",
+  "description": "把杂活儿交给命令行和 AI —— CLI + MCP 双形态工具箱：文件整理、批量重命名、中文 OCR、剪贴板、哈希、时间戳、压缩、CSV 转换、安全执行命令",
+  "keywords": [
+    "mcp",
+    "cli",
+    "toolbox",
+    "file-organizer",
+    "batch-rename",
+    "ocr",
+    "clipboard",
+    "developer-tools",
+    "ai-agent",
+    "claude",
+    "cursor"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "bin": {
+    "cupbox": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./mcp": "./dist/mcp.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "examples",
+    "README.md",
+    "README.zh-CN.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "pretest": "npm run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "mcp": "node dist/mcp.js",
+    "prepublishOnly": "npm run build && npm test",
+    "preversion": "npm test",
+    "version": "node -e \"console.log('version bumped')\"",
+    "postversion": "git push && git push --tags"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beizilaoshi/cupbox.git"
+  },
+  "homepage": "https://github.com/beizilaoshi/cupbox#readme",
+  "bugs": {
+    "url": "https://github.com/beizilaoshi/cupbox/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
