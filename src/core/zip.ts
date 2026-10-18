@@ -121,12 +121,63 @@ async function hasZipMagic(p: string): Promise<boolean> {
   }
 }
 
+/**
+ * zip-slip 防护：拒绝路径穿越条目（`..` 段、绝对路径、盘符、反斜杠穿越、NUL）。
+ * 纯函数，供 zipExtract 解压前预检；可单独测试。
+ */
+export function assertSafeZipEntries(entries: string[]): void {
+  const bad: string[] = [];
+  for (const raw of entries) {
+    const norm = raw.replace(/\\/g, '/');
+    if (norm.includes('\0')) {
+      bad.push(raw);
+      continue;
+    }
+    if (norm.startsWith('/') || /^[A-Za-z]:/.test(norm)) {
+      bad.push(raw);
+      continue;
+    }
+    if (norm.split('/').some((seg) => seg === '..')) {
+      bad.push(raw);
+      continue;
+    }
+  }
+  if (bad.length) {
+    throw new Error(
+      `压缩包包含不安全条目（路径穿越），已拒绝解压: ${bad.slice(0, 5).join('、')}${bad.length > 5 ? ` 等 ${bad.length} 项` : ''}`,
+    );
+  }
+}
+
+/** 找出会覆盖目标目录中已有文件的条目（绝不静默覆盖）。 */
+async function findOverwriteConflicts(entries: string[], destDir: string): Promise<string[]> {
+  const conflicts: string[] = [];
+  for (const raw of entries) {
+    const norm = raw.replace(/\\/g, '/');
+    if (norm.endsWith('/') || norm.startsWith('/') || /^[A-Za-z]:/.test(norm)) continue;
+    const rel = norm.replace(/^\.\//, '');
+    if (!rel) continue;
+    if (await exists(path.join(destDir, ...rel.split('/')))) conflicts.push(rel);
+  }
+  return conflicts;
+}
+
 /** 解压 zip 到目标目录（tar -x 跨平台可用，天然支持 UTF-8 文件名）。 */
 export async function zipExtract(zipFile: string, destDir: string): Promise<ZipResult> {
   if (!(await exists(zipFile))) throw new Error(`压缩包不存在: ${zipFile}`);
-  await mkdir(destDir, { recursive: true });
   const absZip = path.resolve(zipFile);
   const absDest = path.resolve(destDir);
+
+  // 解压前预检：① zip-slip 路径穿越条目 ② 会覆盖目标已有文件的条目（绝不静默覆盖）
+  const entries = await zipList(zipFile);
+  assertSafeZipEntries(entries);
+  const conflicts = await findOverwriteConflicts(entries, absDest);
+  if (conflicts.length) {
+    throw new Error(
+      `解压会覆盖目标目录中的已有文件，已拒绝（可换空目录或先清理目标）: ${conflicts.slice(0, 5).join('、')}${conflicts.length > 5 ? ` 等 ${conflicts.length} 项` : ''}`,
+    );
+  }
+  await mkdir(destDir, { recursive: true });
 
   // Windows：优先 .NET 解压（读 UTF-8 标志位文件名），与 zipCreate 保持一致
   if (isWindows()) {

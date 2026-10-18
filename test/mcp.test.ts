@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import path from 'node:path';
-import { readdir, readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
+import { PNG } from 'pngjs';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { buildServer } from '../src/mcp.js';
@@ -13,6 +15,12 @@ let closed = false;
 
 beforeAll(async () => {
   delete process.env.CUPBOX_DISABLE_TOOLS;
+  // AI 工具走真实配置文件：指向空目录 + 清掉环境变量，保证「未配置」路径确定性
+  process.env.CUPBOX_HOME = await mkTmpDir();
+  delete process.env.CUPBOX_AI_API_KEY;
+  delete process.env.CUPBOX_AI_BASE_URL;
+  delete process.env.CUPBOX_AI_MODEL;
+  delete process.env.CUPBOX_AI_PROVIDER;
   server = buildServer();
   client = new Client({ name: 'cupbox-test', version: '0.0.0' });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
@@ -33,16 +41,19 @@ function textOf(result: unknown): string {
 }
 
 describe('MCP 冒烟', () => {
-  it('握手成功并暴露 13 个工具', async () => {
+  it('握手成功并暴露 16 个工具', async () => {
     const { tools } = await client.listTools();
-    expect(tools).toHaveLength(13);
+    expect(tools).toHaveLength(16);
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual([
+      'ai_agent',
+      'ai_ask',
       'batch_rename',
       'clipboard',
       'codec',
       'convert_csv_json',
       'hash',
+      'obfuscate_image',
       'ocr_image',
       'organize_files',
       'process',
@@ -144,7 +155,10 @@ describe('MCP 冒烟', () => {
   });
 
   it('run_command 受保护执行 + 白名单拒绝', async () => {
-    const r = await client.callTool({ name: 'run_command', arguments: { command: 'node -e "console.log(7*6)"' } });
+    const r = await client.callTool({
+      name: 'run_command',
+      arguments: { command: 'node -e "console.log(7*6)"', allowPrefixes: ['node'] },
+    });
     expect(textOf(r)).toContain('42');
     const denied = await client.callTool({
       name: 'run_command',
@@ -152,6 +166,28 @@ describe('MCP 冒烟', () => {
     });
     expect(denied.isError).toBe(true);
     expect(textOf(denied)).toContain('允许列表');
+  });
+
+  it('run_command 默认拒绝无白名单的调用（安全设计）', async () => {
+    const denied = await client.callTool({
+      name: 'run_command',
+      arguments: { command: 'node -e "console.log(1)"' },
+    });
+    expect(denied.isError).toBe(true);
+    expect(textOf(denied)).toContain('默认拒绝');
+    expect(textOf(denied)).toContain('allowPrefixes');
+  });
+
+  it('run_command 白名单模式拦截 shell 注入', async () => {
+    const injected = await client.callTool({
+      name: 'run_command',
+      arguments: { command: 'node -e "1"; echo pwned', allowPrefixes: ['node'] },
+    });
+    expect(injected.isError).toBe(true);
+    expect(textOf(injected)).toContain('防注入');
+    // 拦截发生在执行之前：错误回显里不得出现执行横幅（exit=…），命令从未真正跑起来
+    expect(textOf(injected)).not.toContain('[exit');
+    expect(textOf(injected)).not.toContain('--- stdout ---');
   });
 
   it('process list 可用', async () => {
@@ -180,4 +216,38 @@ describe('MCP 冒烟', () => {
     const found = await readFile(path.join(dest, 'in', '文档.txt'), 'utf8');
     expect(found).toBe('内容');
   }, 60000);
+
+  it('obfuscate_image 加密→还原往返 + 非法参数被拦', async () => {
+    const d = await mkTmpDir();
+    const input = path.join(d, 'pic.png');
+    const w = 20;
+    const h = 12;
+    const png = new PNG({ width: w, height: h });
+    const buf = Buffer.alloc(w * h * 4);
+    for (let i = 0; i < buf.length; i++) buf[i] = (i * 31 + 7) & 255;
+    png.data = buf;
+    await writeFile(input, PNG.sync.write(png));
+
+    const enc = await client.callTool({ name: 'obfuscate_image', arguments: { input, mode: 'c', key: 'k' } });
+    expect(enc.isError).toBeFalsy();
+    const encJson = JSON.parse(textOf(enc)) as { output: string; direction: string };
+    expect(encJson.direction).toBe('encrypt');
+    expect(existsSync(encJson.output)).toBe(true);
+
+    const dec = await client.callTool({
+      name: 'obfuscate_image',
+      arguments: { input: encJson.output, mode: 'c', key: 'k', direction: 'decrypt' },
+    });
+    expect(dec.isError).toBeFalsy();
+    const decJson = JSON.parse(textOf(dec)) as { output: string };
+    const back = PNG.sync.read(await readFile(decJson.output));
+    expect(back.data.equals(buf)).toBe(true);
+
+    const bad = await client.callTool({ name: 'obfuscate_image', arguments: { input, mode: 'pe1', key: 'abc' } });
+    expect(bad.isError).toBe(true);
+    expect(textOf(bad)).toContain('0 到 1');
+    const noKey = await client.callTool({ name: 'obfuscate_image', arguments: { input, mode: 'c' } });
+    expect(noKey.isError).toBe(true);
+    expect(textOf(noKey)).toContain('需要文本密钥');
+  });
 });

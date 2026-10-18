@@ -23,6 +23,8 @@ import { screenshot } from './core/shot.js';
 import { zipCreate, zipExtract, zipList } from './core/zip.js';
 import { safeRun } from './core/run.js';
 import { listProcesses, killProcess } from './core/proc.js';
+import { obfuscateImage } from './core/obfuscate.js';
+import { aiChat, aiAgent, loadAiConfig, DEFAULT_SYSTEM } from './core/ai.js';
 import { VERSION } from './version.js';
 
 type ToolResult = {
@@ -381,6 +383,41 @@ export function buildServer(): McpServer {
     },
   );
 
+  // ---------- 图片像素混淆 ----------
+  reg(
+    'obfuscate_image',
+    {
+      title: '图片像素混淆 / 还原',
+      description:
+        'Pixel-scramble a PNG image (6 modes: gilbert/b/c/c2/pe1/pe2) or restore it losslessly. 图片像素混淆与还原：防内容识别、隐私打码；encrypt 只写新文件绝不覆盖，decrypt 需相同 mode+key，与「番茄图片混淆」生态实现互通。',
+      inputSchema: {
+        input: z.string().describe('输入 PNG 图片路径'),
+        mode: z
+          .enum(['gilbert', 'b', 'c', 'c2', 'pe1', 'pe2'])
+          .describe('混淆模式：gilbert 无密钥；b/c/c2 任意文本密钥；pe1/pe2 密钥须为 0~1 小数（如 0.666）'),
+        key: z.string().optional().describe('密钥（gilbert 不需要；其余模式必填；解密必须用同一密钥）'),
+        direction: z.enum(['encrypt', 'decrypt']).optional().describe('encrypt=混淆（默认）；decrypt=还原'),
+        output: z
+          .string()
+          .optional()
+          .describe('输出 PNG 路径；默认在输入旁生成 <名字>.obf.png / <名字>.clear.png，重名自动加 (1)'),
+        blockSize: z.number().optional().describe('仅 b 模式有效：方块边长，默认 32（与生态实现一致）'),
+      },
+      destructive: false, // 只写新文件，绝不覆盖已有文件
+    },
+    async (a) => {
+      const r = await obfuscateImage({
+        input: a.input,
+        mode: a.mode,
+        ...(a.key !== undefined ? { key: a.key } : {}),
+        ...(a.direction ? { direction: a.direction } : {}),
+        ...(a.output ? { output: a.output } : {}),
+        ...(a.blockSize ? { blockSize: a.blockSize } : {}),
+      });
+      return JSON.stringify(r, null, 2);
+    },
+  );
+
   // ---------- 压缩 ----------
   reg(
     'zip',
@@ -419,7 +456,7 @@ export function buildServer(): McpServer {
     {
       title: '执行命令（受保护）',
       description:
-        'Run a shell command with timeout and output truncation. 超时默认 60s（上限 600s），输出截断 100KB。可选 allowPrefixes 白名单限制可执行的命令前缀。用于自动化杂活；高风险环境建议用 CUPBOX_DISABLE_TOOLS 禁用。',
+        'Run a shell command with timeout and output truncation. 超时默认 60s（上限 600s），输出截断 100KB。安全默认：必须提供 allowPrefixes 白名单（或管理员预设环境变量 CUPBOX_RUN_ALLOW），白名单模式下拒绝 shell 元字符防注入。高风险环境可设置 CUPBOX_DISABLE_TOOLS=run_command 完全禁用。',
       inputSchema: {
         command: z.string().describe('完整 shell 命令字符串'),
         timeoutMs: z.number().int().positive().max(600000).optional().describe('超时毫秒，默认 60000'),
@@ -429,10 +466,22 @@ export function buildServer(): McpServer {
       destructive: true,
     },
     async (a) => {
+      // 安全默认：AI 侧命令执行必须有显式白名单——调用时给 allowPrefixes，
+      // 或管理员在启动 MCP 前设置环境变量 CUPBOX_RUN_ALLOW（逗号分隔前缀）。
+      const envAllow = (process.env.CUPBOX_RUN_ALLOW ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const allow = a.allowPrefixes?.length ? a.allowPrefixes : envAllow;
+      if (!allow.length) {
+        throw new Error(
+          'run_command 默认拒绝执行任意命令（安全设计）。请提供 allowPrefixes（如 ["npm","git status"]），或由管理员设置环境变量 CUPBOX_RUN_ALLOW=npm,git；需要完全禁用本工具时设置 CUPBOX_DISABLE_TOOLS=run_command。',
+        );
+      }
       const r = await safeRun(a.command, {
         ...(a.timeoutMs ? { timeoutMs: a.timeoutMs } : {}),
         ...(a.cwd ? { cwd: a.cwd } : {}),
-        ...(a.allowPrefixes ? { allowPrefixes: a.allowPrefixes } : {}),
+        allowPrefixes: allow,
       });
       const flags = [
         `exit=${r.exitCode}`,
@@ -471,6 +520,61 @@ export function buildServer(): McpServer {
       if (a.pid === undefined || !a.name) throw new Error('kill 需要同时提供 pid 和 name');
       const r = await killProcess(a.pid, a.name);
       return `${r.killed ? '✅' : '⚠️'} ${r.message}`;
+    },
+  );
+
+  // ---------- AI 接入 ----------
+  reg(
+    'ai_ask',
+    {
+      title: 'AI 问答（API）',
+      description:
+        '通过已配置的 AI API 发起一次问答（OpenAI 兼容或 Anthropic 协议）。密钥在桌面版「设置」或环境变量 CUPBOX_AI_API_KEY 配置；未配置时会返回配置指引，不会发起请求。',
+      inputSchema: {
+        prompt: z.string().describe('用户问题'),
+        system: z.string().optional().describe('可选系统提示词'),
+        model: z.string().optional().describe('可选临时覆盖模型名'),
+      },
+      readOnly: true,
+    },
+    async (a) => {
+      const base = await loadAiConfig();
+      const config = a.model ? { ...base, model: a.model } : base;
+      const r = await aiChat({
+        messages: [
+          { role: 'system', text: a.system?.trim() || DEFAULT_SYSTEM },
+          { role: 'user', text: a.prompt },
+        ],
+        config,
+      });
+      return r.text || '（模型返回空内容）';
+    },
+  );
+
+  reg(
+    'ai_agent',
+    {
+      title: 'AI Agent（本地工具循环）',
+      description:
+        'Codex 式多轮 Agent：模型自动选择并调用本服务器的本地工具（文件/数据/图片/受保护命令），拿到结果后继续推理，最终给出总结。rename/organize 在 Agent 内永远 dry-run 预览。maxTurns 上限 10。',
+      inputSchema: {
+        prompt: z.string().describe('任务描述'),
+        system: z.string().optional().describe('可选系统提示词'),
+        maxTurns: z.number().int().min(1).max(10).optional().describe('最大工具轮次，默认 8'),
+      },
+      destructive: true,
+    },
+    async (a) => {
+      const r = await aiAgent({
+        prompt: a.prompt,
+        ...(a.system?.trim() ? { system: a.system.trim() } : {}),
+        ...(a.maxTurns ? { maxTurns: a.maxTurns } : {}),
+      });
+      if (r.trace.length === 0) return r.text;
+      const trace = r.trace
+        .map((t, i) => `${i + 1}. ${t.name} ${t.ok ? '✅' : '❌'} ${t.durationMs}ms`)
+        .join('\n');
+      return `${r.text}\n\n—— 工具轨迹（${r.trace.length} 次）——\n${trace}`;
     },
   );
 

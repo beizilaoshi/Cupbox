@@ -24,6 +24,12 @@ import { zipCreate, zipExtract, zipList } from './core/zip.js';
 import { safeRun } from './core/run.js';
 import { isWindows } from './util/platform.js';
 import { listProcesses, killProcess } from './core/proc.js';
+import { obfuscateImage, OBF_MODES, isObfMode, listModesText } from './core/obfuscate.js';
+import { checkForUpdate, RELEASES_URL } from './core/update.js';
+import {
+  aiChat, aiAgent, loadAiConfig, saveAiConfig, maskKey, configPath, DEFAULT_SYSTEM,
+  type AiProvider,
+} from './core/ai.js';
 import { VERSION } from './version.js';
 
 /**
@@ -32,8 +38,9 @@ import { VERSION } from './version.js';
  * Windows cmd 保持原样（现有行为已在测试中验证）。
  */
 function quoteShellWord(word: string): string {
-  if (isWindows()) return word;
   if (/^[A-Za-z0-9_\-./:=,@%+]+$/.test(word)) return word;
+  // 带空格/括号/元字符的词必须加引号，否则重建出的命令会被 shell 重新分词甚至语法报错
+  if (isWindows()) return `"${word.replace(/"/g, '""')}"`;
   return `'${word.replace(/'/g, `'\\''`)}'`;
 }
 
@@ -57,6 +64,10 @@ const HELP = `cupbox v${VERSION} — 把杂活儿交给命令行和 AI
   csv      <文件.csv|.json> [-o 输出] [--to json|csv]       CSV ↔ JSON
   zip      create <out.zip> <文件...> | extract <zip> [目录] | list <zip>
 
+图片杂活:
+  obfuscate <图片.png> --mode 模式 [--key 密钥] [-o 输出] [--decrypt]
+                     图片像素混淆/还原（gilbert|b|c|c2|pe1|pe2 六种模式；不带参数看模式表）
+
 系统杂活:
   ocr      <图片> [--lang zh-Hans] [--engine auto|windows|tesseract]
   clip     [read | write 文本]                             读/写剪贴板
@@ -66,17 +77,26 @@ const HELP = `cupbox v${VERSION} — 把杂活儿交给命令行和 AI
   proc     [list] [--query 关键字] | kill --pid N --name 名字
 
 AI 接入:
+  ai       [ask] <问题> [--system ...]   通过 API 一次问答（OpenAI 兼容/Anthropic）
+           agent <任务> [--max-turns N]  Codex 式 Agent 循环，自动调用本地工具
+           config [--provider p --base url --model m --key sk-…]
+                                          查看/写入 AI 配置（存于 ~/.cupbox/config.json）
   mcp      启动 MCP 服务器（stdio），供 Claude Desktop / Cursor / Cline 使用
 
 其他:
   help     显示帮助      version 显示版本
+  update   检查更新（GitHub Releases → npm；CUPBOX_UPDATE_DISABLE=1 关闭）
   全部命令支持 --json 输出（机器可读）
 
 示例:
   cupbox organize ~/Downloads --mode category --dry-run
   cupbox rename ./photos --template "{n}-{name}" --ext *.jpg --dry-run
   cupbox ocr ./截图.png --lang zh-Hans
+  cupbox obfuscate ./图.png --mode c --key 我的密钥
   cupbox time 1700000000
+  cupbox ai config --model deepseek-chat --key sk-xxx
+  cupbox ai ask "1718000000 是几点"
+  cupbox ai agent "搜索项目里所有 TODO 并汇总" --max-turns 6
   cupbox mcp
 `;
 
@@ -336,6 +356,38 @@ async function main(): Promise<void> {
       return;
     }
 
+    // ---------------- obfuscate ----------------
+    case 'obfuscate': {
+      const { values, positionals } = parse(rest, {
+        mode: _string(), key: _string(), o: _string(), out: _string(),
+        decrypt: _boolean(), json: _boolean(), blocksize: _string(),
+      });
+      const img = positionals[0];
+      if (!img) {
+        console.log(
+          `图片像素混淆（obfuscate）— 与「番茄图片混淆」生态实现互通，同一模式+密钥可互相还原。\n\n模式:\n${listModesText()}\n\n用法: cupbox obfuscate <图片.png> --mode <模式> [--key 密钥] [-o 输出.png] [--decrypt] [--json]\n  --decrypt   还原（需要与混淆时相同的 mode + key）\n  --blocksize 仅 b 模式：方块边长，默认 32\n\n示例:\n  cupbox obfuscate ./图.png --mode c --key 我的密钥\n  cupbox obfuscate ./图.obf.png --mode c --key 我的密钥 --decrypt -o 还原.png`,
+        );
+        return;
+      }
+      if (!values.mode) {
+        die(`需要 --mode（可用: ${OBF_MODES.map((m) => m.mode).join(' | ')}）；先运行 cupbox obfuscate 查看模式说明`);
+      }
+      if (!isObfMode(values.mode)) die(`无效 --mode: ${values.mode}。可用: ${OBF_MODES.map((m) => m.mode).join(' | ')}`);
+      const out = values.o ?? values.out;
+      const blocksize = toInt(values.blocksize, '--blocksize');
+      const r = await obfuscateImage({
+        input: relOrAbs(img),
+        mode: values.mode,
+        ...(out ? { output: relOrAbs(out) } : {}),
+        ...(values.key !== undefined ? { key: values.key } : {}),
+        ...(values.decrypt ? { direction: 'decrypt' as const } : {}),
+        ...(blocksize !== undefined ? { blockSize: blocksize } : {}),
+      });
+      if (values.json) console.log(JSON.stringify(r, null, 2));
+      else console.log(r.message + (r.renamed ? '（重名已自动改名）' : ''));
+      return;
+    }
+
     // ---------------- ocr ----------------
     case 'ocr': {
       const { values, positionals } = parse(rest, {
@@ -483,6 +535,120 @@ async function main(): Promise<void> {
         return;
       }
       die('用法: cupbox proc [list] [--query x] | kill --pid N --name X');
+      return;
+    }
+
+    // ---------------- ai ----------------
+    case 'ai': {
+      const sub = rest[0] ?? 'config';
+      if (sub === 'config') {
+        const { values } = parse(rest.slice(1), {
+          provider: _string(), base: _string(), model: _string(), key: _string(),
+          temperature: _string(), 'max-turns': _string(), json: _boolean(),
+        });
+        const hasPatch = Boolean(
+          values.provider ?? values.base ?? values.model ?? values.key ?? values.temperature ?? values['max-turns'],
+        );
+        if (hasPatch) {
+          if (values.provider && values.provider !== 'openai-compatible' && values.provider !== 'anthropic') {
+            die('--provider 只支持 openai-compatible 或 anthropic');
+          }
+          const saved = await saveAiConfig({
+            ...(values.provider ? { provider: values.provider as AiProvider } : {}),
+            ...(values.base !== undefined ? { baseUrl: values.base } : {}),
+            ...(values.model !== undefined ? { model: values.model } : {}),
+            ...(values.key !== undefined ? { apiKey: values.key } : {}),
+            ...(values.temperature !== undefined ? { temperature: Number(values.temperature) } : {}),
+            ...(values['max-turns'] !== undefined ? { maxTurns: Number(values['max-turns']) } : {}),
+          });
+          console.log(`✅ 已保存到 ${configPath()}`);
+          if (values.json) console.log(JSON.stringify(saved, null, 2));
+          else console.log(`  provider=${saved.provider} model=${saved.model || '(未配置)'} key=${maskKey(saved.apiKey)}`);
+          return;
+        }
+        const cur = await loadAiConfig();
+        if (values.json) {
+          console.log(JSON.stringify({ ...cur, apiKey: maskKey(cur.apiKey), configPath: configPath() }, null, 2));
+          return;
+        }
+        console.log(`AI 配置（${configPath()}）`);
+        console.log(`  provider   ${cur.provider}`);
+        console.log(`  baseUrl    ${cur.baseUrl || '(官方默认)'}`);
+        console.log(`  model      ${cur.model || '(未配置)'}`);
+        console.log(`  apiKey     ${maskKey(cur.apiKey)}`);
+        console.log(`  temperature${cur.temperature !== undefined ? ` ${cur.temperature}` : ' (默认)'}`);
+        console.log(`  maxTurns   ${cur.maxTurns ?? 8}`);
+        console.log('环境变量 CUPBOX_AI_* 优先于该文件；桌面版「设置」写入的就是这个文件。');
+        return;
+      }
+
+      if (sub === 'ask' || sub === 'agent') {
+        const { values, positionals } = parse(rest.slice(1), {
+          system: _string(), json: _boolean(), 'max-turns': _string(),
+        });
+        const prompt = positionals.join(' ').trim();
+        if (!prompt) die(`用法: cupbox ai ${sub} <问题或任务描述> [--system 提示] [--json]`);
+        if (sub === 'ask') {
+          const r = await aiChat({
+            messages: [
+              { role: 'system', text: values.system?.trim() || DEFAULT_SYSTEM },
+              { role: 'user', text: prompt },
+            ],
+          });
+          if (values.json) console.log(JSON.stringify({ text: r.text }, null, 2));
+          else console.log(r.text);
+          return;
+        }
+        const t0 = Date.now();
+        const r = await aiAgent({
+          prompt,
+          ...(values.system?.trim() ? { system: values.system.trim() } : {}),
+          ...(values['max-turns'] ? { maxTurns: Number(values['max-turns']) } : {}),
+          onTool: (it) => {
+            if (!values.json) console.error(`  ⚙ ${it.name} ${it.ok ? '✅' : '❌'} ${it.durationMs}ms`);
+          },
+        });
+        if (values.json) console.log(JSON.stringify(r, null, 2));
+        else {
+          console.log(r.text);
+          console.error(`[工具调用 ${r.trace.length} 次 · 总耗时 ${Date.now() - t0}ms]`);
+        }
+        return;
+      }
+      die('用法: cupbox ai [ask|agent] <内容> [--json] | cupbox ai config [--provider … --model … --key …]');
+      return;
+    }
+
+    // ---------------- update ----------------
+    case 'update': {
+      const { values } = parse(rest, { json: _boolean() });
+      const info = await checkForUpdate({ currentVersion: VERSION });
+      if (values.json) {
+        console.log(JSON.stringify(info, null, 2));
+        return;
+      }
+      console.log(`当前版本   v${VERSION}`);
+      if (info.source === 'disabled') {
+        console.log('更新检查已关闭（CUPBOX_UPDATE_DISABLE=1）');
+        return;
+      }
+      if (info.source === 'none') {
+        console.log(`检查更新失败: ${info.error}`);
+        console.log(`发布页      ${RELEASES_URL}`);
+        process.exitCode = 1;
+        return;
+      }
+      const fromName = info.source === 'github' ? 'GitHub Releases' : info.source === 'npm' ? 'npm registry' : '自定义清单';
+      if (info.hasUpdate) {
+        console.log(`发现新版本   v${info.latest}（来源 ${fromName}）`);
+        console.log(`下载 / 更新  ${info.url}`);
+        if (info.notes) {
+          const notes = info.notes.length > 600 ? `${info.notes.slice(0, 600)}…` : info.notes;
+          console.log(`\n—— 更新公告 ——\n${notes}`);
+        }
+      } else {
+        console.log(`✅ 已是最新（数据源 ${fromName}）`);
+      }
       return;
     }
 

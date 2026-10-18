@@ -28,6 +28,45 @@ function splitCommand(cmd: string): { head: string; rest: string } {
 }
 
 /**
+ * 白名单模式专用的注入扫描（带引号状态机）：
+ * 拒绝命令中的 shell 元字符，否则 `npm i; rm -rf /` 只要首 token 是 `npm`
+ * 就能通过前缀白名单、却由 shell 执行整串。
+ * 返回首个危险字符；引号不配对返回 'unbalanced-quote'；安全返回 null。
+ */
+export function findUnsafeShellChars(cmd: string): string | null {
+  let quote: 'none' | 'single' | 'double' = 'none';
+  for (let i = 0; i < cmd.length; i++) {
+    const ch = cmd[i];
+    if (quote === 'single') {
+      if (ch === "'") quote = 'none';
+      continue; // 单引号内一律字面量
+    }
+    if (quote === 'double') {
+      if (ch === '"') {
+        quote = 'none';
+        continue;
+      }
+      if (ch === '`' || ch === '$') return ch; // 双引号内仍会做命令替换 / 变量展开
+      continue;
+    }
+    if (ch === "'") {
+      quote = 'single';
+      continue;
+    }
+    if (ch === '"') {
+      quote = 'double';
+      continue;
+    }
+    if (';|&<>`$()\n\r'.includes(ch)) return ch;
+    if (ch === '%') {
+      // cmd.exe 变量展开 %VAR%（单个 % 是字面量，如 URL 里的 %20）
+      if (/^[A-Za-z_][A-Za-z0-9_]*%/.test(cmd.slice(i + 1))) return ch;
+    }
+  }
+  return quote === 'none' ? null : 'unbalanced-quote';
+}
+
+/**
  * 受保护的命令执行：白名单前缀 + 超时 + 输出截断。
  * 设计目标是给 AI agent 用——防失控、防刷屏。
  */
@@ -47,6 +86,15 @@ export async function safeRun(command: string, opts: SafeRunOptions = {}): Promi
     if (!ok) {
       throw new Error(
         `命令不在允许列表内。允许的前缀: ${prefixes.join(' | ')}；收到: ${trimmed}`,
+      );
+    }
+    // 白名单生效时追加防注入扫描（白名单只匹配首 token，整串仍交给 shell 执行）
+    const unsafe = findUnsafeShellChars(trimmed);
+    if (unsafe) {
+      throw new Error(
+        unsafe === 'unbalanced-quote'
+          ? `白名单模式下命令引号不配对，拒绝执行: ${trimmed}`
+          : `白名单模式下禁止 shell 元字符（防注入）: 发现“${unsafe}”，拒绝执行: ${trimmed}。如需管道或重定向，请由人工在 CLI 不加白名单运行。`,
       );
     }
   }

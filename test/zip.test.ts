@@ -1,7 +1,7 @@
 import { describe, it, expect, afterAll } from 'vitest';
 import path from 'node:path';
 import { readdir } from 'node:fs/promises';
-import { zipCreate, zipExtract, zipList } from '../src/core/zip.js';
+import { zipCreate, zipExtract, zipList, assertSafeZipEntries } from '../src/core/zip.js';
 import { mkTmpDir, seed, cleanupAll } from './helpers.js';
 
 afterAll(cleanupAll);
@@ -49,6 +49,27 @@ describe('zip', () => {
     const d = await mkTmpDir();
     await expect(zipExtract(path.join(d, 'no.zip'), d)).rejects.toThrow('压缩包不存在');
   });
+});
+
+describe('zip 安全预检', () => {
+  it('拒绝路径穿越条目（zip-slip），放行正常条目', () => {
+    expect(() => assertSafeZipEntries(['dir/', 'dir/中文.txt', './ok.txt'])).not.toThrow();
+    expect(() => assertSafeZipEntries(['../evil.txt'])).toThrow('不安全条目');
+    expect(() => assertSafeZipEntries(['a/b/../../../evil'])).toThrow('不安全条目');
+    expect(() => assertSafeZipEntries(['/etc/passwd'])).toThrow('不安全条目');
+    expect(() => assertSafeZipEntries(['C:\\evil.txt'])).toThrow('不安全条目');
+    expect(() => assertSafeZipEntries(['a\\..\\..\\b'])).toThrow('不安全条目');
+  });
+
+  it('重复解压到同一目录时拒绝覆盖（绝不静默覆盖）', async () => {
+    const d = await mkTmpDir();
+    await seed(d, { 'in/文档.txt': '内容' });
+    const zipPath = path.join(d, 'p.zip');
+    await zipCreate({ sources: [path.join(d, 'in')], output: zipPath });
+    const dest = path.join(d, 'out');
+    expect((await zipExtract(zipPath, dest)).ok).toBe(true);
+    await expect(zipExtract(zipPath, dest)).rejects.toThrow('已有文件');
+  }, 60000);
 });
 
 async function findFile(root: string, basename: string): Promise<string | null> {
