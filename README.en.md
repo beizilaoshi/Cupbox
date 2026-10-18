@@ -109,7 +109,7 @@ Cupbox incorporates safeguards into its design:
 
 - File organization and batch renaming support dry-run previews.
 - File-modification tools invoked through MCP default to dry-run mode.
-- Command execution must pass an allowlist check: the AI-facing `run_command` **is denied by default** and requires `allowPrefixes` or an administrator-provided `CUPBOX_RUN_ALLOW`; in allowlist mode, shell metacharacters are rejected to prevent injection.
+- Command execution must pass an allowlist check.
 - Process termination requires both the PID and the expected process name.
 - Name conflicts are skipped instead of silently overwriting existing files.
 - Individual MCP tools can be disabled through an environment variable.
@@ -138,7 +138,7 @@ Platform-specific tools, permissions, and system behavior may differ. Individual
 
 ## 🧰 Features
 
-Cupbox brings together 14 everyday utilities plus 2 AI capabilities (16 MCP tools in total). Every local capability has a CLI entry point and a corresponding MCP tool.
+Cupbox brings together 13 everyday utilities. Each feature has a CLI entry point and a corresponding MCP tool.
 
 ### 📁 File Management
 
@@ -158,12 +158,6 @@ Cupbox brings together 14 everyday utilities plus 2 AI capabilities (16 MCP tool
 | Encoding and decoding | `cupbox codec` | `codec` | Base64, URL, and HTML encoding/decoding, plus JSON formatting and minification |
 | CSV and JSON conversion | `cupbox csv` | `convert_csv_json` | Convert between CSV and JSON with RFC 4180-oriented CSV handling |
 
-### 🖼️ Image Processing
-
-| Feature | CLI | MCP Tool | Description |
-|---|---|---|---|
-| Pixel obfuscation | `cupbox obfuscate` | `obfuscate_image` | Scramble and losslessly restore PNG images across six modes, interoperable with the Tomato-Obfuscator ecosystem; invalid keys are rejected up front and existing files are never overwritten |
-
 ### 🖥️ System and Desktop Utilities
 
 | Feature | CLI | MCP Tool | Description |
@@ -171,16 +165,8 @@ Cupbox brings together 14 everyday utilities plus 2 AI capabilities (16 MCP tool
 | OCR | `cupbox ocr` | `ocr_image` | Extract text using native Windows OCR or Tesseract |
 | Clipboard | `cupbox clip` | `clipboard` | Read from and write to the clipboard |
 | Screenshots | `cupbox shot` | `take_screenshot` | Capture screenshots and output PNG files |
-| Protected command execution | `cupbox run` | `run_command` | Deny-by-default on the MCP side with a mandatory allowlist (injection-guarded), plus timeouts and output truncation |
+| Protected command execution | `cupbox run` | `run_command` | Command-prefix allowlisting, timeouts, and output truncation |
 | Process management | `cupbox proc` | `process` | Inspect processes and validate both PID and process name before termination |
-| Update check | `cupbox update` | — | GitHub Releases → npm fallback (npm source verifies repository ownership to avoid name collisions); prints release notes and download URL; opt out with `CUPBOX_UPDATE_DISABLE=1` |
-
-### 🧠 AI Capabilities
-
-| Feature | CLI | MCP Tool | Description |
-|---|---|---|---|
-| AI chat | `cupbox ai ask` | `ai_ask` | Single-shot Q&A over your configured API (OpenAI-compatible / Anthropic) |
-| AI agent | `cupbox ai agent` | `ai_agent` | Multi-turn loop: the model drives the 14 local tools and summarizes the outcome |
 
 All CLI commands support `--json`, making their output easier to consume in scripts, automation pipelines, and other programs.
 
@@ -354,20 +340,6 @@ cupbox proc kill --pid 1234 --name node
 
 The PID shown here is only an example. Verify that the target process is correct before terminating it.
 
-### 11. Pixel obfuscation and restoration
-
-```bash
-cupbox obfuscate ./photo.png --mode c --key my-secret
-```
-
-The scrambled image is saved as `photo.obf.png`. Restore it losslessly with the same mode and key plus `--decrypt`:
-
-```bash
-cupbox obfuscate ./photo.obf.png --mode c --key my-secret --decrypt
-```
-
-Run `cupbox obfuscate` without arguments to list all six modes. A wrong or missing key is rejected before any file is touched, and colliding output names are automatically renamed — existing files are never overwritten.
-
 ---
 
 ## 🤖 Connect Your AI
@@ -387,35 +359,6 @@ Or:
 > Number these screenshots in order. Show me the proposed filenames first, and never overwrite existing files.
 
 The assistant can select the relevant MCP tool, inspect the structured result, and proceed with the requested operation when appropriate.
-
-### Built-in AI engine (direct API access, no MCP client required)
-
-Cupbox ships a Codex-style AI capability usable from all three forms — CLI, desktop app, and MCP:
-
-- **`cupbox ai ask`** — single-shot Q&A;
-- **`cupbox ai agent`** — multi-turn agent loop: the model picks from the 14 local tools (files / data / images / protected commands) and summarizes at the end;
-- MCP gains the `ai_ask` and `ai_agent` tools, callable from Claude Desktop / Cursor;
-- The desktop app is a chat workbench: new chat / history sessions, one-click “Ask · Agent” mode switch, and API configuration in “Settings → API Settings”.
-
-**First-time setup (once):**
-
-```bash
-# OpenAI-compatible providers (official / DeepSeek / Kimi / Ollama / OpenRouter / vLLM …)
-cupbox ai config --provider openai-compatible --base https://api.deepseek.com/v1 --model deepseek-chat --key sk-xxx
-
-# or Anthropic official
-cupbox ai config --provider anthropic --model claude-sonnet-4-5 --key sk-ant-xxx
-```
-
-```bash
-cupbox ai ask "What time is 1718000000"
-cupbox ai agent "Find every TODO in this project and summarize them" --max-turns 6
-cupbox ai config                 # show current config (key masked)
-```
-
-- The config lives in `~/.cupbox/config.json` (mode 0600); **the key stays on your machine and is never uploaded**;
-- Env vars `CUPBOX_AI_API_KEY` / `CUPBOX_AI_BASE_URL` / `CUPBOX_AI_MODEL` / `CUPBOX_AI_PROVIDER` override the file;
-- Inside the agent, `rename` / `organize` are **always dry-run previews** (8 rounds by default, 10 max) and `run` still requires an allowlist — **the AI never gets more permissions than a human user**.
 
 ### Option 1: Use a global installation
 
@@ -480,28 +423,6 @@ The actual flow depends on each tool's parameters, implementation, and safety ch
 
 ---
 
-## 📦 Desktop app (Stage 1/3)
-
-A local Electron desktop app rebuilt as a workbench (since v1.0.0):
-
-- **Session sidebar** — new chat, persistent history (`~/.cupbox/sessions/`, deletable / clearable), and a **workspace directory picker** (Agent file tasks run inside the workspace).
-- **Chat pane** — segmented “Ask / Agent” mode switch, Enter to send (Shift+Enter newline), tool-trace cards on replies, automatic multi-turn context.
-- **Tool drawer** — the former 16-tool form UI folded into a right-side drawer, grouped by data / files / images / system, with dynamic forms and a result panel (pretty JSON, inline image preview).
-- **Settings modal** — four tabs: **API settings** (protocol / base URL / model / key / temperature / agent rounds), **Theme** (dark · light · follow-system × aurora / mint / amber / rose, applied instantly and persisted), **Plugins** (each tool toggle affects both drawer visibility and the Agent's callable tool set), and **About & Updates** (version info, one-click **check the GitHub repository** for new releases with inline results, plus repository / Releases / CHANGELOG shortcuts).
-- **Update check & release announcement** (v1.0.1) — a silent startup check lights up a breathing "vX.Y.Z available" badge in the title bar and pops a one-time announcement (version diff + release notes + **Download on GitHub** / View changelog / Remind later); click the version chip or use **Settings → About & Updates** for a manual check, dismissed versions stay reachable from the badge, `CUPBOX_UPDATE_DISABLE=1` turns checking off.
-
-It shares the exact same engines and safety defaults as the CLI and MCP server (dry-run, allowlists, and extraction pre-flights all active).
-
-```bash
-npm install          # first run downloads the Electron runtime through the npmmirror mirror
-npm run desktop      # run in development
-npm run pack:exe     # build a portable exe → release/Cupbox可视化/Cupbox可视化.exe
-```
-
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the three-stage roadmap (tool cockpit → multi-engine ACP integration → skills marketplace / scheduling / multi-session) and the rationale behind each choice.
-
----
-
 ## 🛡️ Security by Design
 
 Cupbox is designed to make AI-assisted automation more controlled and predictable.
@@ -510,10 +431,9 @@ Cupbox is designed to make AI-assisted automation more controlled and predictabl
 |---|---|---|
 | Unintended file moves | Dry-run previews | Inspect the planned changes before execution |
 | Batch rename conflicts | Preview and collision handling | Reduce accidental overwrites |
-| AI command execution | Deny-by-default, explicit allowlist required | Refuses to run without `allowPrefixes` or `CUPBOX_RUN_ALLOW`; shell metacharacters are rejected in allowlist mode to prevent injection |
+| AI command execution | Command-prefix allowlist | Restrict the commands that can be invoked |
 | Long-running commands | Timeout controls | Prevent commands from waiting indefinitely |
 | Excessive command output | Output truncation | Limit the size of returned results |
-| Extracting untrusted zips | Pre-flight entry checks before extraction | Prevent zip-slip (`../` traversal) and silent overwrites of existing files |
 | Incorrect process termination | PID and process-name validation | Reduce the risk of terminating the wrong process |
 | Unnecessary AI capabilities | MCP tool disabling | Reduce the available tool surface |
 
@@ -527,15 +447,11 @@ CUPBOX_DISABLE_TOOLS=run_command,process cupbox mcp
 
 This example illustrates the intended configuration. Environment-variable syntax differs between shells and operating systems. On Windows, configure the variable in the environment used to launch the MCP server.
 
-Relatedly, `CUPBOX_RUN_ALLOW=npm,git status` pre-configures the allowed command prefixes for `run_command` (a call-site `allowPrefixes` takes precedence). With neither in place, the MCP-side `run_command` refuses to execute anything.
-
 ### Understanding the security boundaries
 
 Several limitations are important to understand:
 
 - An allowlist is not a complete operating-system sandbox.
-- In allowlist mode, commands containing shell metacharacters (pipes, redirection, command substitution, cmd variable expansion) are rejected — this is an injection guard, not a bug; run pipes or redirection yourself from the CLI without an allowlist when needed.
-- Zip extraction pre-flights traversal entries and overwrite conflicts before extracting; when unpacking untrusted archives yourself via the CLI, still verify their origin first.
 - An allowed program may still have access to files and system resources permitted to its operating-system account.
 - PID and process-name validation reduce certain risks but cannot eliminate all process races.
 - A dry-run preview may become stale if files change before execution.
@@ -556,7 +472,6 @@ Cupbox aims to remain lightweight by reusing available system capabilities. Some
 | Archive operations | The system archive utility required by the implementation |
 | Clipboard | Platform-specific capabilities and permissions |
 | Screenshots | Platform-specific implementation and permissions |
-| Pixel obfuscation | PNG encoding/decoding via the pure-JS [pngjs](https://github.com/pngjs/pngjs) library, no native dependencies |
 | Process management | Operating-system permissions and process-management behavior |
 
 If a feature does not work in your environment, check the relevant system components, permissions, and command help before opening an issue.
@@ -662,12 +577,6 @@ Potential areas for continued improvement include:
 - **Usability:** Improve diagnostics, examples, and environment troubleshooting.
 
 These are development directions, not a claim that every item has already been implemented.
-
----
-
-## 🙏 Acknowledgements
-
-The six pixel-obfuscation modes behind `obfuscate` / `obfuscate_image` are ported from the open-source project "番茄图片混淆 桌面版 / Tomato Image Obfuscator Desktop" ([MIT License, Copyright (c) 2026 3450892121](https://github.com/3450892121), author's GitHub profile: [github.com/3450892121](https://github.com/3450892121)). The port was byte-for-byte cross-checked against the original engine, and compatibility golden tests are kept in the test suite to preserve long-term interoperability with that project and its mobile ecosystem. Thanks to the original author for open-sourcing it.
 
 ---
 

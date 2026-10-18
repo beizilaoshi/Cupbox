@@ -109,7 +109,7 @@ Cupbox 将安全规则纳入工具设计：
 
 - 文件整理和批量重命名支持预览操作。
 - 面向 AI 的文件变更工具默认先进行 dry-run。
-- 命令执行必须通过白名单检查：面向 AI 的 `run_command` **默认拒绝执行**，必须提供 `allowPrefixes` 或管理员预设 `CUPBOX_RUN_ALLOW`，且白名单模式下拦截 shell 元字符防注入。
+- 命令执行必须通过白名单检查。
 - 进程终止需要同时校验 PID 和进程名。
 - 重名冲突默认跳过，不静默覆盖。
 - MCP 工具支持通过环境变量禁用。
@@ -138,7 +138,7 @@ Cupbox 面向 Windows、macOS 和 Linux，适合个人开发环境、项目仓�
 
 ## 🧰 功能一览
 
-Cupbox 将 14 项日常开发杂活与 2 项 AI 能力整合为一套工具（共 16 个 MCP 工具）。每项本地能力均提供 CLI 入口与对应的 MCP 工具。
+Cupbox 将 13 项日常开发杂活整合为一套工具。每项能力均提供 CLI 入口与对应的 MCP 工具。
 
 ### 📁 文件管理
 
@@ -158,12 +158,6 @@ Cupbox 将 14 项日常开发杂活与 2 项 AI 能力整合为一套工具（�
 | 编码与解码 | `cupbox codec` | `codec` | Base64、URL、HTML 编解码及 JSON 格式化、压缩 |
 | CSV 与 JSON 转换 | `cupbox csv` | `convert_csv_json` | 双向转换，支持 RFC 4180 相关 CSV 处理 |
 
-### 🖼️ 图片处理
-
-| 功能 | CLI 命令 | MCP 工具 | 能力说明 |
-|---|---|---|---|
-| 图片像素混淆 | `cupbox obfuscate` | `obfuscate_image` | 六种模式混淆与无损还原，与「番茄图片混淆」生态互通；密钥非法即时拦截，绝不覆盖已有文件 |
-
 ### 🖥️ 系统与桌面工具
 
 | 功能 | CLI 命令 | MCP 工具 | 能力说明 |
@@ -171,16 +165,8 @@ Cupbox 将 14 项日常开发杂活与 2 项 AI 能力整合为一套工具（�
 | OCR 文字识别 | `cupbox ocr` | `ocr_image` | 调用 Windows 原生引擎或 Tesseract |
 | 剪贴板 | `cupbox clip` | `clipboard` | 读取和写入剪贴板 |
 | 截屏 | `cupbox shot` | `take_screenshot` | 调用平台支持的截屏能力并输出 PNG |
-| 受保护命令执行 | `cupbox run` | `run_command` | MCP 侧默认拒绝、必须白名单（防注入），超时限制和输出截断 |
+| 受保护命令执行 | `cupbox run` | `run_command` | 命令前缀白名单、超时限制和输出截断 |
 | 进程管理 | `cupbox proc` | `process` | 按内存等信息查看进程，并对结束操作进行双重校验 |
-| 版本检测与更新 | `cupbox update` | — | GitHub Releases → npm 双数据源（npm 源校验仓库归属防撞名），输出更新公告与下载地址；`CUPBOX_UPDATE_DISABLE=1` 可关闭 |
-
-### 🧠 AI 能力
-
-| 功能 | CLI 命令 | MCP 工具 | 能力说明 |
-|---|---|---|---|
-| AI 问答 | `cupbox ai ask` | `ai_ask` | 通过已配置的 API 单次问答（OpenAI 兼容 / Anthropic 双协议） |
-| AI Agent | `cupbox ai agent` | `ai_agent` | 多轮循环：模型自主调用本地 14 个工具完成任务后给出总结 |
 
 所有 CLI 命令均支持 `--json`，便于脚本、自动化流程和其他程序消费结构化输出。
 
@@ -356,20 +342,6 @@ cupbox proc kill --pid 1234 --name node
 
 示例中的 `1234` 仅为占位 PID。执行前应确认进程确实是目标进程。
 
-### 11. 图片像素混淆与还原
-
-```bash
-cupbox obfuscate ./图.png --mode c --key 我的密钥
-```
-
-混淆后的图片会另存为 `图.obf.png`；用同一模式和密钥加 `--decrypt` 即可无损还原：
-
-```bash
-cupbox obfuscate ./图.obf.png --mode c --key 我的密钥 --decrypt
-```
-
-六种模式的说明可通过不带参数的 `cupbox obfuscate` 查看。密钥错误或缺失会在执行前被拒绝，输出文件重名时自动改名，绝不覆盖已有文件。
-
 ---
 
 ## 🤖 让 AI 替你干活
@@ -389,35 +361,6 @@ Cupbox 的一个重要目标，是让 AI 不仅能回答问题，还能在受控
 > 帮我给这批截图按顺序编号。先生成预览，不要覆盖任何已有文件。
 
 AI 可以根据任务选择对应的 MCP 工具，获取结构化结果，并在确认后继续执行。
-
-### 内置 AI 引擎（API 直连，不依赖 MCP 客户端）
-
-Cupbox 自带 Codex 式 AI 能力，CLI、桌面版、MCP 三种形态都能直接调用模型：
-
-- **`cupbox ai ask`** —— 单次问答；
-- **`cupbox ai agent`** —— 多轮 Agent 循环：模型自主选择本地 14 个工具（文件 / 数据 / 图片 / 受保护命令）执行任务，最后给出总结；
-- MCP 侧新增 `ai_ask`、`ai_agent` 两个工具，在 Claude Desktop / Cursor 中直接可调；
-- 桌面版就是一座对话工作台：新建会话 / 历史对话、「问一问 · Agent 模式」一键切换，API 配置在「设置 → API 设置」页完成。
-
-**首次配置（一次即可）：**
-
-```bash
-# OpenAI 兼容协议（官方 / DeepSeek / Kimi / Ollama / OpenRouter / vLLM …）
-cupbox ai config --provider openai-compatible --base https://api.deepseek.com/v1 --model deepseek-chat --key sk-xxx
-
-# 或 Anthropic 官方
-cupbox ai config --provider anthropic --model claude-sonnet-4-5 --key sk-ant-xxx
-```
-
-```bash
-cupbox ai ask "1718000000 是几点"
-cupbox ai agent "搜索项目里所有 TODO 并汇总" --max-turns 6
-cupbox ai config                 # 查看当前配置（Key 打码显示）
-```
-
-- 配置保存在 `~/.cupbox/config.json`（权限 0600），**密钥只存本机、不上传**；
-- 环境变量 `CUPBOX_AI_API_KEY` / `CUPBOX_AI_BASE_URL` / `CUPBOX_AI_MODEL` / `CUPBOX_AI_PROVIDER` 优先于配置文件；
-- Agent 内 `rename` / `organize` **永远 dry-run 预览**（轮次默认 8、上限 10），`run` 仍必须白名单——**AI 拿不到任何超出人类使用时的安全权限**。
 
 ### 方式一：使用全局安装
 
@@ -482,28 +425,6 @@ Cupbox 再次校验并执行操作
 
 ---
 
-## 📦 可视化桌面版（阶段 1/3）
-
-本地 Electron 桌面应用，工作台式布局（v1.0.0 起）：
-
-- **会话侧栏** —— 新建会话、历史对话列表（本机 `~/.cupbox/sessions/` 持久化，可删除 / 清空）、**工作区目录选择**（Agent 的文件任务在工作区内进行）；
-- **对话主区** —— 「问一问 / Agent 模式」分段切换，Enter 发送、Shift+Enter 换行，回复附带工具轨迹卡片，多轮上下文自动携带；
-- **工具箱抽屉** —— 原 16 工具表单界面折叠为右侧抽屉，按数据 / 文件 / 图片 / 系统分组选择，动态表单 + 结果面板（JSON 美化、图片预览）；
-- **设置弹窗** —— 四个页签：**API 设置**（协议 / 地址 / 模型 / 密钥 / 温度 / agent 轮次）、**主题**（深色 · 浅色 · 跟随系统 × 极光 / 薄荷 / 琥珀 / 玫瑰四种强调色，即时生效并落盘）、**插件管理**（每个工具的开关同时作用于工具箱显示与 Agent 可调用的工具集）、**关于更新**（版本信息、一键**检查 GitHub 仓库新版本**与结果展示、仓库 / Releases / CHANGELOG 快捷入口）；
-- **版本检测与更新公告**（v1.0.1）—— 启动静默检查更新，发现新版顶栏亮「vX.Y.Z 可用」呼吸徽标并自动弹出一次更新公告（版本对比 + Release 说明 + **前往 GitHub 下载** / 查看更新日志 / 稍后提醒）；点击顶栏版本号或在「设置 → 关于更新」可手动检查（转圈反馈），静默过的版本仍可从徽标再进，`CUPBOX_UPDATE_DISABLE=1` 一键关闭检查。
-
-与 CLI、MCP 共用同一套引擎和安全默认（dry-run、白名单、解压预检全部生效）。
-
-```bash
-npm install          # 首次会经 npmmirror 镜像下载 Electron 运行时
-npm run desktop      # 开发运行
-npm run pack:exe     # 打包绿色便携 exe → release/Cupbox可视化/Cupbox可视化.exe
-```
-
-三阶段路线（工具驾驶舱 → ACP 多引擎接入 → 技能市场/调度/多会话）与选型依据见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
-
----
-
 ## 🛡️ 安全设计
 
 Cupbox 不希望 AI 自动化变成无边界的系统控制，因此将若干安全措施作为默认设计方向。
@@ -512,10 +433,9 @@ Cupbox 不希望 AI 自动化变成无边界的系统控制，因此将若干安
 |---|---|---|
 | 批量移动文件 | 支持 dry-run 预览 | 执行前检查影响范围 |
 | 批量重命名 | 预览、冲突检查 | 减少误操作与文件覆盖 |
-| AI 调用命令执行 | 默认拒绝，须显式白名单 | 不提供 `allowPrefixes` 或 `CUPBOX_RUN_ALLOW` 就不执行；白名单下拦截 shell 元字符防注入 |
+| AI 调用命令执行 | 命令前缀白名单 | 限制可执行的命令范围 |
 | 命令执行时间过长 | 超时控制 | 防止任务无限等待 |
 | 命令输出过大 | 输出截断 | 控制返回结果的体积 |
-| 解压来源不明的 zip | 解压前预检路径穿越与覆盖冲突 | 防 zip-slip（`../` 穿越）与静默覆盖目标目录已有文件 |
 | 终止错误进程 | PID 与进程名双重校验 | 降低误结束其他进程的风险 |
 | 不需要某些 AI 工具 | 支持禁用指定工具 | 缩小可用工具的攻击面 |
 
@@ -529,15 +449,11 @@ CUPBOX_DISABLE_TOOLS=run_command,process cupbox mcp
 
 上面的写法展示了配置意图。不同操作系统设置环境变量的语法不同，Windows 用户可以在启动 MCP 的配置环境中设置对应变量。
 
-与之配合，`CUPBOX_RUN_ALLOW=npm,git status` 可以为 `run_command` 预设允许的命令前缀（调用时提供了 `allowPrefixes` 则以调用方为准）。两者都没有时，MCP 侧的 `run_command` 会拒绝执行任何命令。
-
 ### 安全边界
 
 需要注意以下几点：
 
 - 白名单限制的是允许的命令形式，不等于完整的操作系统沙箱。
-- 白名单模式下命令不得包含 shell 元字符（管道、重定向、命令替换、cmd 变量展开等），命中即拒绝——这是防注入设计，不是功能缺陷；需要管道或重定向时请由人工在 CLI 不加白名单运行。
-- 解压 zip 前会预检路径穿越条目与覆盖冲突；经由人工 CLI 处理不可信压缩包时，仍建议先确认来源。
 - 被允许的程序仍可能具有自身的文件访问和系统权限。
 - PID 与进程名校验可以降低误操作风险，但不能消除所有进程竞态问题。
 - dry-run 的预览结果不保证执行时文件系统状态仍然相同。
@@ -558,7 +474,6 @@ Cupbox 尽可能使用轻量的实现方式，但部分功能依赖操作系统�
 | 压缩包处理 | 依赖实现所使用的系统压缩工具 |
 | 剪贴板 | 依赖对应平台的能力与权限 |
 | 截屏 | 依赖对应平台的实现与权限 |
-| 图片像素混淆 | PNG 编解码由纯 JS 的 [pngjs](https://github.com/pngjs/pngjs) 实现，无原生依赖 |
 | 进程管理 | 受操作系统权限和进程管理规则约束 |
 
 如果某项功能在你的环境中不可用，请先检查系统组件、权限和命令帮助，再提交包含操作系统、Node.js 版本、复现步骤及错误输出的 Issue。
@@ -662,12 +577,6 @@ Cupbox 的长期方向是成为一个轻量、可靠、适合人类与 AI 共同
 - **易用性：** 提供更直观的错误信息、示例和环境诊断。
 
 这些是项目的发展方向，不代表所有事项都已经实现。
-
----
-
-## 🙏 致谢
-
-图片像素混淆（`obfuscate` / `obfuscate_image`）的六种模式算法移植自开源项目「番茄图片混淆 桌面版」（[MIT License, Copyright (c) 2026 3450892121](https://github.com/3450892121)，作者 GitHub 主页：[github.com/3450892121](https://github.com/3450892121)）。移植实现与原版引擎做过逐字节对拍，并在测试中保留了兼容性金标，以确保与该项目及手机端生态的长期互通。感谢原作者的开源贡献。
 
 ---
 
