@@ -12,8 +12,9 @@
 </p>
 
 <p align="center">
-  One toolkit, two ways to work.<br>
-  A practical command-line toolbox for developers and an MCP server for AI agents.
+  One toolkit, three ways to work.<br>
+  A practical command-line toolbox for developers, an MCP server for AI agents,<br>
+  and a portable visual desktop app.
 </p>
 
 <p align="center">
@@ -50,18 +51,18 @@ Each task may seem trivial on its own. Together, however, they consume time, int
 
 Cupbox brings these scattered utilities together in one reusable toolkit.
 
-### One toolkit. Two interfaces.
+### One toolkit. Three interfaces.
 
 ```text
                        Cupbox
                           |
-                +---------+---------+
-                |                   |
-             CLI                 MCP Server
-                |                   |
-        Direct developer use    AI agent access
-                |                   |
-                +---------+---------+
+                +---------+---------+---------+
+                |            |            |
+             CLI        MCP Server    Desktop App
+                |            |            |
+        Direct developer use   AI agent access   Double-click
+                |            |            |
+                +---------+---------+---------+
                           |
                     Shared core
                           |
@@ -76,7 +77,8 @@ Cupbox brings these scattered utilities together in one reusable toolkit.
 
 - **CLI:** For developers working directly in the terminal, writing scripts, and automating repetitive tasks.
 - **MCP:** For AI agents that need structured access to local utilities through the Model Context Protocol.
-- **Shared core:** Both interfaces reuse the same underlying functionality instead of maintaining separate implementations.
+- **Desktop (new in 1.0.1):** A portable, offline-capable visual app that runs by double-clicking and follows the same safety rules.
+- **Shared core:** All three interfaces reuse the same underlying functionality instead of maintaining separate implementations.
 - **Safety first:** File modifications, command execution, and process management have explicit safeguards.
 
 Whether you run the commands yourself or ask an AI assistant to do the work, you can use the same toolkit.
@@ -138,7 +140,7 @@ Platform-specific tools, permissions, and system behavior may differ. Individual
 
 ## 🧰 Features
 
-Cupbox brings together 13 everyday utilities. Each feature has a CLI entry point and a corresponding MCP tool.
+Cupbox brings together 16 everyday utilities: the original 13, plus reversible image-pixel obfuscation and two AI orchestration capabilities. Every feature is reachable from the CLI, from MCP, or from the desktop app (`cupbox update`, the version checker, is CLI-only).
 
 ### 📁 File Management
 
@@ -168,7 +170,27 @@ Cupbox brings together 13 everyday utilities. Each feature has a CLI entry point
 | Protected command execution | `cupbox run` | `run_command` | Command-prefix allowlisting, timeouts, and output truncation |
 | Process management | `cupbox proc` | `process` | Inspect processes and validate both PID and process name before termination |
 
+### 🖼️ Images and AI
+
+| Feature | CLI | MCP Tool | Description |
+|---|---|---|---|
+| Image-pixel obfuscation | `cupbox obfuscate` | `obfuscate_image` | Reversible six-mode obfuscation, verified byte-for-byte against golden vectors |
+| AI assistant | `cupbox ai ask` | `ai_ask` | Read-only Q&A through OpenAI-compatible or Anthropic APIs |
+| AI agent | `cupbox ai agent` | `ai_agent` | Multi-turn tool orchestration; file operations are forced into dry-run, commands still require the allowlist |
+
 All CLI commands support `--json`, making their output easier to consume in scripts, automation pipelines, and other programs.
+
+---
+
+## 🆕 What's New in 1.0.1
+
+- **AI toolbox:** `cupbox ai ask / agent / config`; new MCP tools `ai_ask` and `ai_agent` (tool count 14 → 16); the agent defaults to 8 turns and **never gains more authority than a human user**.
+- **Visual desktop app (stage 1/3):** A portable Electron app — no installation, works offline — see [`desktop/`](./desktop/).
+- **Image-pixel obfuscation:** The 14th engine tool; six reversible modes, byte-for-byte compatible with the "Tomato Image Obfuscation" engine.
+- **Update announcements:** CLI `cupbox update` plus a desktop update dialog, sourced from a custom manifest → GitHub Releases → npm.
+- **Security hardening:** `run_command` is now deny-by-default with shell-injection interception; zip-slip and overwrite pre-checks; PNG decompression-bomb protection.
+
+See [CHANGELOG.en.md](./CHANGELOG.en.md) for the full list of changes.
 
 ---
 
@@ -436,6 +458,8 @@ Cupbox is designed to make AI-assisted automation more controlled and predictabl
 | Excessive command output | Output truncation | Limit the size of returned results |
 | Incorrect process termination | PID and process-name validation | Reduce the risk of terminating the wrong process |
 | Unnecessary AI capabilities | MCP tool disabling | Reduce the available tool surface |
+| AI executing arbitrary commands | `run_command` is deny-by-default; explicit allowlist plus injection interception | Nothing runs unless it was declared |
+| Extracting untrusted archives | zip-slip path-traversal and overwrite pre-checks | Prevent directory traversal and silent overwrites |
 
 ### Disable specific MCP tools
 
@@ -529,6 +553,8 @@ cupbox/
 │   ├── index.ts    # CLI entry point
 │   └── mcp.ts      # MCP server entry point
 ├── test/           # Automated tests
+├── desktop/        # Portable desktop app (Electron)
+├── docs/           # Architecture documentation
 ├── examples/       # MCP configuration examples
 ├── README.md
 └── README.en.md
