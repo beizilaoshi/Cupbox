@@ -125,6 +125,7 @@ let sending = false;
 let drawerOpen = false;
 let modalOpen = false;
 let updOpen = false;    // 更新公告弹窗
+let ctxOpen = false;    // 上下文洞察弹窗
 let updateInfo = null;  // 最近一次检测结果（UpdateInfo）
 
 const SMOKE = new URLSearchParams(location.search).get("smoke");
@@ -1123,6 +1124,165 @@ function closeUpdateAnnounce() {
   }, 300);
 }
 
+/* —— 上下文洞察弹窗（成分 / 趋势 / 事件） —— */
+const CTX_PART_COLORS = {
+  system: "#82a38a", tools: "#d6b17d", user: "#cb96a3",
+  injected: "#8fb3c9", assistant: "#a99bd4", toolResults: "#9fb88a",
+};
+const CTX_EVENT_LABELS = { inject: "注入", compact: "压缩", switch: "切换", mode: "模式" };
+
+function fmtTokens(n) {
+  const raw = Math.round(Number(n) || 0);
+  const v = Math.abs(raw);
+  const sign = raw < 0 ? "-" : "";
+  if (v < 1000) return `${sign}${v}`;
+  if (v < 1e6) return `${sign}${(v / 1000).toFixed(v < 1e4 ? 1 : 0)}k`;
+  return `${sign}${(v / 1e6).toFixed(1)}M`;
+}
+function fmtTime(at) {
+  const d = new Date(at);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+const ctxEsc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+/** 建元素并用 CSSOM 赋样式（CSP 拦 style= 属性，但 el.style.x 赋值不受限）。 */
+function ctxEl(tag, cls, css) {
+  const el = document.createElement(tag);
+  if (cls) el.className = cls;
+  if (css) Object.assign(el.style, css);
+  return el;
+}
+
+function renderContextStats(payload) {
+  const rec = payload?.record || { window: 128000, last: null, trend: [], events: [], totals: { requests: 0, prompt: 0, output: 0 } };
+  const last = rec.last;
+  const occ = last && rec.window ? last.total / rec.window : 0;
+
+  $("ctx-window").textContent = `窗口 ${fmtTokens(rec.window)}`;
+  $("ctx-kpis").innerHTML = `
+    <div class="ctx-kpi"><b>${last ? fmtTokens(last.total) : "—"}</b><span>最近一次占用 tokens</span><em>${last ? `${(occ * 100).toFixed(occ < 0.1 ? 1 : 0)}% of 窗口` : "尚无请求"}</em></div>
+    <div class="ctx-kpi"><b>${rec.totals.requests || 0}</b><span>累计请求</span></div>
+    <div class="ctx-kpi"><b>${fmtTokens(rec.totals.prompt)}</b><span>累计输入 tokens</span><em>提供方上报</em></div>
+    <div class="ctx-kpi"><b>${fmtTokens(rec.totals.output)}</b><span>累计输出 tokens</span></div>`;
+
+  const bar = $("ctx-bar");
+  const legend = $("ctx-legend");
+  bar.replaceChildren();
+  legend.replaceChildren();
+  if (last && last.total > 0) {
+    for (const p of last.parts) {
+      const seg = ctxEl("i", "", {
+        width: `${Math.max(0, (p.tokens / last.total) * 100)}%`,
+        background: CTX_PART_COLORS[p.key] || "#9ab",
+      });
+      seg.title = `${p.label}：${fmtTokens(p.tokens)} tokens`;
+      bar.append(seg);
+
+      const row = ctxEl("div", "ctx-leg");
+      row.append(ctxEl("i", "", { background: CTX_PART_COLORS[p.key] || "#9ab" }));
+      const name = document.createElement("b");
+      name.textContent = p.label;
+      const val = document.createElement("span");
+      val.textContent = `${fmtTokens(p.tokens)} · ${last.total ? ((p.tokens / last.total) * 100).toFixed(1) : 0}%`;
+      row.append(name, val);
+      legend.append(row);
+    }
+  } else {
+    const note = document.createElement("div");
+    note.className = "ctx-empty-note";
+    note.textContent = "还没有数据。发送一条消息后，这里会显示六成分占比。";
+    legend.append(note);
+  }
+
+  const trend = rec.trend || [];
+  $("ctx-trend-count").textContent = `${trend.length} 次请求`;
+  const tEl = $("ctx-trend");
+  tEl.replaceChildren();
+  if (trend.length) {
+    const max = Math.max(...trend.map((t) => Math.max(t.tokens || 0, t.prompt || 0)), 1);
+    for (const t of trend.slice(-60)) {
+      const h = Math.max(3, Math.round(((t.tokens || 0) / max) * 100));
+      const promptRatio = t.prompt && t.tokens ? Math.min(1, t.prompt / Math.max(t.tokens, t.prompt)) : 0;
+      const bar2 = ctxEl("i", t.prompt ? "has-prompt" : "", { height: `${h}%` });
+      bar2.style.setProperty("--cq", `${Math.round(promptRatio * 100)}%`);
+      bar2.title = `${fmtTime(t.at)} · 估算 ${fmtTokens(t.tokens)} tokens${t.prompt ? ` · 实际输入 ${fmtTokens(t.prompt)}` : ""}${t.output ? ` · 输出 ${fmtTokens(t.output)}` : ""}${t.label ? `\n${t.label}` : ""}`;
+      tEl.append(bar2);
+    }
+  } else {
+    const s = document.createElement("span");
+    s.className = "ctx-empty";
+    s.textContent = "暂无趋势 · 发送消息后逐条记录";
+    tEl.append(s);
+  }
+
+  const events = rec.events || [];
+  $("ctx-event-count").textContent = String(events.length);
+  const eEl = $("ctx-events");
+  eEl.replaceChildren();
+  if (events.length) {
+    for (const ev of [...events].reverse().slice(0, 30)) {
+      const row = ctxEl("div", "ctx-ev");
+      const kind = document.createElement("span");
+      kind.className = "ctx-ev-kind";
+      kind.dataset.kind = ev.kind;
+      kind.textContent = CTX_EVENT_LABELS[ev.kind] || ev.kind;
+      const txt = document.createElement("span");
+      txt.className = "ctx-ev-txt";
+      txt.textContent = ev.label || "";
+      if (typeof ev.delta === "number") {
+        const d = document.createElement("b");
+        d.textContent = ` ${ev.delta > 0 ? "+" : ""}${fmtTokens(ev.delta)}`;
+        d.style.color = ev.delta < 0 ? "var(--warn)" : "var(--accent)";
+        d.style.fontWeight = "600";
+        txt.append(d);
+      }
+      const time = document.createElement("span");
+      time.className = "ctx-ev-time";
+      time.textContent = fmtTime(ev.at);
+      row.append(kind, txt, time);
+      eEl.append(row);
+    }
+  } else {
+    const note = document.createElement("div");
+    note.className = "ctx-empty-note";
+    note.textContent = "暂无事件。注入记忆块、压缩历史、切换模型或模式时会记录在这里。";
+    eEl.append(note);
+  }
+
+  const base = payload?.baseline;
+  $("ctx-note").innerHTML = base && base.kind === "baseline"
+    ? `Agent 基线开销：系统提示词 ${fmtTokens(base.system?.tokens)} + 工具 Schema ${fmtTokens(base.tools?.tokens)}（${base.tools?.count ?? 0} 个工具）= <b>${fmtTokens(base.total)}</b> · ${ctxEsc(base.note || "")}`
+    : "估算为固定密度启发式（≈），非精确 tokenizer 计数。";
+}
+
+async function openContextModal() {
+  if (ctxOpen) return;
+  let payload = null;
+  try { payload = await api.contextStats?.(sessionId); } catch { payload = null; }
+  renderContextStats(payload || null);
+  const scrim = $("ctx-scrim");
+  const m = $("ctx-modal");
+  scrim.hidden = false;
+  m.hidden = false;
+  ctxOpen = true;
+  requestAnimationFrame(() => {
+    scrim.classList.add("open");
+    m.classList.add("open");
+  });
+  setTimeout(() => $("ctx-close")?.focus(), 240);
+}
+
+function closeContextModal() {
+  if (!ctxOpen) return;
+  ctxOpen = false;
+  const scrim = $("ctx-scrim");
+  const m = $("ctx-modal");
+  scrim.classList.remove("open");
+  m.classList.remove("open");
+  setTimeout(() => {
+    if (!ctxOpen) { scrim.hidden = true; m.hidden = true; }
+  }, 300);
+}
+
 /** 设置 → 关于更新：检查 GitHub 仓库新版本并内联展示结果（不弹公告，结果区自己给下载按钮）。 */
 async function checkUpdateInSettings() {
   const btn = $("btn-check-upd");
@@ -1291,6 +1451,11 @@ async function boot() {
   });
   $("btn-workspace")?.addEventListener("click", pickWorkspace);
 
+  // —— 上下文洞察弹窗 ——
+  $("btn-context")?.addEventListener("click", () => { void openContextModal(); });
+  $("ctx-close")?.addEventListener("click", closeContextModal);
+  $("ctx-scrim")?.addEventListener("click", closeContextModal);
+
   const ta = $("chat-text");
   ta.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
@@ -1334,8 +1499,8 @@ async function boot() {
   });
 
   window.addEventListener("keydown", (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "n") { e.preventDefault(); if (!modalOpen && !drawerOpen && !updOpen) void newChat(); }
-    const overlay = modalOpen ? $("settings-modal") : updOpen ? $("upd-modal") : null;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "n") { e.preventDefault(); if (!modalOpen && !drawerOpen && !updOpen && !ctxOpen) void newChat(); }
+    const overlay = modalOpen ? $("settings-modal") : updOpen ? $("upd-modal") : ctxOpen ? $("ctx-modal") : null;
     if (overlay && e.key === "Tab") {
       const focusable = [...overlay.querySelectorAll('button:not(:disabled),input:not(:disabled),textarea:not(:disabled),select:not(:disabled),[tabindex="0"]')].filter(el => el.getClientRects().length);
       const first = focusable[0], last = focusable.at(-1);
@@ -1345,6 +1510,7 @@ async function boot() {
     if (e.key === "Escape") {
       if (modalOpen) closeModal();
       else if (updOpen) closeUpdateAnnounce();
+      else if (ctxOpen) closeContextModal();
       else if (drawerOpen) closeDrawer();
     }
   });
@@ -1395,6 +1561,47 @@ async function boot() {
     setTimeout(() => {
       if (updateInfo && updateInfo.hasUpdate) showUpdateAnnounce();
     }, 9400);
+    // 10.0s：打开上下文洞察面板（演示数据，仅冒烟截图用），主进程 10.6s 截帧
+    setTimeout(() => {
+      closeUpdateAnnounce();
+      const now = Date.now();
+      const demo = {
+        record: {
+          window: 128000,
+          last: {
+            parts: [
+              { key: "system", label: "系统提示词", tokens: 55, chars: 220 },
+              { key: "tools", label: "工具 Schema", tokens: 2040, chars: 8160 },
+              { key: "user", label: "用户消息", tokens: 1860, chars: 7440 },
+              { key: "injected", label: "注入上下文", tokens: 940, chars: 3760 },
+              { key: "assistant", label: "助手回复", tokens: 1520, chars: 6080 },
+              { key: "toolResults", label: "工具结果", tokens: 3080, chars: 12320 },
+            ],
+            total: 9495, window: 128000, occupancy: 9495 / 128000, at: now,
+          },
+          trend: Array.from({ length: 18 }, (_, i) => ({
+            at: now - (17 - i) * 60000,
+            tokens: 1200 + i * 470 + (i % 3) * 300,
+            ...(i % 4 === 0 ? { prompt: 1400 + i * 430, output: 180 + i * 12 } : {}),
+            label: ["帮我整理下载目录", "这段 base64 是什么", "批量重命名加序号", "算一个 sha256"][i % 4],
+          })),
+          events: [
+            { at: now - 4000, kind: "inject", label: "记忆块注入（facts.jsonl 召回 Top3）", delta: 320 },
+            { at: now - 90000, kind: "compact", label: "压缩 12 条早前消息为摘要", delta: -2140 },
+            { at: now - 200000, kind: "switch", label: "模型 gpt-4o → claude-sonnet-4" },
+            { at: now - 320000, kind: "mode", label: "问一问 → 执行任务" },
+          ],
+          totals: { requests: 18, prompt: 15420, output: 6840 },
+          lastInjectTokens: 320,
+          model: "claude-sonnet-4",
+        },
+        baseline: null,
+      };
+      renderContextStats(demo);
+      const scrim = $("ctx-scrim"), m = $("ctx-modal");
+      scrim.hidden = false; m.hidden = false; ctxOpen = true;
+      requestAnimationFrame(() => { scrim.classList.add("open"); m.classList.add("open"); });
+    }, 10000);
   }
 
   // 首次进入聚焦输入框

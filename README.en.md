@@ -138,7 +138,7 @@ Platform-specific tools, permissions, and system behavior may differ. Individual
 
 ## 🧰 Features
 
-Cupbox brings together 14 everyday utilities plus 2 AI capabilities (16 MCP tools in total). Every local capability has a CLI entry point and a corresponding MCP tool.
+Cupbox brings together 15 everyday utilities plus 2 AI capabilities (21 MCP tools in total). Every local capability has a CLI entry point and a corresponding MCP tool.
 
 ### 📁 File Management
 
@@ -202,6 +202,19 @@ The AI no longer starts from scratch every session: Cupbox keeps three memory ti
 | Profile / agreements | `cupbox memory user [text]` / `collab [text]` | `memory_profile` |
 
 In the desktop agent loop the model can call these four memory tools directly to remember things across sessions; relevant memories are auto-injected at the start of every conversation.
+
+### 📊 Context insight (capability direction inspired by [dsh-context](https://github.com/bowenliang123/dsh-context))
+
+Long conversations make it hard to know how much room is left. Cupbox turns context usage into visible numbers:
+
+| Capability | CLI | MCP Tool | Notes |
+|---|---|---|---|
+| Token estimate & window occupancy | `cupbox context [--text TEXT] [--file PATH] [--window 128000]` | `context_stats` | Fixed-density heuristic (≈1.5 chars/token for CJK, ≈4 for others); without text it returns the Agent baseline overhead (system prompt + all tool schemas) |
+
+- **Six-part breakdown**: every request is split into system prompt / tool schemas / user messages / injected context / assistant replies / tool results.
+- **Trend & events**: the desktop app records per-request occupancy (including the provider-reported actual input/output tokens) and flags four event kinds — memory injection, history compaction, model switch, mode switch.
+- **Desktop entry**: the "Context" button at the top right of the chat opens the insight panel (composition bar + trend + event feed). The default window is 128k, adjustable via `CUPBOX_CONTEXT_WINDOW`.
+- Estimates are heuristic (≈), not exact tokenizer counts, and are meant as a rough occupancy reference.
 
 All CLI commands support `--json`, making their output easier to consume in scripts, automation pipelines, and other programs.
 

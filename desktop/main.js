@@ -11,6 +11,9 @@ import { aiChat, aiAgent, loadAiConfig, saveAiConfig, DEFAULT_SYSTEM } from '../
 import { dataHome, migrateLegacyHome } from '../dist/core/paths.js';
 import { memoryPromptBlock, summaryPromptBlock, compactHistory } from '../dist/core/memory.js';
 import { checkForUpdate } from '../dist/core/update.js';
+import {
+  contextBreakdown, estimateTokens, pushTrend, pushEvent, emptySessionContext,
+} from '../dist/core/context.js';
 import { importWallpaper } from './wallpaper.js';
 import { importStartupMedia } from './startup-media.js';
 import { createToolExecution } from './tool-execution.js';
@@ -318,6 +321,20 @@ ipcMain.handle('sessions:clear', async (_e, id) => {
   return s;
 });
 
+/** 上下文洞察：返回会话的成分分解 / 趋势 / 事件记录（无记录时返回空档案 + Agent 基线）。 */
+ipcMain.handle('context:stats', async (_e, id) => {
+  let record = emptySessionContext();
+  if (id) {
+    const s = await readSession(id).catch(() => null);
+    if (s && s.context && Array.isArray(s.context.trend)) record = { ...record, ...s.context };
+  }
+  let baseline = null;
+  try {
+    baseline = await runTool('context_stats', {});
+  } catch { /* 基线仅作参考，失败忽略 */ }
+  return { record, baseline };
+});
+
 /* ---------- 对话（ask = 多轮历史直连；agent = 工具循环） ---------- */
 
 ipcMain.handle('chat:send', async (event, payload) => {
@@ -347,6 +364,8 @@ ipcMain.handle('chat:send', async (event, payload) => {
       workspace ? `当前工作区：${workspace}。涉及文件 / 目录的任务优先在该目录下进行；引用路径时一律使用绝对路径。` : '',
       p.system ? String(p.system) : '',
     ].filter(Boolean).join('\n');
+    const baseSystem = system; // 成分分解：系统提示词与注入块分开计量
+    let injectedText = '';     // 注入上下文（历史摘要 + 记忆块）
     let history = (sess.messages ?? []).filter(
       (m) => (m.role === 'user' || m.role === 'assistant') && typeof m.text === 'string',
     ).map((m) => ({ role: m.role, text: m.text }));
@@ -357,11 +376,11 @@ ipcMain.handle('chat:send', async (event, payload) => {
       sess.summary = compacted.summary;
       history = compacted.kept;
       const sb = summaryPromptBlock(compacted.summary);
-      if (sb) system += `\n${sb}`;
+      if (sb) { system += `\n${sb}`; injectedText += `${sb}\n`; }
     }
     // 记忆注入：运行时记忆（用户画像/协作约定）常驻 + 按本条消息召回相关长期事实
     const memBlock = await memoryPromptBlock(text);
-    if (memBlock) system += `\n${memBlock}`;
+    if (memBlock) { system += `\n${memBlock}`; injectedText += `${memBlock}\n`; }
     const mode = p.mode === 'agent' ? 'agent' : 'ask';
     let result;
     const signal=controller.signal;
@@ -387,11 +406,75 @@ ipcMain.handle('chat:send', async (event, payload) => {
       }
     }else result=await integrate(text,await loadAiConfig());
     // 成功后才落盘（失败不污染历史）
+    const prevMode = sess.mode; // 模式切换检测（记录事件用）
     sess.messages.push({ role: 'user', text });
     sess.messages.push({ role: 'assistant', text: result.text, ...(result.trace ? { trace: result.trace } : {}), ...(result.tasks?{tasks:result.tasks}:{}), ...(result.media?{media:result.media}:{}) });
     sess.mode = mode;
     sess.updatedAt = new Date().toISOString();
     if (!sess.workspace && workspace) sess.workspace = workspace;
+    // ---- 上下文洞察：本次请求后的六成分快照 + 趋势点 + 事件 ----
+    {
+      const ctx = sess.context && Array.isArray(sess.context.trend) ? sess.context : emptySessionContext();
+      const toolSchemas = mode === 'agent' && tools.length
+        ? JSON.stringify(TOOL_DEFS.filter(t => tools.includes(t.name)))
+        : '';
+      const bd = contextBreakdown({
+        system: baseSystem,
+        toolSchemas,
+        injected: injectedText,
+        messages: sess.messages
+          .filter(m => typeof m.text === 'string')
+          .map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', text: m.text })),
+      });
+      ctx.window = bd.window;
+      ctx.last = bd;
+      const usage = result.usage;
+      const now = Date.now();
+      ctx.trend = pushTrend(ctx.trend, {
+        at: now,
+        tokens: bd.total,
+        ...(usage ? { prompt: usage.prompt, completion: usage.completion } : {}),
+        label: text.slice(0, 24),
+      });
+      ctx.totals = {
+        requests: ctx.totals.requests + (result.requests ?? 1),
+        prompt: ctx.totals.prompt + (usage?.prompt ?? 0),
+        output: ctx.totals.output + (usage?.completion ?? 0),
+      };
+      // 事件1：注入块 token 变化（记忆/摘要内容变了才报，避免每轮重复）
+      const injectTokens = estimateTokens(injectedText);
+      if (injectTokens > 0 && injectTokens !== (ctx.lastInjectTokens ?? 0)) {
+        ctx.events = pushEvent(ctx.events, {
+          at: now, kind: 'inject',
+          label: injectTokens > (ctx.lastInjectTokens ?? 0) ? '记忆 / 摘要注入' : '注入内容更新',
+          delta: injectTokens - (ctx.lastInjectTokens ?? 0),
+        });
+        ctx.lastInjectTokens = injectTokens;
+      }
+      // 事件2：上下文压缩（记录回收量为负 delta）
+      if (compacted.compactedTurns > 0) {
+        const freed = Math.max(0, Math.round((compacted.charsBefore - compacted.charsAfter) / 4));
+        ctx.events = pushEvent(ctx.events, {
+          at: now, kind: 'compact',
+          label: `压缩 ${compacted.compactedTurns} 轮历史`,
+          delta: -freed,
+        });
+      }
+      // 事件3：模型切换
+      const model = aiCfg?.model || '';
+      if (model && ctx.model && ctx.model !== model) {
+        ctx.events = pushEvent(ctx.events, { at: now, kind: 'switch', label: `${ctx.model} → ${model}` });
+      }
+      if (model) ctx.model = model;
+      // 事件4：模式切换 ask ↔ agent
+      if (prevMode && prevMode !== mode) {
+        ctx.events = pushEvent(ctx.events, {
+          at: now, kind: 'mode',
+          label: `${prevMode === 'agent' ? 'Agent' : '问答'} → ${mode === 'agent' ? 'Agent' : '问答'}`,
+        });
+      }
+      sess.context = ctx;
+    }
     await writeSession(sess);
     if (compacted.compactedTurns > 0) {
       result = { ...result, compaction: { turns: compacted.compactedTurns, charsBefore: compacted.charsBefore, charsAfter: compacted.charsAfter, ...(compacted.fallback ? { fallback: compacted.fallback } : {}) } };
@@ -472,6 +555,8 @@ async function createWindow() {
           await capture(`${base}-light${ext}`);
           await new Promise((r) => setTimeout(r, 950));
           await capture(`${base}-update${ext}`); // 更新公告弹窗（冒烟注入假更新源时才有内容）
+          await new Promise((r) => setTimeout(r, 700));
+          await capture(`${base}-context${ext}`); // 上下文洞察面板（渲染端 10.0s 打开）
         } catch (e) {
           console.error('[smoke] settings failed:', e);
         }

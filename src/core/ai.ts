@@ -112,9 +112,17 @@ export type ChatTurn =
   | { role: 'assistant'; text: string; toolCalls?: ToolCall[] }
   | { role: 'tool'; results: { id: string; name: string; text: string }[] };
 
+/** 提供方上报的 token 用量（OpenAI prompt/completion；Anthropic input/output；均已归一）。 */
+export interface AiUsage {
+  prompt: number;
+  completion: number;
+}
+
 export interface ChatResult {
   text: string;
   toolCalls?: ToolCall[];
+  /** 提供方上报的实际用量（响应缺失时省略）。 */
+  usage?: AiUsage;
 }
 
 export const DEFAULT_SYSTEM =
@@ -260,13 +268,18 @@ export async function aiChat(opts: AiChatOptions): Promise<ChatResult> {
       }
       const data = (await res.json()) as {
         content?: { type: string; text?: string; id?: string; name?: string; input?: Record<string, unknown> }[];
+        usage?: { input_tokens?: number; output_tokens?: number };
       };
       const blocks = data.content ?? [];
       const text = blocks.filter((b) => b.type === 'text').map((b) => b.text ?? '').join('');
       const toolCalls = blocks
         .filter((b) => b.type === 'tool_use' && b.id && b.name)
         .map((b) => ({ id: b.id as string, name: b.name as string, args: b.input ?? {} }));
-      return { text, ...(toolCalls.length ? { toolCalls } : {}) };
+      const usage =
+        data.usage && (Number.isFinite(data.usage.input_tokens) || Number.isFinite(data.usage.output_tokens))
+          ? { prompt: Number(data.usage.input_tokens) || 0, completion: Number(data.usage.output_tokens) || 0 }
+          : undefined;
+      return { text, ...(toolCalls.length ? { toolCalls } : {}), ...(usage ? { usage } : {}) };
     }
 
     // OpenAI 兼容协议（OpenAI / DeepSeek / Kimi / GLM / OpenRouter / Ollama / LM Studio…）
@@ -305,6 +318,7 @@ export async function aiChat(opts: AiChatOptions): Promise<ChatResult> {
           tool_calls?: { id: string; function?: { name?: string; arguments?: string } }[];
         };
       }[];
+      usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
     };
     const msg = data.choices?.[0]?.message ?? {};
     const toolCalls = (msg.tool_calls ?? [])
@@ -318,7 +332,11 @@ export async function aiChat(opts: AiChatOptions): Promise<ChatResult> {
         }
         return { id: tc.id, name: tc.function?.name as string, args };
       });
-    return { text: msg.content ?? '', ...(toolCalls.length ? { toolCalls } : {}) };
+    const usage =
+      data.usage && (Number.isFinite(data.usage.prompt_tokens) || Number.isFinite(data.usage.completion_tokens))
+        ? { prompt: Number(data.usage.prompt_tokens) || 0, completion: Number(data.usage.completion_tokens) || 0 }
+        : undefined;
+    return { text: msg.content ?? '', ...(toolCalls.length ? { toolCalls } : {}), ...(usage ? { usage } : {}) };
   } catch (e) {
     if (e instanceof Error && e.name === 'AbortError') throw new Error('AI 请求超时');
     if (e instanceof Error && /^AI 请求失败/.test(e.message)) throw e;
@@ -347,6 +365,10 @@ export interface AgentTraceItem {
 export interface AgentResult {
   text: string;
   trace: AgentTraceItem[];
+  /** 多轮请求累加的提供方用量（每轮都缺 usage 时省略）。 */
+  usage?: AiUsage;
+  /** 实际发起的模型请求数。 */
+  requests?: number;
 }
 export interface AiAgentOptions {
   signal?: AbortSignal;
@@ -382,6 +404,9 @@ export async function aiAgent(opts: AiAgentOptions): Promise<AgentResult> {
   ];
 
   let lastText = '';
+  const acc: AiUsage = { prompt: 0, completion: 0 };
+  let usageSeen = false;
+  let requests = 0;
   for (let turn = 0; turn < maxTurns; turn++) {
     opts.signal?.throwIfAborted();
     const resp = await aiChat({
@@ -391,8 +416,19 @@ export async function aiAgent(opts: AiAgentOptions): Promise<AgentResult> {
       ...(defs.length ? { tools: defs } : {}),
       ...(opts.timeoutMs ? { timeoutMs: opts.timeoutMs } : {}),
     });
+    requests++;
+    if (resp.usage) {
+      usageSeen = true;
+      acc.prompt += resp.usage.prompt;
+      acc.completion += resp.usage.completion;
+    }
     if (!resp.toolCalls || resp.toolCalls.length === 0) {
-      return { text: resp.text || lastText || '（模型返回空内容）', trace };
+      return {
+        text: resp.text || lastText || '（模型返回空内容）',
+        trace,
+        ...(usageSeen ? { usage: acc } : {}),
+        requests,
+      };
     }
     if (resp.text) lastText = resp.text;
     messages.push({ role: 'assistant', text: resp.text, toolCalls: resp.toolCalls });
@@ -431,5 +467,7 @@ export async function aiAgent(opts: AiAgentOptions): Promise<AgentResult> {
   return {
     text: `${lastText ? `${lastText}\n\n` : ''}（已达到最大工具轮次 ${maxTurns}，停止调用）`,
     trace,
+    ...(usageSeen ? { usage: acc } : {}),
+    requests,
   };
 }

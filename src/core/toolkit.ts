@@ -20,6 +20,7 @@ import { screenshot } from './shot.js';
 import { safeRun } from './run.js';
 import { listProcesses, killProcess } from './proc.js';
 import { addFact, listFacts, forgetFacts, recall, loadRuntimeMemory, saveRuntimeMemory } from './memory.js';
+import { estimateTokens, resolveWindow } from './context.js';
 
 const CODEC_MAP: Record<string, (s: string) => string> = {
   b64e: base64Encode, b64d: base64Decode,
@@ -275,6 +276,18 @@ export const TOOL_DEFS: ToolDef[] = [
       required: ['kind'],
     },
   },
+  {
+    name: 'context_stats',
+    description:
+      '估算上下文 token 占用（固定密度启发式，≈）。给 text 估算其 token 数与窗口占比；省略 text 则返回 Cupbox Agent 基线开销（系统提示词 + 全部工具 Schema）。',
+    parameters: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: '要估算的文本；省略则估算 Agent 基线开销' },
+        window: { type: 'number', description: '上下文窗口 token 数，默认 128000' },
+      },
+    },
+  },
 ];
 
 function str(v: unknown): string {
@@ -434,6 +447,38 @@ export async function runTool(tool: string, a: Record<string, unknown>): Promise
       }
       const rt = await loadRuntimeMemory();
       return { kind, content: rt[kind] };
+    }
+    case 'context_stats': {
+      const win = a.window ? Number(a.window) : undefined;
+      if (a.text !== undefined && a.text !== null && String(a.text) !== '') {
+        const text = str(a.text);
+        const tokens = estimateTokens(text);
+        const window = resolveWindow(win);
+        return {
+          kind: 'text',
+          chars: text.length,
+          tokens,
+          window,
+          occupancy: Number((tokens / window).toFixed(4)),
+          note: '固定密度启发式估算（≈），非精确 tokenizer 计数',
+        };
+      }
+      // 基线开销：系统提示词 + 全部工具 Schema（动态 import 避免与 ai.ts 循环依赖）
+      const { DEFAULT_SYSTEM } = await import('./ai.js');
+      const toolSchemas = JSON.stringify(TOOL_DEFS.map((t) => ({ name: t.name, description: t.description, parameters: t.parameters })));
+      const window = resolveWindow(win);
+      const sysTokens = estimateTokens(DEFAULT_SYSTEM);
+      const toolTokens = estimateTokens(toolSchemas);
+      const total = sysTokens + toolTokens;
+      return {
+        kind: 'baseline',
+        system: { chars: DEFAULT_SYSTEM.length, tokens: sysTokens },
+        tools: { count: TOOL_DEFS.length, chars: toolSchemas.length, tokens: toolTokens },
+        total,
+        window,
+        occupancy: Number((total / window).toFixed(4)),
+        note: '固定密度启发式估算（≈），非精确 tokenizer 计数',
+      };
     }
     default:
       throw new Error(`未知工具: ${tool}`);

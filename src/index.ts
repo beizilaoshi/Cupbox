@@ -31,6 +31,7 @@ import {
   type AiProvider,
 } from './core/ai.js';
 import { VERSION } from './version.js';
+import { runTool } from './core/toolkit.js';
 import {
   addFact, listFacts, forgetFacts, recall,
   loadRuntimeMemory, saveRuntimeMemory, memoryStats,
@@ -67,6 +68,8 @@ const HELP = `cupbox v${VERSION} — 把杂活儿交给命令行和 AI
                                                            html-esc/html-unesc/json/json-min
   csv      <文件.csv|.json> [-o 输出] [--to json|csv]       CSV ↔ JSON
   zip      create <out.zip> <文件...> | extract <zip> [目录] | list <zip>
+  context  [--text 文本] [--file 路径] [--window 128000]
+                     估算上下文 token 占用（缺省 = Agent 基线开销）
 
 图片杂活:
   obfuscate <图片.png> --mode 模式 [--key 密钥] [-o 输出] [--decrypt]
@@ -368,6 +371,39 @@ async function main(): Promise<void> {
       } else {
         console.log(result);
       }
+      return;
+    }
+
+    // ---------------- context（上下文占用估算） ----------------
+    case 'context': {
+      const { values, positionals } = parse(rest, {
+        text: _string(), file: _string(), window: _string(), json: _boolean(),
+      });
+      const win = toInt(values.window, '--window');
+      let text = values.text;
+      if (text === undefined && values.file) {
+        text = await readFile(relOrAbs(values.file), 'utf8').catch((e) => die(`读取失败: ${e.message}`));
+      }
+      if (text === undefined && positionals.length) text = positionals.join(' ');
+      const r = (await runTool('context_stats', {
+        ...(text !== undefined ? { text } : {}),
+        ...(win !== undefined ? { window: win } : {}),
+      })) as Record<string, unknown>;
+      if (values.json) {
+        console.log(JSON.stringify(r, null, 2));
+        return;
+      }
+      if (r.kind === 'text') {
+        console.log(`文本: ${r.chars} 字符 ≈ ${r.tokens} tokens`);
+        console.log(`窗口: ${r.window} tokens · 占用 ${((Number(r.occupancy) * 100).toFixed(2))}%`);
+      } else {
+        const sys = r.system as { tokens: number };
+        const tools = r.tools as { count: number; tokens: number };
+        console.log(`Agent 基线开销 ≈ ${r.total} tokens（窗口 ${r.window}，占用 ${((Number(r.occupancy) * 100).toFixed(2))}%）`);
+        console.log(`  系统提示词: ${sys.tokens} tokens`);
+        console.log(`  工具 Schema: ${tools.tokens} tokens（${tools.count} 个工具）`);
+      }
+      console.log(String(r.note ?? ''));
       return;
     }
 

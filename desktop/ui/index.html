@@ -34,7 +34,7 @@
         <div class="side-foot"><button class="foot-btn" id="btn-settings"><span data-icon="settings"></span> 设置与外观</button><span class="local-note"><i></i> 历史记录保存在本机</span></div>
       </nav>
       <main class="stage chat-stage" id="stage">
-        <div class="chat-head"><div class="breadcrumb">工作台 <span>/</span> <span class="chat-title" id="chat-title">新任务</span></div><div class="chat-head-actions"><button class="ghost-btn" id="export-chat" title="导出为 Markdown">导出</button><button class="ghost-btn" id="btn-clear" title="清空当前任务的消息">清空对话</button></div></div>
+        <div class="chat-head"><div class="breadcrumb">工作台 <span>/</span> <span class="chat-title" id="chat-title">新任务</span></div><div class="chat-head-actions"><button class="ghost-btn" id="btn-context" title="查看上下文占用、趋势与事件">上下文</button><button class="ghost-btn" id="export-chat" title="导出为 Markdown">导出</button><button class="ghost-btn" id="btn-clear" title="清空当前任务的消息">清空对话</button></div></div>
         <section id="workflow-board" class="workflow-board" hidden aria-label="多模型子项目"><header class="workflow-board-header"><b>协作工作台</b><span id="workflow-count" role="status"></span><button id="workflow-collapse" class="ghost-btn">收起</button><button id="workflow-dismiss" class="ghost-btn" title="结果也会保存在对话中">隐藏</button></header><div id="workflow-live-grid" class="workflow-grid"></div></section><div class="chat-scroll" id="chat-scroll" role="log" aria-label="任务对话" aria-live="polite"><div id="chat-empty"></div></div>
         <div class="composer-wrap">
           <div class="chat-input">
@@ -272,6 +272,34 @@
         <button type="button" class="btn-ghost2" id="btn-upd-later">稍后提醒</button>
       </div>
       <div class="upd-foot">数据源：GitHub Releases → npm registry · 本机静默后仍可点顶栏徽标查看 · <code>CUPBOX_UPDATE_DISABLE=1</code> 可关闭检查</div>
+    </div>
+
+    <!-- 上下文洞察弹窗（成分分解 / 占用趋势 / 事件） -->
+    <div class="modal-scrim" id="ctx-scrim" hidden></div>
+    <div class="modal ctx-modal glass" id="ctx-modal" hidden role="dialog" aria-modal="true" aria-label="上下文洞察">
+      <div class="upd-hero ctx-hero">
+        <span class="upd-spark" aria-hidden="true">◧</span>
+        <div class="upd-hero-txt">
+          <div class="upd-kicker">CONTEXT · 上下文洞察</div>
+          <div class="upd-title">这一轮对话占了多少</div>
+        </div>
+        <button type="button" class="ghost-btn" id="ctx-close" title="关闭">✕</button>
+      </div>
+      <div class="ctx-kpis" id="ctx-kpis"></div>
+      <div class="ctx-section">
+        <div class="ctx-sec-head"><b>成分分解</b><span class="chip" id="ctx-window">窗口 128k</span></div>
+        <div class="ctx-bar" id="ctx-bar" role="img" aria-label="上下文成分占比"></div>
+        <div class="ctx-legend" id="ctx-legend"></div>
+      </div>
+      <div class="ctx-section">
+        <div class="ctx-sec-head"><b>占用趋势</b><span class="chip" id="ctx-trend-count">0 次请求</span></div>
+        <div class="ctx-trend" id="ctx-trend"></div>
+      </div>
+      <div class="ctx-section">
+        <div class="ctx-sec-head"><b>事件</b><span class="chip" id="ctx-event-count">0</span></div>
+        <div class="ctx-events" id="ctx-events"></div>
+      </div>
+      <div class="upd-foot" id="ctx-note"></div>
     </div>
   </div>
 

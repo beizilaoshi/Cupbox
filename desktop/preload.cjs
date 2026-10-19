@@ -40,6 +40,8 @@ contextBridge.exposeInMainWorld('cupbox', {
   sessionsDelete: (id) => ipcRenderer.invoke('sessions:delete', id),
   sessionsClear: (id) => ipcRenderer.invoke('sessions:clear', id),
   chatSend: (payload) => ipcRenderer.invoke('chat:send', payload),
+  // 上下文洞察（成分分解 / 趋势 / 事件）
+  contextStats: (sessionId) => ipcRenderer.invoke('context:stats', sessionId),
   // 版本检测 / 更新公告 / 外链（GitHub 下载源）
   updateCheck: (force) => ipcRenderer.invoke('update:check', Boolean(force)),
   openExternal: (url) => ipcRenderer.invoke('open:external', url),

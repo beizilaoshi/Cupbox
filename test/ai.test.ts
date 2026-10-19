@@ -109,10 +109,10 @@ describe('desktop AI routing',()=>{
 });
 
 describe('toolkit 统一编排层', () => {
-  it('TOOL_DEFS 18 项：名字唯一、说明与 schema 齐全', () => {
-    expect(TOOL_DEFS).toHaveLength(18);
+  it('TOOL_DEFS 19 项：名字唯一、说明与 schema 齐全', () => {
+    expect(TOOL_DEFS).toHaveLength(19);
     const names = new Set(TOOL_DEFS.map((t) => t.name));
-    expect(names.size).toBe(18);
+    expect(names.size).toBe(19);
     for (const t of TOOL_DEFS) {
       expect(t.description.length).toBeGreaterThan(10);
       expect(t.parameters).toBeTruthy();

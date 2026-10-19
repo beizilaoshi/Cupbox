@@ -7,6 +7,17 @@
 
 > 📖 **English (optional): [CHANGELOG.en.md](./CHANGELOG.en.md)**
 
+## [1.1.0] - 2026-10-19
+
+### 上下文洞察（能力方向致敬 [dsh-context](https://github.com/bowenliang123/dsh-context)）
+
+- 新增 `src/core/context.ts`：token 固定密度估算（中文≈1.5 字符/token、西文≈4 字符/token）、**六成分分解**（系统提示词 / 工具 Schema / 用户消息 / 注入上下文 / 助手回复 / 工具结果）、趋势点与事件的追加与裁剪、紧凑 token 展示。
+- 新增 CLI `cupbox context [--text 文本] [--file 路径] [--window 128000] [--json]`：估算文本占用；不传文本时返回 **Agent 基线开销**（系统提示词 + 全部工具 Schema 合计）。
+- MCP 新增 `context_stats` 工具（只读），**工具总数 20 → 21**；编排层 `TOOL_DEFS` 同步至 19。
+- AI 调用开始采集**提供方上报的真实 usage**：`aiChat` 读取 Anthropic `input_tokens/output_tokens` 与 OpenAI `prompt_tokens/completion_tokens`，`aiAgent` 循环内累加并返回请求数。
+- 桌面版：每轮对话把成分分解、占用趋势（含真实 in/out）、四类事件（注入 / 压缩 / 切换模型 / 切换模式）写进会话记录；对话页新增「**上下文**」按钮，弹窗展示 KPI（最近占用、累计请求、累计输入 / 输出）、六成分堆叠条、逐请求趋势柱与事件流；`CUPBOX_CONTEXT_WINDOW` 可调整窗口大小。
+- 估算为启发式（≈），非精确 tokenizer 计数，仅作占用参考。
+
 ## [1.0.2] - 2026-10-19
 
 ### 存储与模型管理

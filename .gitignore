@@ -12,3 +12,5 @@ desktop-smoke*.png
 .vs/
 output/
 .DS_Store
+.tmp-*/
+.tmp-smoke/

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > 📖 **中文文档（默认）：[CHANGELOG.md](./CHANGELOG.md)**
 
+## [1.1.0] - 2026-10-19
+
+### Context insight (capability direction inspired by [dsh-context](https://github.com/bowenliang123/dsh-context))
+
+- Added `src/core/context.ts`: fixed-density token estimation (≈1.5 chars/token for CJK, ≈4 for others), **six-part breakdown** (system prompt / tool schemas / user messages / injected context / assistant replies / tool results), capped trend points and events, compact token formatting.
+- Added CLI `cupbox context [--text TEXT] [--file PATH] [--window 128000] [--json]`: estimates text occupancy; with no text it returns the **Agent baseline overhead** (system prompt + all tool schemas).
+- Added MCP tool `context_stats` (read-only) — **tool count 20 → 21**; orchestration layer `TOOL_DEFS` now has 19 entries.
+- AI calls now capture **provider-reported usage**: `aiChat` reads Anthropic `input_tokens/output_tokens` and OpenAI `prompt_tokens/completion_tokens`; `aiAgent` accumulates them across the loop and returns the request count.
+- Desktop: each turn stores the breakdown, occupancy trend (including real in/out tokens) and four event kinds (inject / compact / model switch / mode switch) in the session record; a new **"Context"** button in the chat header opens an insight panel with KPIs, a stacked composition bar, a per-request trend chart and the event feed. `CUPBOX_CONTEXT_WINDOW` adjusts the window size.
+- Estimates are heuristic (≈), not exact tokenizer counts, meant as a rough occupancy reference.
+
 ## [1.0.2] - 2026-10-19
 
 ### Storage & model management

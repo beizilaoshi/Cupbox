@@ -96,6 +96,30 @@
 
 记忆存储全在 `~/.cupbox/memory/`（`CUPBOX_HOME` 可重定向），追加式、可 `forget`、不上传。
 
+### 上下文洞察流水线（v1.1.0，能力方向致敬 dsh-context）
+
+```
+chat:send 成功落盘前
+  ├─ contextBreakdown({system, toolSchemas, injected, messages})
+  │    六成分固定序：系统提示词 → 工具 Schema → 用户消息
+  │                 → 注入上下文 → 助手回复 → 工具结果
+  │    total = Σ各成分（估算 tokens），occupancy = total / window
+  ├─ pushTrend(caps 200)：tokens + 提供方 usage(prompt/completion) + label
+  ├─ pushEvent(caps 100)：
+  │    inject  注入记忆/摘要变化（delta = token 差）
+  │    compact 压缩历史（delta 为负，按 chars/4 折算）
+  │    switch  模型切换；mode 工作模式切换
+  └─ sess.context = ctx → writeSession（随会话持久化）
+
+渲染进程「上下文」按钮 → api.contextStats(sessionId)
+  → 主进程读会话 record + runTool('context_stats', {}) 基线
+  → 弹窗渲染 KPI / 六色堆叠条 / 逐请求趋势柱 / 事件流
+```
+
+- 估算密度：中文/全角 ≈ 1.5 字符 token，西文 ≈ 4 字符 token（`src/core/context.ts`），启发式（≈）非精确计数。
+- 窗口解析：显式 `--window` → 环境变量 `CUPBOX_CONTEXT_WINDOW` → 默认 128000。
+- 入口三形态：CLI `cupbox context`、MCP `context_stats`（只读）、桌面洞察面板；Agent 基线（系统提示词 + 全部工具 Schema）由 toolkit 动态 import `ai.js` 计算，避免循环依赖。
+
 目录结构：
 
 ```
@@ -103,12 +127,12 @@ cupbox/
 ├── src/                # TS 源码（CLI / MCP / core / util）
 ├── dist/               # 构建产物（三形态共用）
 ├── desktop/            # 可视化桌面壳
-│   ├── main.js         # Electron 主进程 + 16 工具 IPC 分发（含 AI / 设置）
+│   ├── main.js         # Electron 主进程 + 21 工具 IPC 分发（含 AI / 设置 / 上下文洞察）
 │   ├── preload.cjs     # contextBridge（沙箱，最小 API 面）
 │   ├── ui/             # 纯静态仪表盘（index/styles/app）
 │   └── pack.mjs        # 极简打包器 → exe
 ├── docs/ARCHITECTURE.md
-├── test/               # 186 用例（vitest）
+├── test/               # 271 用例（vitest）
 └── release/            # 打包产物（gitignore）
 ```
 

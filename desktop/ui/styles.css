@@ -60,3 +60,37 @@
 /* 侧栏「模型管理」入口 */
 .nav-models{margin-left:auto;font-size:9.5px;color:var(--txt-faint);background:var(--raised);border-radius:5px;padding:2px 7px;white-space:nowrap}
 #btn-models-nav:hover .nav-models{color:var(--accent)}
+
+/* 上下文洞察弹窗 */
+.ctx-modal{width:660px}
+.ctx-hero .upd-title{font-size:17px}
+.ctx-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px 26px 4px}
+.ctx-kpi{background:var(--surface);border:1px solid var(--stroke);border-radius:8px;padding:11px 13px;min-width:0}
+.ctx-kpi b{display:block;font-size:18px;font-weight:600;letter-spacing:-.4px;color:var(--txt);font-variant-numeric:tabular-nums}
+.ctx-kpi span{display:block;font-size:10px;color:var(--txt-faint);margin-top:4px}
+.ctx-kpi em{font-style:normal;font-size:10px;color:var(--accent)}
+.ctx-section{padding:14px 26px 0}
+.ctx-sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.ctx-sec-head b{font-size:12px;font-weight:600;color:var(--txt-dim)}
+.ctx-bar{display:flex;height:22px;border-radius:6px;overflow:hidden;background:var(--raised);border:1px solid var(--stroke)}
+.ctx-bar i{display:block;min-width:0;transition:width .25s}
+.ctx-bar i:first-child{border-radius:5px 0 0 5px}
+.ctx-legend{display:grid;grid-template-columns:repeat(3,1fr);gap:5px 14px;margin-top:10px}
+.ctx-leg{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--txt-dim);min-width:0}
+.ctx-leg i{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.ctx-leg b{color:var(--txt);font-weight:600;font-variant-numeric:tabular-nums}
+.ctx-leg span{color:var(--txt-faint);margin-left:auto;font-variant-numeric:tabular-nums}
+.ctx-trend{display:flex;align-items:flex-end;gap:3px;height:76px;padding:8px 8px 4px;background:var(--surface);border:1px solid var(--stroke);border-radius:8px;overflow-x:auto}
+.ctx-trend i{display:block;flex:1;min-width:7px;max-width:26px;border-radius:3px 3px 0 0;background:linear-gradient(180deg,var(--accent),#82a38a55);opacity:.9;cursor:default}
+.ctx-trend .ctx-empty{align-self:center;margin:auto;font-size:11px;color:var(--txt-faint)}
+.ctx-events{max-height:150px;overflow:auto;display:flex;flex-direction:column;gap:6px;padding-right:4px}
+.ctx-ev{display:flex;align-items:center;gap:9px;font-size:11px;color:var(--txt-dim);background:var(--surface);border:1px solid var(--stroke);border-radius:7px;padding:7px 11px}
+.ctx-ev .ctx-ev-kind{flex-shrink:0;font-size:10px;padding:1.5px 7px;border-radius:4px;background:var(--raised);color:var(--txt)}
+.ctx-ev .ctx-ev-kind[data-kind=inject]{color:var(--accent)}
+.ctx-ev .ctx-ev-kind[data-kind=compact]{color:var(--warn)}
+.ctx-ev .ctx-ev-kind[data-kind=switch],.ctx-ev .ctx-ev-kind[data-kind=mode]{color:var(--ok)}
+.ctx-ev .ctx-ev-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ctx-ev .ctx-ev-time{color:var(--txt-faint);font-variant-numeric:tabular-nums;flex-shrink:0}
+.ctx-empty-note{font-size:11px;color:var(--txt-faint);padding:6px 2px}
+.ctx-modal .upd-foot{margin-top:14px}
+@media(max-width:800px){.ctx-kpis{grid-template-columns:repeat(2,1fr)}.ctx-legend{grid-template-columns:repeat(2,1fr)}}

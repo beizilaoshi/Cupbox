@@ -662,6 +662,28 @@ export function buildServer(): McpServer {
     },
   );
 
+  reg(
+    'context_stats',
+    {
+      title: '上下文占用估算',
+      description:
+        '估算上下文 token 占用（固定密度启发式，≈）。不带 text 返回 Cupbox Agent 基线开销（系统提示词 + 全部工具 Schema）；带 text 返回该文本的 token 数与窗口占比。可用于判断一段内容是否会挤爆上下文窗口。',
+      inputSchema: {
+        text: z.string().optional().describe('要估算的文本；省略则估算 Agent 基线开销'),
+        window: z.number().int().positive().optional().describe('上下文窗口 token 数，默认 128000'),
+      },
+      readOnly: true,
+    },
+    async (a) => {
+      const toolkit = await import('./core/toolkit.js');
+      const r = (await toolkit.runTool('context_stats', {
+        ...(a.text !== undefined ? { text: a.text } : {}),
+        ...(a.window !== undefined ? { window: a.window } : {}),
+      })) as Record<string, unknown>;
+      return JSON.stringify(r, null, 2);
+    },
+  );
+
   return server;
 }
 

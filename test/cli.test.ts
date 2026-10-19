@@ -39,7 +39,7 @@ describe.skipIf(!built)('CLI 冒烟', () => {
   it('help 列出所有命令', async () => {
     const r = await runCli(['help']);
     expect(r.code).toBe(0);
-    for (const c of ['search', 'rename', 'organize', 'ocr', 'clip', 'mcp']) {
+    for (const c of ['search', 'rename', 'organize', 'ocr', 'clip', 'mcp', 'context']) {
       expect(r.stdout).toContain(c);
     }
   });
@@ -62,6 +62,27 @@ describe.skipIf(!built)('CLI 冒烟', () => {
     const r = await runCli(['codec', 'b64e', '你好']);
     expect(r.code).toBe(0);
     expect(r.stdout.trim()).toBe(Buffer.from('你好', 'utf8').toString('base64'));
+  });
+
+  it('context --text 估算 token（JSON）', async () => {
+    const r = await runCli(['context', '--text', '中'.repeat(30), '--json']);
+    expect(r.code).toBe(0);
+    const j = JSON.parse(r.stdout);
+    expect(j.kind).toBe('text');
+    expect(j.chars).toBe(30);
+    expect(j.tokens).toBe(20); // 30 CJK ÷ 1.5
+    expect(j.window).toBe(128000);
+    expect(j.occupancy).toBeGreaterThan(0);
+  });
+
+  it('context 无文本时给出 Agent 基线开销', async () => {
+    const r = await runCli(['context', '--json']);
+    expect(r.code).toBe(0);
+    const j = JSON.parse(r.stdout);
+    expect(j.kind).toBe('baseline');
+    expect(j.tools.count).toBeGreaterThanOrEqual(19);
+    expect(j.total).toBe(j.system.tokens + j.tools.tokens);
+    expect(j.window).toBe(128000);
   });
 
   it('search 内容命中', async () => {
