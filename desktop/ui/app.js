@@ -903,7 +903,7 @@ async function fillApiForm() {
     set("api-temp", c.temperature);
     set("api-turns", c.maxTurns);
   } catch { /* 读取失败保持占位 */ }
-  // 储存管理：显示数据目录（v1.2.0 起默认 文档/Cupbox）
+  // 储存管理：显示数据目录（v1.0.2 起默认 文档/Cupbox）
   try {
     const s = await api.storageInfo?.();
     if (s && sequence === apiFillSequence) {
@@ -1228,6 +1228,8 @@ async function boot() {
     document.querySelectorAll('.nav-count').forEach((el) => { el.textContent = String(info.tools ?? 18); });
     const av = $("about-ver");
     if (av) av.textContent = `v${info.version}`;
+    const hv = $("startup-hero-version");
+    if (hv) hv.textContent = info.version;
   } catch { /* info 不可用忽略 */ }
 
   // 版本检测：静默首检 → 有新版则顶栏徽标 + 一次性更新公告

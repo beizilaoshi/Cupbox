@@ -7,7 +7,7 @@
 
 > 📖 **English (optional): [CHANGELOG.en.md](./CHANGELOG.en.md)**
 
-## [1.2.0] - 2026-10-19
+## [1.0.2] - 2026-10-19
 
 ### 存储与模型管理
 
@@ -22,8 +22,6 @@
 - `aiAgent` 新增 `onToolStart` 回调（早于完成事件），主进程经 `chat:tool` IPC 推送到渲染进程（phase=start/done），`runId` 过滤防串台。
 - **AI 回复改为气泡样式**：卡片底色 + 左下尖角 + 标识头，与用户气泡对偶；带入场动画，错误气泡红色描边。
 
-## [1.1.0] - 2026-10-19
-
 ### 三层记忆与上下文压缩（架构参考 [dsh-mnemon](https://github.com/omdsh-dev/dsh-mnemon)）
 
 - 新增 `src/core/memory.ts`：运行时记忆（用户画像 / 协作约定，常驻注入 system prompt）、长期事实（`facts.jsonl` 追加式存储，中文二元组 + 拉丁词相关性召回）、会话摘要三层。
@@ -32,8 +30,6 @@
 - MCP 新增 `memory_remember` / `memory_recall` / `memory_manage` / `memory_profile` 四个工具，**工具总数 16 → 20**；编排层 `TOOL_DEFS` 同步至 18（桌面 Agent 可直接调用记忆工具跨会话记事）。
 - 桌面版 `chat:send` 每次对话自动注入相关记忆；触发压缩时对话框显示「已压缩 N 条早前消息为摘要」提示条。
 - 修复 `cupbox memory add <文本> --source <标签>` 时标签值被误并入文本的解析问题。
-
-## [1.0.2] - 2026-10-18
 
 ### 多模型与项目工作流
 

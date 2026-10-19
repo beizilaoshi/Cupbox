@@ -434,7 +434,7 @@ cupbox ai agent "Find every TODO in this project and summarize them" --max-turns
 cupbox ai config                 # show current config (key masked)
 ```
 
-- The config lives in `Documents/Cupbox/config.json` (mode 0600; since v1.2.0 the OS Documents folder is the default, the legacy `~/.cupbox` migrates on first launch, `CUPBOX_HOME` still overrides); **the key stays on your machine and is never uploaded**;
+- The config lives in `Documents/Cupbox/config.json` (mode 0600; since v1.0.2 the OS Documents folder is the default, the legacy `~/.cupbox` migrates on first launch, `CUPBOX_HOME` still overrides); **the key stays on your machine and is never uploaded**;
 - Env vars `CUPBOX_AI_API_KEY` / `CUPBOX_AI_BASE_URL` / `CUPBOX_AI_MODEL` / `CUPBOX_AI_PROVIDER` override the file;
 - Inside the agent, `rename` / `organize` are **always dry-run previews** (8 rounds by default, 10 max) and `run` still requires an allowlist — **the AI never gets more permissions than a human user**.
 
@@ -510,8 +510,8 @@ A local Electron desktop app rebuilt as a workbench (since v1.0.0):
 - **Tool drawer** — the former 16-tool form UI folded into a right-side drawer, grouped by data / files / images / system, with dynamic forms and a result panel (pretty JSON, inline image preview).
 - **Settings modal** — four tabs: **API settings** (protocol / base URL / model / key / temperature / agent rounds), **Theme** (dark · light · follow-system × aurora / mint / amber / rose, applied instantly and persisted), **Plugins** (each tool toggle affects both drawer visibility and the Agent's callable tool set), and **About & Updates** (version info, one-click **check the GitHub repository** for new releases with inline results, plus repository / Releases / CHANGELOG shortcuts).
 - **Update check & release announcement** (v1.0.1) — a silent startup check lights up a breathing "vX.Y.Z available" badge in the title bar and pops a one-time announcement (version diff + release notes + **Download on GitHub** / View changelog / Remind later); click the version chip or use **Settings → About & Updates** for a manual check, dismissed versions stay reachable from the badge, `CUPBOX_UPDATE_DISABLE=1` turns checking off.
-- **Data defaults to your Documents folder** (v1.2.0) — config / keys / model library / sessions / memory all live in `Documents/Cupbox`; the **API storage card** in Settings → Model connection opens the folder or reveals `config.json` in one click. The legacy `~/.cupbox` migrates on first launch (copy-only, never overwrites; `CUPBOX_HOME` overrides), and the sidebar **Model management** entry jumps straight to multi-model + capability multi-select.
-- **Live tool-call stream + assistant bubbles** (v1.2.0) — while the agent runs a task each tool call appears as a card in real time (name / args / executing animation → duration or failure detail), then the final message's full trace takes over; assistant replies are now bubble cards mirroring the user's, with an entrance animation.
+- **Data defaults to your Documents folder** (v1.0.2) — config / keys / model library / sessions / memory all live in `Documents/Cupbox`; the **API storage card** in Settings → Model connection opens the folder or reveals `config.json` in one click. The legacy `~/.cupbox` migrates on first launch (copy-only, never overwrites; `CUPBOX_HOME` overrides), and the sidebar **Model management** entry jumps straight to multi-model + capability multi-select.
+- **Live tool-call stream + assistant bubbles** (v1.0.2) — while the agent runs a task each tool call appears as a card in real time (name / args / executing animation → duration or failure detail), then the final message's full trace takes over; assistant replies are now bubble cards mirroring the user's, with an entrance animation.
 
 It shares the exact same engines and safety defaults as the CLI and MCP server (dry-run, allowlists, and extraction pre-flights all active).
 

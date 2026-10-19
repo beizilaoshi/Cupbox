@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > 📖 **中文文档（默认）：[CHANGELOG.md](./CHANGELOG.md)**
 
-## [1.2.0] - 2026-10-19
+## [1.0.2] - 2026-10-19
 
 ### Storage & model management
 
@@ -22,8 +22,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `aiAgent` gained an `onToolStart` callback (fires before completion); the main process pushes `chat:tool` IPC events (phase=start/done) to the renderer, filtered by `runId`.
 - **Assistant replies are now bubbles**: card surface with a bottom-left tail and a header, mirroring the user bubble, with an entrance animation and a red-outlined error bubble.
 
-## [1.1.0] - 2026-10-19
-
 ### Three-tier memory & context compaction (architecture inspired by [dsh-mnemon](https://github.com/omdsh-dev/dsh-mnemon))
 
 - Added `src/core/memory.ts`: runtime memory (user profile & working agreements, always injected into the system prompt), long-term facts (`facts.jsonl`, relevance-recalled via CJK bigrams + Latin tokens), and session summaries.
@@ -33,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Desktop `chat:send` now auto-injects relevant memories into every conversation and shows a "compacted N earlier messages" chip when compaction triggers.
 - Fixed `cupbox memory add <text> --source <tag>` parsing where the tag value leaked into the text.
 
-## [1.0.2] - 2026-10-18
+### Multi-model & project workflows (1.0.2)
 
 - Added independent model profiles and text, vision, image, speech and video routing; multi-model mode is off by default.
 - Added sequential, parallel project and review workflows with explicit worker selection, progress panes, cancellation and per-task retries.

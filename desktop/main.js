@@ -183,7 +183,7 @@ ipcMain.handle('open:external', async (_event, url) => {
 /* ---------- 桌面偏好（~/.cupbox/desktop.json，与 core 配置同目录） ---------- */
 
 function cupboxHome() {
-  // v1.2.0：数据默认存「文档/Cupbox」；CUPBOX_HOME 保持整体覆盖（与 CLI/MCP 同语义）
+  // v1.0.2：数据默认存「文档/Cupbox」；CUPBOX_HOME 保持整体覆盖（与 CLI/MCP 同语义）
   return dataHome(app.getPath('documents'));
 }
 const PREFS_DEFAULT = { multiModel:false,workflow:'direct',parallelTasks:2, approvalMode:'smart',executionEnvironment:'native', theme: 'light', accent: 'aurora', mode: 'ask', workspace: '', disabledTools: [], background: 'sakura', backgroundVeil: 72, backgroundBlur: 0, backgroundFit: 'cover', startupEnabled:true, startupStyle:'orbit', startupDuration:1.6, startupCaption:'让灵感，轻轻启程。' };
@@ -491,7 +491,7 @@ app.whenReady().then(async () => {
   await createWindow();
 });
 
-/* ---------- 存储管理（v1.2.0：数据默认在 文档/Cupbox） ---------- */
+/* ---------- 存储管理（v1.0.2：数据默认在 文档/Cupbox） ---------- */
 ipcMain.handle('storage:info', () => ({
   home: cupboxHome(),
   legacy: path.join(app.getPath('home'), '.cupbox'),
