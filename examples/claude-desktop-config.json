@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "cupbox": {
+      "command": "cupbox",
+      "args": ["mcp"]
+    }
+  }
+}

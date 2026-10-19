@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+*.log
+*.tgz
+diag*.mjs
+.tmp-*.mjs
+release/
+desktop-smoke*.png
+.vscode/
+.idea/
+.DS_Store
