@@ -9,4 +9,6 @@ release/
 desktop-smoke*.png
 .vscode/
 .idea/
+.vs/
+output/
 .DS_Store
