@@ -1,12 +1,18 @@
 import {describe,it,expect,afterAll,beforeAll} from 'vitest';
-import {mkdtemp,mkdir,writeFile,readFile,rm,symlink} from 'node:fs/promises';
+import {mkdtemp,mkdir,writeFile,readFile,rm,symlink,realpath} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
+import {spawnSync} from 'node:child_process';
 import {EventEmitter,once} from 'node:events';
 import {classifyTool,needsApproval,sandboxArgs} from '../desktop/execution-policy.js';
 import {createToolExecution,restrictedRun} from '../desktop/tool-execution.js';
+// 受限沙箱依赖 Node 的 --permission 权限模型（22.x 起可用；18/20 没有该选项）：探测支持性，不支持就跳过相关用例
+const hasPermissionModel=spawnSync(process.execPath,['--permission','--eval','process.exit(0)'],{stdio:'ignore'}).status===0;
 let home:string,folder:string,outside:string;
-beforeAll(async()=>{home=await mkdtemp(path.join(tmpdir(),'cupbox-execution-'));folder=path.join(home,'sandbox');outside=path.join(home,'outside.txt');await mkdir(folder);await writeFile(outside,'outside-secret');await writeFile(path.join(folder,'a.txt'),'hello');});
+beforeAll(async()=>{
+  // 归一化真实路径：Windows CI 的临时目录可能是 8.3 短路径（RUNNER~1），与 realpath 结果不一致会导致断言与路径分类错乱
+  home=await realpath(await mkdtemp(path.join(tmpdir(),'cupbox-execution-')));folder=path.join(home,'sandbox');outside=path.join(home,'outside.txt');await mkdir(folder);await writeFile(outside,'outside-secret');await writeFile(path.join(folder,'a.txt'),'hello');
+});
 afterAll(async()=>{await rm(home,{recursive:true,force:true});});
 describe('desktop permission decisions',()=>{
   it('request approval includes reads',()=>expect(needsApproval('ask','hash',{text:'hi'})).toBe(true));
@@ -20,9 +26,9 @@ describe('sandbox boundaries',()=>{
   it('rejects absolute paths outside the sandbox',async()=>{await expect(sandboxArgs('hash',{file:outside},folder)).rejects.toThrow('沙箱');});
   it('rejects system tools even with full approval mode',async()=>{await expect(sandboxArgs('run',{command:'echo x'},folder)).rejects.toThrow('本机运行');});
   it('rejects symbolic link escape',async()=>{const linked=path.join(folder,'escape');await symlink(home,linked,'junction');try{await expect(sandboxArgs('hash',{file:path.join(linked,'outside.txt')},folder)).rejects.toThrow('链接');}finally{await rm(linked,{force:true});}});
-  it('runs a real tool in a permission restricted child',async()=>{const r=await restrictedRun('hash',{text:'hello'},folder);expect(r.sha256).toBe('2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824');});
-  it('runtime itself denies external file reads',async()=>{await expect(restrictedRun('hash',{file:outside},folder)).rejects.toThrow();});
-  it('runtime itself denies subprocesses',async()=>{await expect(restrictedRun('run',{command:'echo denied',allowPrefixes:'echo'},folder)).rejects.toThrow();});
+  it.runIf(hasPermissionModel)('runs a real tool in a permission restricted child',async()=>{const r=await restrictedRun('hash',{text:'hello'},folder);expect(r.sha256).toBe('2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824');});
+  it.runIf(hasPermissionModel)('runtime itself denies external file reads',async()=>{await expect(restrictedRun('hash',{file:outside},folder)).rejects.toThrow();});
+  it.runIf(hasPermissionModel)('runtime itself denies subprocesses',async()=>{await expect(restrictedRun('run',{command:'echo denied',allowPrefixes:'echo'},folder)).rejects.toThrow();});
 });
 class Sender extends EventEmitter{id=1;isDestroyed(){return false;}send(name:string,data:unknown){this.emit(name,data);}}
 describe('approval enforcement',()=>{

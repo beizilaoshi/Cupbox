@@ -1,9 +1,10 @@
-import sharp from 'sharp';
 import pixelmatch from 'pixelmatch';
 import { readFile } from 'node:fs/promises';
 import { fail } from './files.js';
-const image=input=>sharp(input,{limitInputPixels:40000000,failOn:'error'});
-export async function imageTool(engine,name,a,scope){const input=await engine.resolve(a.input||a.a),meta=await image(input).metadata();if(!['png','jpeg','webp','heif','gif'].includes(meta.format))fail('E_IMAGE','只处理位图文件；不加载 SVG/PDF 外部资源');
+// sharp 原生模块按需加载：老版本 Node（如 18）缺少对应运行时，只有真正调用图片工具时才报错，不影响模块加载
+let sharpPromise;
+const loadSharp=()=>sharpPromise??=import('sharp').then(m=>m.default);
+export async function imageTool(engine,name,a,scope){const sharp=await loadSharp();const image=input=>sharp(input,{limitInputPixels:40000000,failOn:'error'});const input=await engine.resolve(a.input||a.a),meta=await image(input).metadata();if(!['png','jpeg','webp','heif','gif'].includes(meta.format))fail('E_IMAGE','只处理位图文件；不加载 SVG/PDF 外部资源');
   if(name==='image_info')return{width:meta.width,height:meta.height,format:meta.format,channels:meta.channels,dpi:meta.density,hasAlpha:meta.hasAlpha,space:meta.space,dominant:(await image(input).stats()).dominant};
   if(name==='image_sample'){const x=Math.max(0,a.x||0),y=Math.max(0,a.y||0),width=Math.min(meta.width-x,a.w||1),height=Math.min(meta.height-y,a.h||1);if(width<1||height<1)fail('E_IMAGE','采样区域越界');const buffer=await image(input).extract({left:x,top:y,width,height}).ensureAlpha().raw().toBuffer();return{region:{x,y,width,height},firstPixel:[...buffer.subarray(0,4)],dominant:(await image(input).extract({left:x,top:y,width,height}).stats()).dominant};}
   let buffer,result;
