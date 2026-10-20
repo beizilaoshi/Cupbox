@@ -109,10 +109,16 @@ describe('desktop AI routing',()=>{
 });
 
 describe('toolkit 统一编排层', () => {
-  it('TOOL_DEFS 19 项：名字唯一、说明与 schema 齐全', () => {
-    expect(TOOL_DEFS).toHaveLength(19);
+  it('大段预览压缩后仍保持有效 JSON 和 confirmToken，不截掉执行令牌',async()=>{
+    const fetch=vi.spyOn(globalThis,'fetch');let received:any;
+    fetch.mockResolvedValueOnce(new Response(JSON.stringify({choices:[{message:{content:'预览',tool_calls:[{id:'preview',type:'function',function:{name:'fs_write',arguments:'{}'}}]}}]}),{status:200}));
+    fetch.mockImplementationOnce(async(_url,options)=>{const body=JSON.parse(String(options?.body));received=JSON.parse(body.messages.find((m:any)=>m.role==='tool').content);return new Response(JSON.stringify({choices:[{message:{content:'已取得预览'}}]}),{status:200});});
+    try{await aiAgent({prompt:'预览',config:{provider:'openai-compatible',baseUrl:'https://example.test/v1',apiKey:'fake',model:'test'},tools:['fs_write'],toolDefinitions:[{name:'fs_write',description:'预览写入',parameters:{type:'object',properties:{}}}],executeTool:async()=>({ok:true,dryRun:true,diff:'large\n'.repeat(5000),confirmToken:'safe-token'})});expect(received.confirmToken).toBe('safe-token');expect(received.truncated).toBe(true);expect(received.diff.length).toBeLessThan(6000);}finally{fetch.mockRestore();}
+  });
+  it('TOOL_DEFS 20 项：名字唯一、说明与 schema 齐全', () => {
+    expect(TOOL_DEFS).toHaveLength(20);
     const names = new Set(TOOL_DEFS.map((t) => t.name));
-    expect(names.size).toBe(19);
+    expect(names.size).toBe(20);
     for (const t of TOOL_DEFS) {
       expect(t.description.length).toBeGreaterThan(10);
       expect(t.parameters).toBeTruthy();

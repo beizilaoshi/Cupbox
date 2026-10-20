@@ -18,6 +18,8 @@ export function memoryDir(): string {
 }
 
 export interface Fact {
+  projectKey?: string;
+  expires?: number;
   id: string;
   text: string;
   source: string;
@@ -76,10 +78,10 @@ async function writeFacts(facts: Fact[]): Promise<void> {
   const body = facts.map((f) => JSON.stringify(f)).join('\n');
   await writeFile(path.join(dir, 'facts.jsonl'), body ? `${body}\n` : '', 'utf8');
 }
-export async function addFact(text: string, source = 'manual'): Promise<Fact> {
+export async function addFact(text: string, source = 'manual', options: {projectKey?:string;ttl?:number} = {}): Promise<Fact> {
   const clean = String(text ?? '').trim();
   if (!clean) throw new Error('记忆内容不能为空');
-  const fact: Fact = { id: `f-${Date.now()}-${randomUUID().slice(0, 6)}`, text: clean, source, createdAt: new Date().toISOString() };
+  const fact: Fact = { id: `f-${Date.now()}-${randomUUID().slice(0, 6)}`, text: clean, source, createdAt: new Date().toISOString(),...(options.projectKey?{projectKey:options.projectKey}:{}),...(options.ttl?{expires:Date.now()+options.ttl*1000}:{}) };
   const facts = await listFacts();
   facts.push(fact);
   await writeFacts(facts);
@@ -126,9 +128,10 @@ export interface Recall {
 const FACT_CAP = 3;
 const FACT_CHARS = 240;
 /** 按查询召回（运行时常驻 + 相关事实 TopN）。 */
-export async function recall(query: string, limit = FACT_CAP): Promise<Recall> {
+export async function recall(query: string, limit = FACT_CAP, projectKey?:string): Promise<Recall> {
   const runtime = await loadRuntimeMemory();
   const scored = (await listFacts())
+    .filter(f=>(!f.projectKey||f.projectKey===projectKey)&&(!f.expires||f.expires>Date.now()))
     .map((f) => ({ f, s: scoreFact(query, f) }))
     .filter((x) => x.s > 0)
     .sort((a, b) => b.s - a.s || (a.f.createdAt < b.f.createdAt ? 1 : -1))
@@ -139,8 +142,8 @@ export async function recall(query: string, limit = FACT_CAP): Promise<Recall> {
 }
 
 /** 生成注入 system 的记忆块（无内容时返回 null）。query 为空时只注入运行时记忆。 */
-export async function memoryPromptBlock(query?: string): Promise<string | null> {
-  const { runtime, facts } = await recall(query ?? '');
+export async function memoryPromptBlock(query?: string, projectKey?:string): Promise<string | null> {
+  const { runtime, facts } = await recall(query ?? '', FACT_CAP, projectKey);
   const parts: string[] = [];
   if (runtime.user) parts.push(`【用户画像 / 偏好】\n${runtime.user.slice(0, 1500)}`);
   if (runtime.memory) parts.push(`【协作记忆】\n${runtime.memory.slice(0, 1500)}`);
@@ -154,6 +157,7 @@ export async function memoryPromptBlock(query?: string): Promise<string | null> 
 /* ---------------- 会话压缩 ---------------- */
 
 export interface CompactionOptions {
+  signal?: AbortSignal;
   /** 摘要所用模型配置；缺密钥时走确定性降级。 */
   config?: AiConfig;
   /** 历史总字符超过该值才压缩（默认 24000）。 */
@@ -215,6 +219,7 @@ export async function compactHistory(messages: ChatTurn[], opts: CompactionOptio
     opts.summarize ??
     (async (text: string): Promise<string> => {
       const r = await aiChat({
+        signal: opts.signal,
         ...(opts.config ? { config: opts.config } : {}),
         messages: [
           {

@@ -7,7 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > 📖 **中文文档（默认）：[CHANGELOG.md](./CHANGELOG.md)**
 
-## [1.1.0] - 2026-10-19
+## [1.0.2] - 2026-10-20
+
+### Windows installer
+
+- Added a complete offline installer, a Chinese branded welcome page, light/dark sakura wizard images, step hints, and a quick-start walkthrough.
+- Optional install location, Start-menu and desktop shortcuts; in-place upgrade and uninstall preserve user conversations and configuration, and no auto-start entry is added.
+- Added `npm run pack:installer` with SHA256 checksum output; the installer builds into its own staging directory and no longer clears the whole release folder. Version stays at 1.0.2.
+- Installation notes and the current code-signing status are documented in docs/WINDOWS-INSTALLER.md.
+
+### Free models, chat model picker & effort slider
+
+- Completed the free-model catalog refresh, the global toggle plus per-model toggles, minimal connection checks, and the "use in chat" entry; unavailable channels are never allowed through, and turning models off never silently switches providers.
+- The model button in the input box is now a searchable grouped menu for direct switching; added a model-aware effort slider with per-model memory that persists and restores per-session choices.
+- Effort maps to real OpenAI / DeepSeek / OpenRouter parameters; unknown models keep their defaults or accept an explicit override. Free requests never reuse paid API keys, and the cancellation signal is propagated into the network layer.
+- The interaction references dsh-codex-effort-slider, adapted independently to the existing desktop UI; reduced-motion remains respected and the version stays at 1.0.2. See docs/CHAT-MODELS-AND-EFFORT.md.
+
+### Feature illustrations & icon motion
+
+- Added four transparent feature illustrations used by the home quick actions, tool categories, search empty state, and model-collaboration guidance.
+- Settings, notifications, folder, tool and search icons respond to hover and keyboard focus; copying shows a brief checkmark, and sub-task icons reflect real run states.
+- Honors the system reduced-motion setting while keeping text feedback; no network-hosted icons or animation dependencies are introduced.
+- Assets and final prompts are documented in docs/FEATURE-VISUALS.md.
+
+### UI & risk interactions
+
+- Redesigned the default startup sequence with a new "sakura clear-window" illustration, keeping local custom media and reduced-motion support.
+- Added tiered notification cards and a notification center; errors are dismissed manually and informational prompts can be reviewed later.
+- Risk dialogs lead with consequences, targets and directories, with a checkbox required for high-risk actions; switching into full control or the native environment now requires an up-front explanation.
+- Unified the settings pages' hierarchy, type scale, cards and press feedback; the developer tools gained Chinese labels and empty states, and the command tool's stale allowlist form was corrected.
+- See docs/UI-EXPERIENCE.md for asset sources and the final prompts.
+
+### Dev-tool capability completion
+
+- The desktop Agent gained 36 dev-tool interfaces covering paginated file read/write, patch, backup & rollback, HTTP, diff/grep/replace, a real persistent ConPTY, processes/ports, image processing, Git, project script/test parsing, project memory/todos, context attribution, and the image clipboard.
+- Destructive file modifications default to preview and commit with a one-time token bound to the parameters and snapshot; out-of-repository paths and junction escapes are rejected.
+- Project policy proposals are never auto-trusted; Shell and terminal input require human approval even in full-control mode; domain authorization plus DNS pinning block SSRF.
+- Added the "Development & authorization" interface with structured results, preview-then-run buttons and policy editing. When long tool results are compacted, valid JSON and tokens are preserved.
+- See docs/WORKBENCH.md (security convergence and boundaries included).
+
+### Responses, feedback & scene workflows
+
+- Markdown is rendered with Marked and DOMPurify, with copy actions for the body, Markdown and code blocks; tool traces collapse and file tools show Chinese names.
+- Added helpful / inaccurate feedback that affects later reference and history filtering; long-term memories are saved only after explicit confirmation, can be edited and removed, and a negative rating revokes the stored memory and rebuilds the summary.
+- Added task scenes, automatic flow selection, dependency scheduling, upstream delivery hand-off, failure blocking, and optional acceptance / one-shot correction.
+- Reuses the official MCP Filesystem's 10 file capabilities; in execution mode sub-projects land in independent directories for the coordinating model to integrate, and writes still go through approval. The portable build ships the full production dependencies.
+- See docs/RESPONSES-AND-WORKFLOWS.md.
 
 ### Context insight (capability direction inspired by [dsh-context](https://github.com/bowenliang123/dsh-context))
 
@@ -18,7 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Desktop: each turn stores the breakdown, occupancy trend (including real in/out tokens) and four event kinds (inject / compact / model switch / mode switch) in the session record; a new **"Context"** button in the chat header opens an insight panel with KPIs, a stacked composition bar, a per-request trend chart and the event feed. `CUPBOX_CONTEXT_WINDOW` adjusts the window size.
 - Estimates are heuristic (≈), not exact tokenizer counts, meant as a rough occupancy reference.
 
-## [1.0.2] - 2026-10-19
+### Earlier updates in the same version (2026-10-19)
 
 ### Storage & model management
 
@@ -42,24 +87,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Desktop `chat:send` now auto-injects relevant memories into every conversation and shows a "compacted N earlier messages" chip when compaction triggers.
 - Fixed `cupbox memory add <text> --source <tag>` parsing where the tag value leaked into the text.
 
-### Multi-model & project workflows (1.0.2)
+### Multi-model & project workflows
 
 - Added independent model profiles and text, vision, image, speech and video routing; multi-model mode is off by default.
-- Added sequential, parallel project and review workflows with explicit worker selection, progress panes, cancellation and per-task retries.
-- Added reference images, local media persistence, Markdown export, draft recovery and Ctrl+M minimization. Video currently uses the SiliconFlow submit/status protocol.
+- Added direct handling, sequential production, parallel large-project and review workflows with explicit worker selection and progress panes showing each sub-project's real progress.
+- Added reference images, local media persistence, sub-project duplication with failure retries, stop requests, Markdown export and draft recovery.
+- Fixed window-minimize positioning and added Ctrl+M. Video currently uses the SiliconFlow submit/status protocol. See docs/DESKTOP-MODELS.md.
 
 ### Model connections and tool execution
 
-- Add provider presets, model discovery, and connection checks; changing providers or endpoints does not reuse old credentials.
-- Add per-operation approvals, smart approvals, full control, and restricted file sandbox / native execution, shared by desktop tools and Agent calls.
-- Replace the tool drawer with a dedicated workspace featuring category cards, search, file pickers, examples, retained drafts and results, and structured result views.
+- Added provider presets for SiliconFlow, DeepSeek, GPT, Claude, OpenRouter, Ollama, LM Studio and custom endpoints, with model listing and connection checks; changing the provider or address never reuses old credentials.
+- Added request approval, smart approval and full control, plus a file sandbox / native execution mode, shared by manual tools and the desktop Agent.
+- Replaced the tool drawer with a dedicated workspace featuring category cards, search, path pickers, examples, retained inputs and results, and structured result lists and tables.
 
 ### Desktop appearance and startup
 
-- Add configurable startup effects with previews, a toggle, duration, caption, skip controls, reduced-motion support, and local GIF, MP4, WebM, or image imports.
-- Expand to eight built-in themes with category filters and matching surface colors, while retaining custom backgrounds.
-- Replace the logo with an original geometric folded-box mark in SVG, PNG, and ICO formats.
-- Align the CLI, desktop, and portable package versions at 1.0.2.
+- Added configurable startup animations: light-track departure, scenic opening, minimal breathing, plus local GIF, MP4, WebM or image media; with preview, toggle, duration, caption, skip controls and reduced-motion support.
+- Expanded to eight built-in themes — Sakura Clear, Bloom, Moon Lake, Flower Garden, Aurora, Dunes, Ink and Solid — with category filters and matching interface tones, while retaining custom backgrounds.
+- Redesigned the geometric folded-box logo, synchronized across SVG, PNG, ICO and the desktop window icon.
+- Aligned the CLI, desktop and portable package versions at 1.0.2.
+
+### Testing
+
+- **198 → 331** test cases, all green, with 12 new test files (freemodel, context, memory, paths, workbench, execution, model-workflow, chat-choice, workflow-scenes, response-context, filesystem-tools, workbench-http).
 
 ## [1.0.1] - 2026-10-18
 

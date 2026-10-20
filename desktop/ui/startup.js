@@ -26,16 +26,17 @@ window.CupboxStartup = (() => {
     const style = ['orbit','cinema','pulse','custom'].includes(p.startupStyle) ? p.startupStyle : 'orbit';
     const duration = Math.max(.8,Math.min(5,Number(p.startupDuration) || 1.6));
     const previousFocus = document.activeElement;
-    const surfaces = [...document.querySelectorAll('.layout,.modal,.drawer')].map(el => [el,el.inert]);
+    const surfaces = [...document.querySelectorAll('#app,.layout,.modal,.drawer,#notice-panel,.toast')].map(el => [el,el.inert]);
     surfaces.forEach(([el]) => { el.inert = true; });
     screen.dataset.style = style;
+    $('startup-backdrop').onerror=()=>{if(token===generation)screen.dataset.style='pulse';};
     screen.style.setProperty('--startup-duration',`${duration}s`);
     $('startup-display-caption').textContent = p.startupCaption ?? defaults.startupCaption;
     $('startup-display-version').textContent = $('ver-chip').textContent;
     $('startup-media-error').textContent = '';
     const media = $('startup-media'); media.replaceChildren();
     const background = CupboxTheme.sourceFor(p,document.documentElement.dataset.theme);
-    $('startup-backdrop').src = background || 'assets/bloom-light.png';
+    $('startup-backdrop').src = style==='orbit'?'assets/startup-atelier.png':background || 'assets/bloom-light.png';
     if (style === 'custom' && p.customStartupUrl) {
       const el = document.createElement(p.customStartupKind === 'video' ? 'video' : 'img');
       if (el.tagName === 'VIDEO') { el.muted=true; el.autoplay=true; el.loop=true; el.playsInline=true; }

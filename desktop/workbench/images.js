@@ -1,0 +1,13 @@
+import sharp from 'sharp';
+import pixelmatch from 'pixelmatch';
+import { readFile } from 'node:fs/promises';
+import { fail } from './files.js';
+const image=input=>sharp(input,{limitInputPixels:40000000,failOn:'error'});
+export async function imageTool(engine,name,a,scope){const input=await engine.resolve(a.input||a.a),meta=await image(input).metadata();if(!['png','jpeg','webp','heif','gif'].includes(meta.format))fail('E_IMAGE','只处理位图文件；不加载 SVG/PDF 外部资源');
+  if(name==='image_info')return{width:meta.width,height:meta.height,format:meta.format,channels:meta.channels,dpi:meta.density,hasAlpha:meta.hasAlpha,space:meta.space,dominant:(await image(input).stats()).dominant};
+  if(name==='image_sample'){const x=Math.max(0,a.x||0),y=Math.max(0,a.y||0),width=Math.min(meta.width-x,a.w||1),height=Math.min(meta.height-y,a.h||1);if(width<1||height<1)fail('E_IMAGE','采样区域越界');const buffer=await image(input).extract({left:x,top:y,width,height}).ensureAlpha().raw().toBuffer();return{region:{x,y,width,height},firstPixel:[...buffer.subarray(0,4)],dominant:(await image(input).extract({left:x,top:y,width,height}).stats()).dominant};}
+  let buffer,result;
+  if(name==='image_diff'){const other=await engine.resolve(a.b),m=await image(other).metadata();if(m.width!==meta.width||m.height!==meta.height)fail('E_IMAGE','图片尺寸不同，先 resize 到相同尺寸');const [left,right]=await Promise.all([image(input).ensureAlpha().raw().toBuffer(),image(other).ensureAlpha().raw().toBuffer()]);const diff=Buffer.alloc(left.length),pixels=pixelmatch(left,right,diff,meta.width,meta.height,{threshold:Math.max(0,Math.min(1,a.threshold??0.1)),includeAA:a.ignoreAntiAlias===false});result={differentPixels:pixels,totalPixels:meta.width*meta.height,ratio:pixels/(meta.width*meta.height)};if(!a.output)return result;buffer=await sharp(diff,{raw:{width:meta.width,height:meta.height,channels:4}}).png().toBuffer();}
+  else{let pipeline=image(input);if(name==='image_resize'){if(!a.width&&!a.height&&!a.maxSide)fail('E_IMAGE','需要尺寸');pipeline=pipeline.resize({width:a.maxSide||a.width,height:a.maxSide||a.height,fit:a.maxSide?'inside':a.fit||'contain',withoutEnlargement:Boolean(a.maxSide)});}else if(name==='image_crop')pipeline=pipeline.extract({left:a.x,top:a.y,width:a.width,height:a.height});const format=a.format||(a.output?.split('.').at(-1)==='jpg'?'jpeg':a.output?.split('.').at(-1))||'png';if(!['png','jpeg','webp','avif'].includes(format))fail('E_IMAGE','不支持的图片格式');if(a.stripMetadata===false)pipeline=pipeline.withMetadata();buffer=await pipeline.toFormat(format,{quality:Math.min(100,Math.max(1,a.quality||85))}).toBuffer();}
+  if(!a.output)fail('E_IMAGE','需要输出路径');const written=await engine.preview(name,a,[{path:a.output,bytes:buffer}],scope);return{...written,data:result};
+}

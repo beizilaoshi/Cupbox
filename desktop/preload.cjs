@@ -3,9 +3,21 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('cupbox', {
+  workbenchList:()=>ipcRenderer.invoke('workbench:list'),
+  workbenchRun:p=>ipcRenderer.invoke('workbench:run',p),
+  policyGet:sessionId=>ipcRenderer.invoke('workbench:policy:get',sessionId),
+  policySet:p=>ipcRenderer.invoke('workbench:policy:set',p),
+  responseFeedback:p=>ipcRenderer.invoke('response:feedback',p),
+  responseRemember:p=>ipcRenderer.invoke('response:remember',p),
   modelsList:()=>ipcRenderer.invoke('models:list'),
   modelSave:draft=>ipcRenderer.invoke('models:save',draft),
   modelRemove:id=>ipcRenderer.invoke('models:remove',id),
+  chatModels:()=>ipcRenderer.invoke('chat:models'),
+  freemodelList:opts=>ipcRenderer.invoke('freemodel:list',opts),
+  freemodelSelectable:p=>ipcRenderer.invoke('freemodel:selectable',p),
+  freemodelProbe:id=>ipcRenderer.invoke('freemodel:probe',id),
+  freemodelToggle:enabled=>ipcRenderer.invoke('freemodel:toggle',{enabled}),
+  freemodelGet:()=>ipcRenderer.invoke('freemodel:get'),
   chatImages:()=>ipcRenderer.invoke('chat:images'),
   chatCancel:()=>ipcRenderer.invoke('chat:cancel'),
   chatExport:id=>ipcRenderer.invoke('chat:export',id),

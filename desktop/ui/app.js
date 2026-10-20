@@ -84,7 +84,7 @@ const TOOLS = [
   { id: "run", name: "受保护命令执行", group: "系统", warn: "安全默认：白名单必填 · 元字符拦截",
     fields: [
       { k: "command", label: "命令", type: "text", ph: "npm test" },
-      { k: "allowPrefixes", label: "允许的前缀白名单 *必填（逗号分隔）", type: "text", ph: "npm,git status" },
+      { k: "mode", label: "执行方式", type: "select", options: ["whitelist", "shell"], value: "whitelist" },
       { k: "cwd", label: "工作目录（可选）", type: "text" },
       { k: "timeoutMs", label: "超时毫秒（≤ 600000）", type: "text", value: "60000" },
     ] },
@@ -98,7 +98,8 @@ const TOOLS = [
 ];
 
 const GROUP_ORDER = ["数据", "文件", "图片", "系统"];
-const OPTION_LABELS = { b64e: "Base64 编码", b64d: "Base64 解码", urle: "URL 编码", urlde: "URL 解码", "html-esc": "HTML 转义", "html-unesc": "HTML 还原", json: "JSON 格式化", "json-min": "JSON 压缩", category: "按文件类型", date: "按日期", regex: "按正则规则", create: "创建压缩包", extract: "解压文件", list: "查看列表", read: "读取剪贴板", write: "写入剪贴板", kill: "结束进程", auto: "自动选择", windows: "Windows 原生识别" };
+const OPTION_LABELS = { whitelist:"已批准的项目白名单", shell:"Shell · 每次请求批准", b64e: "Base64 编码", b64d: "Base64 解码", urle: "URL 编码", urlde: "URL 解码", "html-esc": "HTML 转义", "html-unesc": "HTML 还原", json: "JSON 格式化", "json-min": "JSON 压缩", category: "按文件类型", date: "按日期", regex: "按正则规则", create: "创建压缩包", extract: "解压文件", list: "查看列表", read: "读取剪贴板", write: "写入剪贴板", kill: "结束进程", auto: "自动选择", windows: "Windows 原生识别" };
+TOOLS.find(t=>t.id==="run").hint="白名单在设置 → 开发与授权 → 项目策略中维护；未授权命令可选择 Shell 逐次请求批准。";
 for (const t of TOOLS) {
   if (["organize", "rename"].includes(t.id)) {
     t.warn = "文件变更默认先预览";
@@ -153,11 +154,13 @@ function applyTheme(themePref, accent) {
 }
 
 async function savePrefs(patch) {
+  const previous=prefs;
   prefs = { ...prefs, ...patch };
   try {
     const r = await api.prefsSet?.(patch);
-    if (r && !r.ok) toast("外观暂时无法保存，请稍后重试");
-  } catch { /* 偏好写失败不阻塞界面 */ }
+    if (r && !r.ok) throw new Error(r.error || '请稍后重试');
+    return true;
+  } catch(e) { const restored={...prefs}; for(const key of Object.keys(patch))if(restored[key]===patch[key])restored[key]=previous[key];prefs=restored;toast('设置保存失败：'+e.message);return false; }
 }
 
 window.matchMedia("(prefers-color-scheme: light)").addEventListener?.("change", () => {
@@ -212,7 +215,7 @@ function renderDrawerTools() {
       if (t.warn) {
         const badge = document.createElement("span");
         badge.className = "t-badge";
-        badge.textContent = "安全";
+        badge.textContent = "需留意";
         b.appendChild(badge);
       }
       b.addEventListener("click", () => selectTool(t.id));
@@ -493,8 +496,9 @@ async function run() {
     const res = await api.run(runningId, collect());
     const ms=Math.round(performance.now()-t0);toolResults.set(runningId,{res,ms});
     if(current.id===runningId)renderResult(res,ms);
+    toast(res.ok?"工具处理完成，可在结果区查看":"工具执行失败："+(res.error||"请检查参数"));
   } catch (e) {
-    const res={ ok: false, error: String((e && e.message) || e) };const ms=Math.round(performance.now()-t0);toolResults.set(runningId,{res,ms});if(current.id===runningId)renderResult(res,ms);
+    const res={ ok: false, error: String((e && e.message) || e) };const ms=Math.round(performance.now()-t0);toolResults.set(runningId,{res,ms});if(current.id===runningId)renderResult(res,ms);toast("工具执行失败："+res.error);
   } finally {
     toolRunning = false;
     btn.disabled = false;
@@ -528,7 +532,7 @@ function pushMsg(kind, payload) {
     return div;
   }
 
-  if (payload.text) div.textContent = payload.text;
+  if(payload.text){if(kind==="assistant")div.append(CupboxResponse.render(payload.text));else div.textContent=payload.text;}
 
   if (payload.compaction && payload.compaction.turns > 0) {
     const c = document.createElement("div");
@@ -538,19 +542,21 @@ function pushMsg(kind, payload) {
   }
 
   if (Array.isArray(payload.trace) && payload.trace.length) {
-    const head = document.createElement("div");
+    const group=document.createElement("details");group.className="response-tools";
+    const head = document.createElement("summary");
     head.className = "msg-trace-head";
     head.textContent = `工具轨迹 · ${payload.trace.length} 次`;
-    div.appendChild(head);
+    group.appendChild(head);div.appendChild(group);
     payload.trace.forEach((t, i) => {
       const line = document.createElement("div");
       line.className = t.ok ? "trace-line" : "trace-line trace-bad";
       const argsPreview = t.args && Object.keys(t.args).length ? JSON.stringify(t.args).slice(0, 90) : "";
-      line.textContent = `${i + 1}. ${t.name} ${t.ok ? "完成" : "失败"} ${t.durationMs}ms${argsPreview ? ` — ${argsPreview}` : ""}`;
-      div.appendChild(line);
+      line.textContent = `${i + 1}. ${CupboxResponse.toolName(t.name)} ${t.ok ? "完成" : "失败"} ${t.durationMs}ms${argsPreview ? ` — ${argsPreview}` : ""}`;
+      group.appendChild(line);
     });
   }
 
+  if(kind==="assistant")CupboxResponse.attach(div,payload);
   CupboxModels.drawMedia(div,payload.media);
   CupboxModels.renderTasks(div,payload.tasks);
   const meta = document.createElement("div");
@@ -594,7 +600,7 @@ function liveToolEvent(ev) {
     const row = document.createElement("div");
     row.className = "lt-row running";
     const args = ev.call.args && Object.keys(ev.call.args).length ? JSON.stringify(ev.call.args).slice(0, 90) : "";
-    const label = document.createElement("span"); label.className = "lt-name"; label.textContent = ev.call.name;
+    const label = document.createElement("span"); label.className = "lt-name"; label.textContent = CupboxResponse.toolName(ev.call.name);
     const detail = document.createElement("span"); detail.className = "lt-args"; detail.textContent = args;
     const status = document.createElement("span"); status.className = "lt-status"; status.textContent = "执行中…";
     row.append(label, detail, status);
@@ -662,7 +668,7 @@ async function sendChat(options = {}) {
       text,
       sessionId,
       mode: prefs.mode,
-      ...selection,
+      ...selection,...CupboxChatPicker.payload(),
     });
     typing.remove();
     stopLiveTrace(true);
@@ -672,6 +678,7 @@ async function sendChat(options = {}) {
         text: r.result && typeof r.result.text === "string" ? r.result.text : "（空回复）",
         trace: r.result ? r.result.trace : null,
         tasks:r.result?.tasks,media:r.result?.media,
+        messageId:r.result?.messageId,sessionId,
         compaction: r.result?.compaction,
         time: `${chatTime()} · ${Math.round(performance.now() - t0)} ms`,
       });
@@ -768,7 +775,8 @@ async function refreshSessions(activeId) {
         await api.sessionsDelete?.(s.id);
         if (s.id === sessionId) newChat();
         await refreshSessions(sessionId);
-      } catch { /* 忽略 */ }
+        toast("任务记录已删除");
+      } catch (e) { toast("删除失败：" + e.message); }
     });
 
     item.appendChild(title);
@@ -796,7 +804,7 @@ function clearChatDom() {
     <button class="setup-link" id="setup-link"><span>✧ 配置你的 AI 搭子，开始第一段对话</span><span>去设置 →</span></button>`;
   scroll.appendChild(empty);
   empty.querySelectorAll("[data-quick]").forEach(b => {
-    b.querySelector('.quick-icon').innerHTML = CupboxIcons.html(b.dataset.quick);
+    const art=CupboxVisuals.art(({organize:'files',codec:'data',ocr:'vision'})[b.dataset.quick]);b.prepend(art);b.querySelector('.quick-icon').remove();
     b.addEventListener("click", () => {
     const tool = visibleTools().find(t => t.id === b.dataset.quick);
     if (!tool) { toast("这项工具已关闭，可在设置中启用"); return; }
@@ -830,13 +838,13 @@ async function openSession(id) {
     sessionId = s.id;
     $("chat-title").textContent = s.title || "会话";
     setMode(s.mode, false);
-    CupboxModels.clearImages();$("workflow-board").hidden=true;
+    CupboxModels.clearImages();CupboxChatPicker.restore(s.chatSelection);$("workflow-board").hidden=true;
     clearChatDom();
     const scroll = $("chat-scroll");
     $("chat-empty")?.remove();
     (s.messages || []).forEach((m) => {
       if (m.role === "user") pushMsg("user", { text: m.text, time: "" });
-      else if (m.role === "assistant") pushMsg("assistant", { text: m.text, trace: m.trace, tasks:m.tasks,media:m.media,time: "" });
+      else if (m.role === "assistant") pushMsg("assistant", { text:m.text,trace:m.trace,tasks:m.tasks,media:m.media,messageId:m.id,sessionId:s.id,feedback:m.feedback,memoryId:m.memoryId,memoryText:m.memoryText,time:"" });
     });
     // pushMsg 里 time 为空则不显示 meta —— 统一补一次时间即可（此处省略）
     await refreshSessions(s.id);
@@ -880,11 +888,14 @@ function switchTab(name) {
     b.classList.toggle("active", b.dataset.tab === name);
     b.setAttribute("aria-selected", String(b.dataset.tab === name));
   });
-  ["api", "models", "theme", "execution", "startup", "plugins", "about"].forEach((n) => {
+  ["api", "models", "theme", "execution", "workbench", "startup", "plugins", "about", "freemodel"].forEach((n) => {
     const page = $(`tab-${n}`);
     if (page) page.hidden = n !== name;
   });
+  if (name === "freemodel") loadFreemodelTab();
 }
+
+async function loadFreemodelTab() { return CupboxChatPicker.refreshFree(); }
 
 async function fillApiForm() {
   const sequence=++apiFillSequence,revision=CupboxProviders.revision();
@@ -900,6 +911,7 @@ async function fillApiForm() {
     if (c.provider) set("api-provider", c.provider);
     set("api-base", c.baseUrl);
     set("api-model", c.model);
+    set("api-reasoning-mode",c.reasoningMode||"auto");
     set("api-key", ""); // 永不回填明文 Key，留空 = 保持不变
     set("api-temp", c.temperature);
     set("api-turns", c.maxTurns);
@@ -930,6 +942,7 @@ async function saveApi() {
       model: raw("api-model"),
       ...(raw("api-key") ? { apiKey: raw("api-key") } : {}),
       temperature: raw("api-temp") === "" ? null : Number(raw("api-temp")),
+      reasoningMode:raw("api-reasoning-mode")||"auto",
       maxTurns: raw("api-turns") === "" ? null : Number(raw("api-turns")),
     };
     const r = await api.aiConfigSet?.(patch);
@@ -1019,25 +1032,13 @@ async function pickWorkspace() {
     const p = await api.pickWorkspace?.();
     const el = $("ws-path");
     if (el) el.textContent = p || prefs.workspace || "未选择";
-    if (p) prefs.workspace = p;
-  } catch { /* 用户取消忽略 */ }
+    if (p) { prefs.workspace = p; toast("工作文件夹已切换：" + p); }
+  } catch (e) { toast("选择工作目录失败：" + e.message); }
 }
 
 /* ---------------- 版本检测与更新公告 ---------------- */
 
-function toast(msg, ms) {
-  const t = $("toast");
-  if (!t) return;
-  t.textContent = msg;
-  t.hidden = false;
-  void t.offsetWidth;
-  t.classList.add("show");
-  clearTimeout(toast._timer);
-  toast._timer = setTimeout(() => {
-    t.classList.remove("show");
-    setTimeout(() => { t.hidden = true; }, 320);
-  }, ms || 2600);
-}
+function toast(msg, ms) { return CupboxUX.notify(String(msg), ms || {}); }
 
 function sourceName(s) {
   return s === "github" ? "GitHub Releases" : s === "npm" ? "npm registry" : s === "custom" ? "自定义清单" : "";
@@ -1347,8 +1348,10 @@ function bindWindowControls() {
 
 async function boot() {
   CupboxIcons.mount();
+  CupboxUX.init();
+  CupboxResponse.init({toast,updated:()=>{if(typeof refreshContextStats==="function")void refreshContextStats();}});
   CupboxProviders.init();
-  CupboxToolWorkspace.init({tools:visibleTools,select:selectTool,current:()=>current.id,busy:()=>toolRunning,toast,native:()=>{void savePrefs({executionEnvironment:'native'});CupboxExecution.sync(prefs);}});
+  CupboxToolWorkspace.init({tools:visibleTools,select:selectTool,current:()=>current.id,busy:()=>toolRunning,toast,native:()=>void CupboxExecution.setEnvironment('native')});
   bindWindowControls();
 
   // 偏好（主题 / 强调色 / 模式 / 工作区 / 插件开关）
@@ -1358,8 +1361,9 @@ async function boot() {
   } catch { /* 用默认 */ }
   applyTheme(prefs.theme || "light", prefs.accent || "aurora");
   CupboxTheme.init({ getPrefs: () => prefs, save: savePrefs, theme: applyTheme, pick: () => api.pickWallpaper() });
+  $("filesystem-enabled").checked=prefs.filesystemTools!==false;$("filesystem-enabled").addEventListener("change",()=>void savePrefs({filesystemTools:$("filesystem-enabled").checked}));
   CupboxStartup.init({getPrefs:()=>prefs,save:savePrefs,pick:()=>api.pickStartupMedia()});
-  await CupboxExecution.init({getPrefs:()=>prefs,save:savePrefs,settings:openModal,toolName:id=>TOOLS.find(t=>t.id===id)?.name||id,toast,onChange:(environment,root)=>{
+  await CupboxExecution.init({getPrefs:()=>prefs,save:savePrefs,settings:openModal,toolName:id=>TOOLS.find(t=>t.id===id)?.name||CupboxResponse.toolName(id),toast,onChange:(environment,root)=>{
     $("ws-path").textContent=environment==='sandbox'?'沙箱工作目录':prefs.workspace||'未选择';
     CupboxToolWorkspace.availability(current.id);
     for(const id of ['dir','root','cwd']){const field=$("tool-form").querySelector(`[data-key="${id}"]`);if(field)field.value=environment==='sandbox'?root:(prefs.workspace||'');}
@@ -1374,7 +1378,9 @@ async function boot() {
   if (visibleTools()[0]) selectTool(visibleTools()[0].id, true);
   $("btn-run").disabled = !visibleTools().length;
   clearChatDom();
+  await CupboxWorkbench.init({session:()=>sessionId,toast});
   await CupboxModels.init({prefs,save:savePrefs,refresh:refreshModel,toast,confirm:confirmAction,session:()=>sessionId,retry:task=>sendChat({retry:task})});
+  await CupboxChatPicker.init({getPrefs:()=>prefs,save:savePrefs,refresh:refreshModel,settings:openModal,closeSettings:closeModal,mode:setMode,toast});
   await refreshModel();
   $("btn-send").disabled = true;
   await refreshSessions(null);
@@ -1399,7 +1405,7 @@ async function boot() {
   $("btn-run")?.addEventListener("click", run);
   $("tool-search").addEventListener("input", renderDrawerTools);
   $("session-search").addEventListener("input", () => { sessionFilter = $("session-search").value.trim(); void refreshSessions(sessionId); });
-  $("btn-model").addEventListener("click", () => openModal("api"));
+  
   // 模型管理：侧栏直达模型库（多模型增删、能力多选 文本/视觉/绘图…）
   $("btn-models-nav")?.addEventListener("click", () => openModal("models"));
   // 储存管理：打开 / 定位数据目录
@@ -1444,9 +1450,10 @@ async function boot() {
     if (!await confirmAction("清空当前任务的对话记录？此操作无法撤销。")) return;
     if (sending) return;
     if (sessionId) {
-      try { await api.sessionsClear?.(sessionId); } catch { /* 忽略 */ }
+      try { await api.sessionsClear?.(sessionId); } catch (e) { toast("清空失败：" + e.message); return; }
     }
     clearChatDom();
+    toast("当前对话已清空");
     await refreshSessions(sessionId);
   });
   $("btn-workspace")?.addEventListener("click", pickWorkspace);
@@ -1615,29 +1622,12 @@ async function refreshModel() {
     await CupboxModels.refresh();
     const r = await api.aiConfigGet?.();
     const c = r?.ok ? r.config : {};
-    modelReady = Boolean(c?.model) || (await api.modelsList()).some(m=>m.enabled);
-    $("btn-model").textContent = c?.model || (modelReady?"模型库已就绪 ⌄":"配置模型 ⌄");
+    modelReady = (await api.chatModels()).models.some(m=>m.enabled);
+    CupboxChatPicker.sync();
     if ($("setup-link")) $("setup-link").hidden = modelReady;
   } catch { modelReady = false; }
 }
 
-function confirmAction(message) {
-  confirmAction.cancel?.();
-  return new Promise(resolve => {
-    const bar = document.createElement("div");
-    bar.className = "confirm-bar";
-    bar.setAttribute("role", "alert");
-    const text = document.createElement("span"); text.textContent = message;
-    const yes = document.createElement("button"); yes.textContent = "确认";
-    const no = document.createElement("button"); no.textContent = "取消";
-    const finish = value => { bar.remove(); confirmAction.cancel = null; resolve(value); };
-    confirmAction.cancel = () => finish(false);
-    yes.addEventListener("click", () => finish(true));
-    no.addEventListener("click", () => finish(false));
-    bar.append(text, yes, no);
-    $("stage").insertBefore(bar, $("chat-scroll"));
-    no.focus();
-  });
-}
+function confirmAction(message, options) { return CupboxUX.confirm(message, options); }
 
 boot();

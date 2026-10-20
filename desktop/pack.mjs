@@ -4,15 +4,22 @@
 import { cp, mkdir, rm, rename, writeFile, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { copyRuntimeDependencies } from './runtime-dependencies.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
-const OUT = path.join(ROOT, 'release', 'Cupbox可视化');
+const outArg = process.argv.find(arg => arg.startsWith('--out='));
+const OUT = outArg ? path.resolve(ROOT, outArg.slice(6)) : path.join(ROOT, 'release', 'Cupbox可视化');
 const APP = path.join(OUT, 'resources', 'app');
 const EXE_NAME = 'Cupbox可视化.exe';
 
-// 0) 清场
-await rm(path.join(ROOT, 'release'), { recursive: true, force: true });
+// 只重建专用产品目录，不清空 release（其中可能已有安装包）。
+const relative = path.relative(ROOT, OUT);
+if (!relative || relative.startsWith('..') || path.isAbsolute(relative) ||
+    !['release', 'output'].includes(relative.split(path.sep)[0]) || relative.split(path.sep).length < 2) {
+  throw new Error('打包输出必须是项目 release 或 output 中的专用子目录');
+}
+await rm(OUT, { recursive: true, force: true });
 
 // 1) Electron 运行时整树复制（含 DLL/locales/resources）
 const dist = path.join(ROOT, 'node_modules', 'electron', 'dist');
@@ -32,10 +39,10 @@ await writeFile(
 );
 await cp(path.join(ROOT, 'desktop'), path.join(APP, 'desktop'), { recursive: true });
 await cp(path.join(ROOT, 'dist'), path.join(APP, 'dist'), { recursive: true });
-// 运行时依赖：dist 里只有 obfuscate 引 pngjs（mcp.js 的 sdk/zod 桌面壳不加载）
-await mkdir(path.join(APP, 'node_modules'), { recursive: true });
-await cp(path.join(ROOT, 'node_modules', 'pngjs'), path.join(APP, 'node_modules', 'pngjs'), { recursive: true });
-console.log('[2/4] app body copied (desktop + dist + pngjs)');
+await cp(path.join(ROOT, 'docs'), path.join(APP, 'docs'), { recursive: true });
+for (const name of ['LICENSE', 'README.md', 'CHANGELOG.md']) await cp(path.join(ROOT, name), path.join(APP, name));
+const dependencyCount=await copyRuntimeDependencies(ROOT,APP);
+console.log(`[2/4] app body copied (desktop + dist + ${dependencyCount} runtime packages)`);
 
 // 3) exe 改名
 await rename(path.join(OUT, 'electron.exe'), path.join(OUT, EXE_NAME));

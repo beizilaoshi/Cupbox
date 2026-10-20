@@ -73,43 +73,4 @@ export async function invokeCapability({cap,model,prompt,system,history=[],attac
   throw Error('不支持的能力');
 }
 
-export async function runWorkflow({selected,workerModels=[],workflow='direct',parallel=2,prompt,system,history,attachments,signal,home,emit,integrate}){
-  const tasks=[];let next=0;
-  const names={text:'文本',vision:'视觉分析',image:'绘图',audio:'语音',video:'视频'};
-  const execute=async(task)=>{
-    const route=task.cap==='text'&&['project','plan'].includes(workflow)&&workerModels.length?{cap:'text',model:workerModels[tasks.indexOf(task)%workerModels.length]}:selected.find(r=>r.cap===task.cap);task.model=route.model.name||route.model.model;task.modelId=route.model.id;task.status='running';emit({...task});
-    try{const result=await invokeCapability({...route,prompt:task.prompt,system,history,attachments,signal,home,progress:note=>emit({...task,note})});Object.assign(task,result,{status:'done'});}
-    catch(e){task.status=signal.aborted?'canceled':'error';task.error=signal.aborted?'已停止等待；服务端生成任务可能仍在运行':e.message;}
-    emit({...task});
-  };
-  const textRoute=selected.find(r=>r.cap==='text');
-  if(workflow!=='direct'&&!textRoute)throw Error('该工作流需要勾选文本能力作为规划和汇总模型');
-  if(['project','plan'].includes(workflow)){
-    emit({id:'planning',title:'拆解任务',status:'running',model:textRoute.model.name||textRoute.model.model});
-    const r=await invokeCapability({...textRoute,prompt:`将下面的大任务拆成 2 到 6 个可独立并行完成的小项目。每个任务必须写明清晰的接口、交付范围，避免文件重叠。只返回 JSON：{"tasks":[{"title":"标题","prompt":"完整独立任务说明","cap":"text"}]}。cap 只能选 ${selected.map(r=>r.cap).join(',')}。不要凭空声称已执行或已交付。总目标：${prompt}`,system,history,signal,home});
-    let plan;try{plan=JSON.parse(r.text.replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,''));}catch{throw Error('规划模型未返回有效 JSON；请重试或选择直接处理');}
-    if(!Array.isArray(plan.tasks)||!plan.tasks.length||plan.tasks.length>6||plan.tasks.some(t=>!t.title||!t.prompt||!selected.some(r=>r.cap===t.cap)))throw Error('拆解结果无效，任务数量应为 1–6 且使用已勾选能力');
-    emit({id:'planning',title:'拆解任务',status:'done',text:`已拆分为 ${plan.tasks.length} 个独立子项目。`});
-    for(const t of plan.tasks)tasks.push({id:randomUUID(),title:String(t.title).slice(0,100),prompt:`总目标：${prompt}\n子项目：${String(t.prompt)}`,cap:t.cap,status:'queued'});
-    // Every selected media capability is called, even if the planner omitted it.
-    for(const r of selected.filter(r=>r.cap!=='text'&&!tasks.some(t=>t.cap===r.cap)))tasks.push({id:randomUUID(),title:`${names[r.cap]}交付`,prompt,cap:r.cap,status:'queued'});
-  } else if(workflow==='review'){
-    const first={id:randomUUID(),title:'初稿',prompt,cap:'text',status:'queued'};await execute(first);tasks.push(first);
-    if(first.status!=='done')return{text:'初稿未完成，请重试。',tasks};
-    const review={id:randomUUID(),title:'审阅与改进',prompt:`原始任务：${prompt}\n初稿：${first.text}\n请指出错误、遗漏并给出改进后的完整交付。`,cap:'text',status:'queued'};
-    const other=selected.filter(r=>r.cap==='text')[1];if(other)selected=[other,...selected.filter(r=>r!==other)];
-    await execute(review);tasks.push(review);
-    for(const r of selected.filter(r=>r.cap!=='text'))tasks.push({id:randomUUID(),title:`${r.cap} 交付`,prompt,cap:r.cap,status:'queued'});
-  } else for(const r of selected)tasks.push({id:randomUUID(),title:r.cap==='text'?'文本处理':`${names[r.cap]}处理`,prompt,cap:r.cap,status:'queued'});
-  tasks.forEach(t=>emit({...t}));
-  const pending=tasks.filter(t=>t.status==='queued');
-  await Promise.all(Array.from({length:workflow==='plan'?1:Math.min(Math.max(1,parallel),3,pending.length)},async()=>{while(next<pending.length&&!signal.aborted){const t=pending[next++];await execute(t);}}));
-  for(const t of tasks.filter(t=>t.status==='queued')){t.status='canceled';emit({...t});}
-  let summary='',trace;
-  if(!signal.aborted&&workflow!=='direct'&&workflow!=='review'&&tasks.some(t=>t.status==='done')){
-    emit({id:'summary',title:'整合交付',status:'running'});
-    const completed=tasks.map(t=>`${t.title} (${t.status})\n${t.text||t.error||''}\n${(t.media||[]).map(m=>m.url).join('\n')}`).join('\n\n');
-    try{const r=await integrate(`原始目标：${prompt}\n各子项目交付：\n${completed}\n请整合完整结果，说明未完成项。仅在执行任务模式下使用本地工具落实交付。`,textRoute.model);summary=r.text;trace=r.trace;emit({id:'summary',title:'整合交付',status:'done',text:summary});}catch(e){summary=`整合失败：${signal.aborted?'已停止':e.message}`;emit({id:'summary',title:'整合交付',status:'error',error:summary});}
-  }
-  return{text:summary||tasks.map(t=>`【${t.title} · ${t.model||''}】\n${t.text||t.error||'已停止'}`).join('\n\n'),tasks,media:tasks.flatMap(t=>t.media||[]),...(trace?{trace}:{})};
-}
+export { runWorkflow } from './workflow-runner.js';

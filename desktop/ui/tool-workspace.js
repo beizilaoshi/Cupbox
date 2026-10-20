@@ -10,7 +10,8 @@ window.CupboxToolWorkspace=(()=>{
     if(!hooks)return;
     const box=$('tool-cards');box.replaceChildren();
     const tools=hooks.tools().filter(t=>(category==='全部'||t.group===category)&&`${t.name} ${t.id} ${summaries[t.id]}`.toLowerCase().includes(query));
-    if(!tools.length){box.innerHTML='<div class="sess-empty">没有找到工具，试试其他关键词，或在设置里启用工具。</div>';return;}
+    const featureKey=({文件:'files',数据:'data',图片:'vision',系统:'workflow'})[category]||'files';const feature=CupboxVisuals.features[featureKey];$('tools-category-art').src='assets/'+feature.image;$('tools-category-description').textContent=category==='全部'?'文件归类、格式转换、图片文字识别，从一个小任务开始。':category==='系统'?'运行命令、查看进程与系统工具。需要本机权限，执行前请核对操作范围。':feature.description+'。无需配置 AI，也可以直接使用。';
+    if(!tools.length){box.append(CupboxVisuals.empty(featureKey,'没有找到匹配工具','试试其他关键词，或在设置中启用需要的工具。'));return;}
     for(const tool of tools){
       const b=document.createElement('button');b.className='tool-card';b.dataset.tool=tool.id;
       b.innerHTML=`<span class="tool-card-icon">${CupboxIcons.html(tool.id)}</span><span><b>${tool.name}</b><small>${summaries[tool.id]}</small></span><em>${system.has(tool.id)?'本机工具':tool.group}</em>`;
@@ -25,12 +26,16 @@ window.CupboxToolWorkspace=(()=>{
       const b=document.createElement('button');b.type='button';b.className='path-picker';b.innerHTML=CupboxIcons.html(kind==='directory'?'folder':'image');b.title=kind==='directory'?'选择文件夹':'选择文件';b.setAttribute('aria-label',b.title);
       b.addEventListener('click',async()=>{try{let picker=kind;if(hooks.current()==='zip'&&input.dataset.key==='output'&&$('tool-form').querySelector('[data-key="action"]').value!=='create')picker='file';const value=await cupbox.pickToolPath(picker);if(value){input.value=value;if(hooks.current()==='hash'&&input.dataset.key==='file')$('tool-form').querySelector('[data-key="text"]').value='';input.dispatchEvent(new Event('input',{bubbles:true}));}}catch(e){hooks.toast(e.message);}});row.appendChild(b);
     });
-    $('tool-form').querySelector('[data-key="dryRun"]')?.addEventListener('change',()=>availability(hooks.current()));
+    $('tool-form').onchange=()=>availability(hooks.current());
   }
   function availability(id){
     const blocked=system.has(id)&&document.documentElement.dataset.executionEnvironment!=='native';
     $('tool-environment-hint').hidden=!blocked;
     $('btn-run').disabled=blocked||hooks.busy();
+    const get=key=>$('tool-form').querySelector('[data-key="'+key+'"]');const action=get('action')?.value;const modifying=['rename','organize'].includes(id)&&!get('dryRun')?.checked;
+    const warn=modifying||id==='run'||id==='proc'&&action==='kill'||id==='clip'||id==='shot'||id==='zip'&&action!=='list';$('tool-risk-notice').hidden=!warn;
+    if(warn){const profile=CupboxRisk.describe(id,{action},modifying||id==='zip'?'write':'system');$('tool-risk-title').textContent=id==='shot'?'截图会包含当前屏幕内容':profile.title;$('tool-risk-text').textContent=id==='shot'?'请确认屏幕没有私人信息。截图保存位置由下方参数决定。':profile.consequence;$('tool-risk-notice').dataset.level=profile.level;}
+    $('btn-run').dataset.risk=warn?'warning':'normal';
     if(!hooks.busy())$('btn-run').querySelector('.btn-label').textContent=['rename','organize'].includes(id)?($('tool-form').querySelector('[data-key="dryRun"]')?.checked?'预览变更':'执行变更'):'运行工具';
   }
   function text(tag,value,cls){const el=document.createElement(tag);el.textContent=String(value??'');if(cls)el.className=cls;return el;}
@@ -58,7 +63,7 @@ window.CupboxToolWorkspace=(()=>{
     for(const [key,value]of Object.entries(values)){const el=$('tool-form').querySelector(`[data-key="${key}"]`);if(el){el.value=value;el.dispatchEvent(new Event('change',{bubbles:true}));}}
   }
   function init(options){hooks=options;
-    for(const name of ['全部','文件','数据','图片','系统']){const b=document.createElement('button');b.textContent=name;b.className=name==='全部'?'active':'';b.addEventListener('click',()=>{category=name;[...$('tool-categories').children].forEach(el=>el.classList.toggle('active',el===b));render();});$('tool-categories').appendChild(b);}
+    for(const name of ['全部','文件','数据','图片','系统']){const b=document.createElement('button');const icon=document.createElement('span');icon.className='tool-category-icon';icon.innerHTML=CupboxIcons.html(({全部:'tools',文件:'folder',数据:'csv',图片:'image',系统:'monitor'})[name]);b.append(icon,document.createTextNode(name));b.className=name==='全部'?'active':'';b.addEventListener('click',()=>{category=name;[...$('tool-categories').children].forEach(el=>el.classList.toggle('active',el===b));render();});$('tool-categories').appendChild(b);}
     $('library-search').addEventListener('input',()=>{query=$('library-search').value.trim().toLowerCase();$('drawer').dataset.view='library';render();});
     $('tools-library').addEventListener('click',library);$('tool-example')?.addEventListener('click',examples);render();
     $('switch-tool-native').addEventListener('click',()=>hooks.native());

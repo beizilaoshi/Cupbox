@@ -3,10 +3,11 @@
 // 零新增依赖：仅用 Node 内置 fetch；配置持久化在数据目录 config.json（默认 <文档>/Cupbox，CUPBOX_HOME 可改）。
 import { readFile, writeFile, mkdir, chmod } from 'node:fs/promises';
 import path from 'node:path';
+import { reasoningCapabilities, reasoningParameters, type ReasoningMode, type ReasoningEffort } from './reasoning.js';
 import { dataHome } from './paths.js';
 import { TOOL_DEFS, runTool, type ToolDef } from './toolkit.js';
 
-export type AiProvider = 'openai-compatible' | 'anthropic';
+export type AiProvider = 'openai-compatible' | 'anthropic' | 'free';
 
 export interface AiConfig {
   preset?: string;
@@ -19,6 +20,10 @@ export interface AiConfig {
   temperature?: number;
   /** Agent 默认最大工具轮次（上限 10） */
   maxTurns?: number;
+  reasoningMode?: ReasoningMode;
+  reasoningEffort?: ReasoningEffort;
+  reasoningLevels?: string[];
+  freeLane?: 'kilo' | 'opencode';
 }
 
 export function configDir(): string {
@@ -51,6 +56,8 @@ export async function loadAiConfig(): Promise<AiConfig> {
     ...(fromFile.preset ? { preset: fromFile.preset } : {}),
     ...(fromFile.temperature !== undefined ? { temperature: fromFile.temperature } : {}),
     ...(fromFile.maxTurns !== undefined ? { maxTurns: fromFile.maxTurns } : {}),
+    ...(fromFile.reasoningMode ? {reasoningMode:fromFile.reasoningMode} : {}),
+    ...(fromFile.reasoningEffort ? {reasoningEffort:fromFile.reasoningEffort} : {}),
   };
   return cfg;
 }
@@ -66,7 +73,7 @@ export async function saveAiConfig(
     if (String(patch.preset) !== (cur.preset || 'custom')) next.apiKey = '';
     next.preset = String(patch.preset);
   }
-  if (patch.provider === 'openai-compatible' || patch.provider === 'anthropic') next.provider = patch.provider;
+  if (patch.provider === 'openai-compatible' || patch.provider === 'anthropic' || patch.provider === 'free') next.provider = patch.provider;
   for (const k of ['baseUrl', 'apiKey', 'model'] as const) {
     if (patch[k] !== undefined) next[k] = String(patch[k]);
   }
@@ -83,6 +90,9 @@ export async function saveAiConfig(
     const n = Math.max(1, Math.min(10, Number(patch.maxTurns) || 1));
     next.maxTurns = n;
   }
+  if(patch.reasoningMode!==undefined){if(!['auto','disabled','openai','deepseek','openrouter'].includes(patch.reasoningMode))throw Error('无效的思考参数适配方式');next.reasoningMode=patch.reasoningMode;}
+  if(patch.reasoningEffort!==undefined){reasoningParameters(next,patch.reasoningEffort);next.reasoningEffort=patch.reasoningEffort;}
+  if(next.provider==='free')next.apiKey='';
   await mkdir(configDir(), { recursive: true });
   await writeFile(configPath(), JSON.stringify(next, null, 2), 'utf8');
   try {
@@ -109,7 +119,7 @@ export interface ToolCall {
 export type ChatTurn =
   | { role: 'system'; text: string }
   | { role: 'user'; text: string }
-  | { role: 'assistant'; text: string; toolCalls?: ToolCall[] }
+  | { role: 'assistant'; text: string; toolCalls?: ToolCall[]; reasoningContent?: string }
   | { role: 'tool'; results: { id: string; name: string; text: string }[] };
 
 /** 提供方上报的 token 用量（OpenAI prompt/completion；Anthropic input/output；均已归一）。 */
@@ -123,6 +133,8 @@ export interface ChatResult {
   toolCalls?: ToolCall[];
   /** 提供方上报的实际用量（响应缺失时省略）。 */
   usage?: AiUsage;
+  /** Opaque provider continuity, kept only during the current tool loop. */
+  reasoningContent?: string;
 }
 
 export const DEFAULT_SYSTEM =
@@ -132,6 +144,12 @@ export const DEFAULT_SYSTEM =
 function requireConfig(cfg?: AiConfig): Promise<AiConfig> {
   return (async () => {
     const c = cfg ?? (await loadAiConfig());
+    if (c.provider === 'free') {
+      if (!c.model) throw new Error('未选择免费模型：请在「设置 → 免费模型」中启用并选择模型。');
+      const {loadFreeStore,isModelEnabled,baseModelId}=await import('./freemodel.js');
+      if(!isModelEnabled(await loadFreeStore(),baseModelId(c.model)))throw Error('免费模型通道或所选模型已关闭，请到设置启用');
+      return c;
+    }
     let local = false;
     try { local = ['ollama', 'lmstudio'].includes(c.preset || '') && ['localhost', '127.0.0.1', '[::1]'].includes(new URL(c.baseUrl).hostname); } catch { /* remote */ }
     if (!c.apiKey && !local) {
@@ -169,6 +187,7 @@ function toOpenAI(turns: ChatTurn[]): Record<string, unknown>[] {
       out.push({
         role: 'assistant',
         content: t.text || null,
+        ...(t.reasoningContent?{reasoning_content:t.reasoningContent}:{}),
         ...(t.toolCalls && t.toolCalls.length
           ? {
               tool_calls: t.toolCalls.map((c) => ({
@@ -223,6 +242,7 @@ export interface AiChatOptions {
   tools?: ToolDef[];
   maxTokens?: number;
   timeoutMs?: number;
+  conversationKey?: string;
 }
 
 /** 单次对话调用（带工具时返回 toolCalls，由调用方决定是否进入循环）。 */
@@ -234,6 +254,30 @@ export async function aiChat(opts: AiChatOptions): Promise<ChatResult> {
   opts.signal?.addEventListener('abort', abort, { once: true });
   if (opts.signal?.aborted) controller.abort();
   try {
+    if (cfg.provider === 'free') {
+      // 免密免费通道（移植自 dsh-our-free-model）：无 API Key，走 opencode / Kilo 网关。
+      const { chatFreeLane } = await import('./freemodel.js');
+      const r = await chatFreeLane({
+        model: cfg.model,
+        lane:cfg.freeLane,
+        messages: opts.messages,
+        ...(opts.tools && opts.tools.length ? { tools: opts.tools } : {}),
+        ...(opts.maxTokens ? { maxTokens: opts.maxTokens } : {}),
+        ...(cfg.temperature !== undefined ? { temperature: cfg.temperature } : {}),
+        // aiChat 层没有会话上下文，统一映射到 global 稳定会话（配额按会话记账，避免每请求新铸导致 429）。
+        conversationKey: opts.conversationKey || 'global',
+        reasoningEffort:cfg.reasoningEffort,
+        reasoningMode:cfg.reasoningMode,
+        reasoningLevels:cfg.reasoningLevels,
+        signal: controller.signal,
+        timeoutMs: opts.timeoutMs ?? 180_000,
+      });
+      return {
+        text: r.text,
+        ...(r.toolCalls && r.toolCalls.length ? { toolCalls: r.toolCalls } : {}),
+        ...(r.usage ? { usage: r.usage } : {}),
+      };
+    }
     if (cfg.provider === 'anthropic') {
       const { system, messages } = toAnthropic(opts.messages);
       const body = {
@@ -283,8 +327,10 @@ export async function aiChat(opts: AiChatOptions): Promise<ChatResult> {
     }
 
     // OpenAI 兼容协议（OpenAI / DeepSeek / Kimi / GLM / OpenRouter / Ollama / LM Studio…）
+    const reasoning=reasoningCapabilities(cfg);
     const body = {
       model: cfg.model,
+      ...reasoningParameters(cfg,cfg.reasoningEffort),
       messages: toOpenAI(opts.messages),
       ...(opts.tools && opts.tools.length
         ? {
@@ -295,8 +341,8 @@ export async function aiChat(opts: AiChatOptions): Promise<ChatResult> {
             tool_choice: 'auto',
           }
         : {}),
-      ...(cfg.temperature !== undefined ? { temperature: cfg.temperature } : {}),
-      ...(opts.maxTokens ? { max_tokens: opts.maxTokens } : {}),
+      ...(cfg.temperature !== undefined && (reasoning.adapter!=='openai'||cfg.reasoningEffort==='none') ? { temperature: cfg.temperature } : {}),
+      ...(opts.maxTokens ? { [reasoning.adapter==='openai'?'max_completion_tokens':'max_tokens']: opts.maxTokens } : {}),
     };
     const res = await fetch(openaiUrl(cfg.baseUrl), {
       method: 'POST',
@@ -315,6 +361,7 @@ export async function aiChat(opts: AiChatOptions): Promise<ChatResult> {
       choices?: {
         message?: {
           content?: string | null;
+          reasoning_content?: string;
           tool_calls?: { id: string; function?: { name?: string; arguments?: string } }[];
         };
       }[];
@@ -336,7 +383,7 @@ export async function aiChat(opts: AiChatOptions): Promise<ChatResult> {
       data.usage && (Number.isFinite(data.usage.prompt_tokens) || Number.isFinite(data.usage.completion_tokens))
         ? { prompt: Number(data.usage.prompt_tokens) || 0, completion: Number(data.usage.completion_tokens) || 0 }
         : undefined;
-    return { text: msg.content ?? '', ...(toolCalls.length ? { toolCalls } : {}), ...(usage ? { usage } : {}) };
+    return { text: msg.content ?? '', ...(typeof msg.reasoning_content==='string'?{reasoningContent:msg.reasoning_content}:{}), ...(toolCalls.length ? { toolCalls } : {}), ...(usage ? { usage } : {}) };
   } catch (e) {
     if (e instanceof Error && e.name === 'AbortError') throw new Error('AI 请求超时');
     if (e instanceof Error && /^AI 请求失败/.test(e.message)) throw e;
@@ -352,6 +399,22 @@ export async function aiChat(opts: AiChatOptions): Promise<ChatResult> {
 
 function capResult(v: unknown): string {
   const s = typeof v === 'string' ? v : JSON.stringify(v, null, 2);
+  if(s.length>6000&&v&&typeof v==='object'&&!Array.isArray(v)&&'ok' in v){
+    const original=v as Record<string,unknown>;
+    const bounded:Record<string,unknown>={...original,truncated:true};
+    if(typeof bounded.diff==='string')bounded.diff=bounded.diff.slice(0,2800);
+    if(Array.isArray(bounded.changed))bounded.changed=bounded.changed.slice(0,10);
+    if(bounded.data&&typeof bounded.data==='object'){
+      const data=bounded.data as Record<string,unknown>;
+      if(Array.isArray(data.lines)){
+        const lines=(data.lines as {no:number;text:string}[]).slice(0,12).map(l=>({...l,text:l.text.slice(0,160)}));
+        bounded.data={...data,lines,content:lines.map(l=>`${l.no}| ${l.text}`).join('\n'),truncated:true,nextStartLine:lines.length?lines[lines.length-1].no+1:undefined};
+      }else bounded.data={preview:JSON.stringify(data).slice(0,1800),truncated:true};
+    }
+    let encoded=JSON.stringify(bounded);
+    if(encoded.length>6000)encoded=JSON.stringify({ok:original.ok,code:original.code,message:original.message,dryRun:original.dryRun,confirmToken:original.confirmToken,operationId:original.operationId,diff:typeof bounded.diff==='string'?bounded.diff.slice(0,2000):undefined,truncated:true});
+    return encoded;
+  }
   return s.length > 6000 ? `${s.slice(0, 6000)}…（结果已截断）` : s;
 }
 
@@ -371,6 +434,8 @@ export interface AgentResult {
   requests?: number;
 }
 export interface AiAgentOptions {
+  /** Additional trusted tool schemas supplied by a desktop integration. */
+  toolDefinitions?: ToolDef[];
   signal?: AbortSignal;
   prompt: string;
   system?: string;
@@ -396,7 +461,8 @@ export async function aiAgent(opts: AiAgentOptions): Promise<AgentResult> {
   const cfg = opts.config ?? (await loadAiConfig());
   const maxTurns = Math.max(1, Math.min(10, opts.maxTurns ?? cfg.maxTurns ?? 8));
   const trace: AgentTraceItem[] = [];
-  const defs = opts.tools ? TOOL_DEFS.filter((t) => opts.tools!.includes(t.name)) : TOOL_DEFS;
+  const available = [...new Map([...TOOL_DEFS, ...(opts.executeTool ? opts.toolDefinitions ?? [] : [])].map(t=>[t.name,t])).values()];
+  const defs = opts.tools ? available.filter((t) => opts.tools!.includes(t.name)) : available;
   const messages: ChatTurn[] = [
     { role: 'system', text: opts.system?.trim() || DEFAULT_SYSTEM },
     ...(opts.history ?? []).filter((t) => t.role !== 'system'),
@@ -431,7 +497,7 @@ export async function aiAgent(opts: AiAgentOptions): Promise<AgentResult> {
       };
     }
     if (resp.text) lastText = resp.text;
-    messages.push({ role: 'assistant', text: resp.text, toolCalls: resp.toolCalls });
+    messages.push({ role: 'assistant', text: resp.text, toolCalls: resp.toolCalls, reasoningContent:resp.reasoningContent });
 
     const results: { id: string; name: string; text: string }[] = [];
     for (const call of resp.toolCalls) {

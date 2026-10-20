@@ -684,6 +684,36 @@ export function buildServer(): McpServer {
     },
   );
 
+  reg(
+    'freemodel_chat',
+    {
+      title: '免费模型对话（免 API Key）',
+      description:
+        '调用免密免费大模型（移植自 dsh-our-free-model，MIT，作者 fish-under-sea，向原项目致谢）。action=list 列出可用免费模型；action=chat 用指定 model 免 API Key 发起一轮纯文本对话；action=probe 探测模型可用性与延迟。免费通道为第三方公共池：无 SLA、可能限流或区域限制，上游可能记录提示词，请勿发送敏感内容。',
+      inputSchema: {
+        action: z.enum(['list', 'chat', 'probe']).optional().describe('list=列模型（默认）/ chat=对话 / probe=探测'),
+        model: z.string().optional().describe('模型 id（chat/probe 必填，如 mimo-v2.6-flash-free）'),
+        prompt: z.string().optional().describe('chat 时的用户消息'),
+        system: z.string().optional().describe('chat 时的系统提示词（可选）'),
+        refresh: z.boolean().optional().describe('list 时强制刷新在线目录'),
+        maxTokens: z.number().int().positive().optional().describe('chat 时的最大输出 token'),
+      },
+      readOnly: true,
+    },
+    async (a) => {
+      const toolkit = await import('./core/toolkit.js');
+      const r = (await toolkit.runTool('freemodel_chat', {
+        ...(a.action !== undefined ? { action: a.action } : {}),
+        ...(a.model !== undefined ? { model: a.model } : {}),
+        ...(a.prompt !== undefined ? { prompt: a.prompt } : {}),
+        ...(a.system !== undefined ? { system: a.system } : {}),
+        ...(a.refresh !== undefined ? { refresh: a.refresh } : {}),
+        ...(a.maxTokens !== undefined ? { maxTokens: a.maxTokens } : {}),
+      })) as Record<string, unknown>;
+      return JSON.stringify(r, null, 2);
+    },
+  );
+
   return server;
 }
 

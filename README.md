@@ -534,7 +534,11 @@ Cupbox 再次校验并执行操作
 npm install          # 首次会经 npmmirror 镜像下载 Electron 运行时
 npm run desktop      # 开发运行
 npm run pack:exe     # 打包绿色便携 exe → release/Cupbox可视化/Cupbox可视化.exe
+npm run pack:installer # Windows 安装包（需 Inno Setup 6.7+）→ release/Cupbox-Setup-1.0.2-x64.exe
 ```
+
+安装版提供樱花主题中文引导、深浅色外观、安装位置与快捷方式选择，卸载保留对话和配置。
+构建、安装与签名说明见 [Windows 安装版](docs/WINDOWS-INSTALLER.md)。
 
 三阶段路线（工具驾驶舱 → ACP 多引擎接入 → 技能市场/调度/多会话）与选型依据见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
 
@@ -725,3 +729,8 @@ Cupbox 使用 [MIT License](./LICENSE) 开源。
   少写一次临时脚本，少做一次重复操作。<br>
   把时间留给真正值得创造的东西。
 </p>
+
+
+### 桌面开发工具与项目授权
+
+设置 → 开发与授权提供 36 项桌面 Agent 工具：文件预览/事务/回滚、HTTP、真实 ConPTY、搜索替换、图片处理、Git、脚本与测试、项目记忆。文件修改需预览令牌，项目策略提案不自动信任，Shell 始终人工批准。详见 [开发工具说明](docs/WORKBENCH.md)。

@@ -41,9 +41,9 @@ function textOf(result: unknown): string {
 }
 
 describe('MCP 冒烟', () => {
-  it('握手成功并暴露 21 个工具', async () => {
+  it('握手成功并暴露 22 个工具', async () => {
     const { tools } = await client.listTools();
-    expect(tools).toHaveLength(21);
+    expect(tools).toHaveLength(22);
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual([
       'ai_agent',
@@ -53,6 +53,7 @@ describe('MCP 冒烟', () => {
       'codec',
       'context_stats',
       'convert_csv_json',
+      'freemodel_chat',
       'hash',
       'memory_manage',
       'memory_profile',

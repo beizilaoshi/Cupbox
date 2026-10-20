@@ -4,7 +4,7 @@
 import path from 'node:path';
 import { mkdir, readFile, readdir, unlink, writeFile, rename } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell,clipboard,nativeImage } from 'electron';
 
 import { runTool, TOOL_DEFS } from '../dist/core/toolkit.js';
 import { aiChat, aiAgent, loadAiConfig, saveAiConfig, DEFAULT_SYSTEM } from '../dist/core/ai.js';
@@ -19,18 +19,46 @@ import { importStartupMedia } from './startup-media.js';
 import { createToolExecution } from './tool-execution.js';
 import { SYSTEM_TOOLS, inside } from './execution-policy.js';
 import { copyFile, realpath } from 'node:fs/promises';
+import { createChatModels } from './chat-models.js';
 import { createModelLibrary, publicModel } from './model-library.js';
 import { resolveRoutes, runWorkflow } from './model-workflow.js';
 import { randomUUID } from 'node:crypto';
+import { ensureMessageIds, feedbackHistory, preferredContext, updateFeedback } from './response-context.js';
+import { addFact, forgetFacts } from '../dist/core/memory.js';
+import { digest } from './workbench/files.js';
+import { ScopedState } from './workbench/state.js';
+import { ProjectPolicy } from './workbench/policy.js';
+import { Workbench } from './workbench/runtime.js';
+import { DEFINITIONS as WORKBENCH_DEFS } from './workbench/definitions.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+if (process.platform === 'win32') app.setAppUserModelId('Cupbox.Desktop');
 // `electron desktop/` 开发时 appPath = desktop/；打包后 resources/app/package.json 在根
 const ROOT = path.resolve(__dirname, '..');
 const modelLibrary=createModelLibrary(cupboxHome);
+const chatModels=createChatModels(modelLibrary);
 const activeChats=new Map(),imageAttachments=new Map();
+const workbenches=new Map(),watchedBenchSenders=new Set();
+async function getWorkbench(sender,session,root){
+  const key=sender.id+':'+session;let bench=workbenches.get(key);
+  if(bench&&bench.root.toLowerCase()!==path.resolve(root).toLowerCase()){bench.dispose();workbenches.delete(key);bench=null;}
+  if(!bench){bench=await new Workbench({root,home:cupboxHome(),session,approve:payload=>execution.authorizeAdvanced(sender,payload),getPrefs:loadPrefs,trash:file=>shell.trashItem(file),clipboard:{read:async()=>clipboard.readImage().toPNG(),write:async file=>{const image=nativeImage.createFromPath(file);if(image.isEmpty())throw Error('无法解码图片');clipboard.writeImage(image);return{written:true};}}}).init();workbenches.set(key,bench);if(!watchedBenchSenders.has(sender.id)){watchedBenchSenders.add(sender.id);sender.once('destroyed',()=>{for(const [id,b]of workbenches)if(id.startsWith(sender.id+':')){b.dispose();workbenches.delete(id);}watchedBenchSenders.delete(sender.id);});}for(const [id,b]of workbenches){if(workbenches.size<=32)break;if(id!==key&&!b.terminals.list().some(t=>!t.exited)){b.dispose();workbenches.delete(id);}}}
+  return bench;
+}
+async function manualBench(event,session='manual'){const p=await loadPrefs();const root=p.executionEnvironment==='native'?p.workspace:execution.sandboxRoot();if(!root)throw Error('先选择工作目录，或切换到沙箱');return getWorkbench(event.sender,String(session),root);}
+ipcMain.handle('workbench:list',()=>WORKBENCH_DEFS);
+ipcMain.handle('workbench:run',async(event,{name,args,sessionId})=>{try{return await(await manualBench(event,sessionId||'manual')).call(name,args);}catch(e){return{ok:false,code:e.code,message:e.message};}});
+ipcMain.handle('workbench:policy:get',async(event,sessionId)=>{const b=await manualBench(event,sessionId||'manual');return{policy:b.policy.value,proposal:await b.policy.proposal(),auditFile:b.policy.auditFile};});
+ipcMain.handle('workbench:policy:set',async(event,{policy,sessionId})=>{const b=await manualBench(event,sessionId||'manual');if(!await execution.authorizeAdvanced(event.sender,{tool:'修改项目授权策略',args:policy,risk:'system',force:true,directory:b.root}))return{ok:false,message:'策略变更未批准'};try{return{ok:true,policy:await b.policy.save(policy)};}catch(e){return{ok:false,message:e.message};}});
 ipcMain.handle('models:list',async()=> (await modelLibrary.list()).map(publicModel));
 ipcMain.handle('models:save',async(_e,draft)=>{try{return{ok:true,models:await modelLibrary.save(draft)};}catch(e){return{ok:false,error:e.message};}});
 ipcMain.handle('models:remove',async(_e,id)=>modelLibrary.remove(id));
+ipcMain.handle('freemodel:list',async(_e,opts={})=>{const fm=await import('../dist/core/freemodel.js');return fm.listFreeModels(opts.refresh?{refresh:true}:{offline:true});});
+ipcMain.handle('chat:models',()=>chatModels.catalog());
+ipcMain.handle('freemodel:selectable',(_e,p)=>chatModels.toggleModel(String(p.id),p.enabled===true));
+ipcMain.handle('freemodel:probe',(_e,id)=>chatModels.probe(String(id)));
+ipcMain.handle('freemodel:toggle',async(_e,{enabled})=>{const fm=await import('../dist/core/freemodel.js');await fm.saveFreeStore({enabled:enabled===true});return{enabled:enabled===true};});
+ipcMain.handle('freemodel:get',async()=>{const fm=await import('../dist/core/freemodel.js');return fm.loadFreeStore();});
 ipcMain.handle('chat:cancel',event=>{const c=activeChats.get(event.sender.id);if(c){c.abort();execution.cancel(event.sender);}return Boolean(c);});
 ipcMain.handle('chat:images',async event=>{
   const r=await dialog.showOpenDialog(BrowserWindow.fromWebContents(event.sender),{title:'添加参考图片（发送时上传至所选模型服务）',properties:['openFile','multiSelections'],filters:[{name:'图片',extensions:['png','jpg','jpeg','webp']}]});
@@ -50,14 +78,16 @@ ipcMain.handle('chat:export',async(event,id)=>{
 });
 
 /** 桌面专属 AI 入口：mode = ask（单次问答）| agent（Codex 式工具循环）。 */
-const execution=createToolExecution({getPrefs:async()=>{await prefsWrite.catch(()=>{});return loadPrefs();},home:cupboxHome});
+const execution=createToolExecution({getPrefs:async()=>{await prefsWrite.catch(()=>{});return loadPrefs();},home:cupboxHome,audit:async(tool,args,result,duration)=>{const p=await loadPrefs();await new ProjectPolicy(p.workspace||execution.sandboxRoot(),cupboxHome()).audit(tool,args,result,duration);}});
 async function desktopAi(a,sender) {
   const prompt = String(a.prompt ?? '').trim();
   if (!prompt) throw new Error('请输入问题 / 任务内容');
   if ((a.mode ?? 'ask') === 'agent') {
+    const p=await loadPrefs(),root=p.executionEnvironment==='native'?p.workspace:execution.sandboxRoot();if(!root)throw Error('请先选择工作目录');const bench=await getWorkbench(sender,'manual',root);
     return aiAgent({
+      toolDefinitions:bench.definitions,tools:[...TOOL_DEFS.map(t=>t.name).filter(n=>!['rename','organize','obfuscate','zip'].includes(n)),...bench.definitions.map(t=>t.name)],
       prompt,
-      executeTool:(name,args)=>execution.execute(sender,name,args,'agent'),
+      executeTool:(name,args)=>bench.handles(name)?bench.call(name,args).then(r=>{if(!r.ok)throw Error(r.code+': '+r.message);return r;}):execution.execute(sender,name,args,'agent'),
       ...(a.system ? { system: String(a.system) } : {}),
       ...(a.maxTurns ? { maxTurns: Number(a.maxTurns) } : {}),
     });
@@ -76,7 +106,8 @@ async function desktopAi(a,sender) {
 ipcMain.handle('cupbox:tool', async (event, tool, args) => {
   try {
     const a = args ?? {};
-    const result = tool === 'ai' ? await desktopAi(a,event.sender) : await execution.execute(event.sender,tool,a);
+    const result = tool === 'ai' ? await desktopAi(a,event.sender) : WORKBENCH_DEFS.some(d=>d.name===tool)?await(await manualBench(event)).call(tool,a):await execution.execute(event.sender,tool,a);
+    if(result?.ok===false)return{ok:false,error:result.code+': '+result.message,result};
     return { ok: true, result };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
@@ -247,7 +278,7 @@ async function listSessions() {
 async function readSession(id) {
   if (!SAFE_ID.test(String(id ?? ''))) throw new Error('非法会话 ID');
   try {
-    return JSON.parse(await readFile(path.join(sessionsDir(), `${id}.json`), 'utf8'));
+    return ensureMessageIds(JSON.parse(await readFile(path.join(sessionsDir(), `${id}.json`), 'utf8')));
   } catch {
     return null;
   }
@@ -335,6 +366,26 @@ ipcMain.handle('context:stats', async (_e, id) => {
   return { record, baseline };
 });
 
+let responseUpdates=Promise.resolve();
+function updateResponse(event,p,remember=false){
+ const operation=responseUpdates.catch(()=>{}).then(async()=>{
+  if(activeChats.has(event.sender.id))throw Error('请在当前任务结束后评价或修改记忆');
+  const sess=await readSession(p.sessionId);if(!sess)throw Error('找不到这次对话');
+  const message=sess.messages.find(m=>m.id===p.messageId&&m.role==='assistant');if(!message)throw Error('找不到这条回复');
+  if(remember){
+    const text=String(p.text||'').trim();if(text.length>600)throw Error('记忆内容最多 600 字');if(text&&message.feedback==='down')throw Error('不准确的回复不能保存为记忆');
+    if(message.memoryId)await forgetFacts(message.memoryId);
+    message.memoryId=text?(await addFact(text,'response:'+sess.id+':'+message.id,{projectKey:digest(path.resolve(sess.workspace||'').toLowerCase())})).id:undefined;message.memoryText=text||undefined;
+  }else{
+    updateFeedback(sess,p.messageId,p.value);
+    if(p.value==='down'&&message.memoryId){await forgetFacts(message.memoryId);delete message.memoryId;delete message.memoryText;}
+  }
+  sess.summary=null;await writeSession(sess);return{ok:true,message};
+ });responseUpdates=operation;return operation.catch(e=>({ok:false,error:e.message}));
+}
+ipcMain.handle('response:feedback',(event,p)=>updateResponse(event,p));
+ipcMain.handle('response:remember',(event,p)=>updateResponse(event,p,true));
+
 /* ---------- 对话（ask = 多轮历史直连；agent = 工具循环） ---------- */
 
 ipcMain.handle('chat:send', async (event, payload) => {
@@ -343,8 +394,10 @@ ipcMain.handle('chat:send', async (event, payload) => {
   if (!text) return { ok: false, error: '消息不能为空' };
   if(activeChats.has(event.sender.id))return{ok:false,error:'当前任务仍在运行'};
   const controller=new AbortController();activeChats.set(event.sender.id,controller);
+  let filesystem=null;
   const close=()=>{controller.abort();execution.cancel(event.sender);};event.sender.once('destroyed',close);
   try {
+    await responseUpdates.catch(()=>{});
     const prefs = await loadPrefs();
     let sess = p.sessionId ? await readSession(p.sessionId) : null;
     const workspace = prefs.executionEnvironment === 'native' ? ((sess && sess.workspace) || prefs.workspace || '') : execution.sandboxRoot();
@@ -366,49 +419,63 @@ ipcMain.handle('chat:send', async (event, payload) => {
     ].filter(Boolean).join('\n');
     const baseSystem = system; // 成分分解：系统提示词与注入块分开计量
     let injectedText = '';     // 注入上下文（历史摘要 + 记忆块）
-    let history = (sess.messages ?? []).filter(
-      (m) => (m.role === 'user' || m.role === 'assistant') && typeof m.text === 'string',
-    ).map((m) => ({ role: m.role, text: m.text }));
+    let history = feedbackHistory(sess);
+    const preferred=preferredContext(sess);if(preferred){system+=`\n${preferred}`;injectedText+=preferred;}
     // 上下文压缩：历史过长时把旧轮次浓缩为摘要，只保留最近几轮原文（设计参考 dsh-mnemon）
-    const aiCfg = await loadAiConfig();
-    const compacted = await compactHistory(history, { config: aiCfg, summary: sess.summary ?? null });
+    const chatChoices=await chatModels.select(p.routes||{},p.reasoningEfforts||{});
+    const configFor=id=>id==='default'?chatChoices.legacy:chatChoices.models.find(m=>m.id===id);
+    const aiCfg = chatChoices.apply(configFor(p.routes?.text||Object.values(p.routes||{})[0])||chatChoices.legacy);
+    if(p.mode==='agent'&&aiCfg.provider==='free')throw Error('免费通道当前只支持问答，请切换到“问一问”或选择支持工具的模型');
+    const compacted = await compactHistory(history, { config: aiCfg, summary: sess.summary ?? null,signal:controller.signal });
     if (compacted.compactedTurns > 0) {
       sess.summary = compacted.summary;
       history = compacted.kept;
-      const sb = summaryPromptBlock(compacted.summary);
-      if (sb) { system += `\n${sb}`; injectedText += `${sb}\n`; }
     }
+    const sb = summaryPromptBlock(compacted.summary);
+    if(sb){system+=`\n${sb}`;injectedText+=`${sb}\n`;}
     // 记忆注入：运行时记忆（用户画像/协作约定）常驻 + 按本条消息召回相关长期事实
-    const memBlock = await memoryPromptBlock(text);
+    const projectKey=digest(path.resolve(workspace||'').toLowerCase());
+    const memBlock = await memoryPromptBlock(text,projectKey);
     if (memBlock) { system += `\n${memBlock}`; injectedText += `${memBlock}\n`; }
+    if(workspace){const state=new ScopedState(workspace,cupboxHome());const scoped=await state.memory('memory_recall',{query:text,scope:'project'});if(scoped.facts.length){const block='\n【当前项目记忆】\n'+scoped.facts.map(f=>f.text).join('\n');system+=block;injectedText+=block;}}
     const mode = p.mode === 'agent' ? 'agent' : 'ask';
+    if(mode==='agent'&&aiCfg.provider==='free')throw Error('免费通道当前只支持问答，请切换到“问一问”或选择支持工具的模型');
     let result;
     const signal=controller.signal;
     const disabled=Array.isArray(prefs.disabledTools)?prefs.disabledTools:[];
-    const tools=TOOL_DEFS.map(t=>t.name).filter(n=>!disabled.includes(n)&&(prefs.executionEnvironment==='native'||!SYSTEM_TOOLS.has(n)));
-    const integrate=(prompt,config)=> mode==='agent'?aiAgent({prompt,system,history,config,signal,tools,executeTool:(name,args)=>execution.execute(event.sender,name,args,'agent',signal),onToolStart:call=>{if(!event.sender.isDestroyed())event.sender.send('chat:tool',{runId:p.runId,phase:'start',call});},onTool:item=>{if(!event.sender.isDestroyed())event.sender.send('chat:tool',{runId:p.runId,phase:'done',item});}}):aiChat({messages:[{role:'system',text:system},...history,{role:'user',text:prompt}],config,signal});
+    let tools=TOOL_DEFS.map(t=>t.name).filter(n=>!disabled.includes(n)&&(prefs.executionEnvironment==='native'||!SYSTEM_TOOLS.has(n)));
+    if(mode==='agent'&&workspace){
+      filesystem=await getWorkbench(event.sender,sess.id,workspace);
+      tools=tools.filter(n=>!['rename','organize','obfuscate','zip'].includes(n));tools.push(...filesystem.definitions.filter(t=>!disabled.includes(t.name)&&(prefs.filesystemTools!==false||!t.name.startsWith('fs_'))).map(t=>t.name));tools=[...new Set(tools)];
+      system+='\n开发工具已连接。必须先 fs_read/fs_stat 读取再修改。所有修改工具默认 dryRun，收到 confirmToken 后用完全相同参数加 dryRun:false、confirmToken 才执行。预览不是完成。写入后读取验证。http 域名需要批准，shell 与终端输入每次人工批准；项目策略文件不能自行放宽授权。项目记忆使用 scope:project。';
+    }
+    if(mode==='agent'&&!workspace)tools=tools.filter(n=>!['run','proc','rename','organize','zip','obfuscate'].includes(n));
+    const integrate=(prompt,config,scope)=> {config=chatChoices.apply(config);if(mode==='agent'&&config.provider==='free')throw Error('免费通道不支持执行任务');return mode==='agent'?aiAgent({prompt,system,history,config,signal,tools:scope?tools.filter(n=>n.startsWith('fs_')):tools,toolDefinitions:filesystem?.definitions||[],executeTool:(name,args)=>{const def=filesystem?.definitions.find(t=>t.name===name);return def?filesystem.call(name,args,scope,signal).then(r=>{if(!r.ok)throw Error(r.code+': '+r.message);return r;}):execution.execute(event.sender,name,args,'agent',signal);},onToolStart:call=>{if(!event.sender.isDestroyed())event.sender.send('chat:tool',{runId:p.runId,phase:'start',call});},onTool:item=>{if(!event.sender.isDestroyed())event.sender.send('chat:tool',{runId:p.runId,phase:'done',item});}}):aiChat({messages:[{role:'system',text:system},...history,{role:'user',text:prompt}],config,signal,conversationKey:sess.id});};
     if(p.capabilities?.length || (prefs.multiModel&&p.workflow&&p.workflow!=='direct')) {
-      const selected=resolveRoutes({models:await modelLibrary.list(),legacy:await loadAiConfig(),capabilities:p.capabilities,routes:p.routes,multiModel:prefs.multiModel===true});
+      const selected=resolveRoutes({models:chatChoices.models,legacy:chatChoices.legacy,capabilities:p.capabilities,routes:p.routes,multiModel:prefs.multiModel===true});
+      for(const route of selected)if(route.cap==='text')route.model=chatChoices.apply(route.model);
       const attachments=(p.attachments||[]).map(id=>imageAttachments.get(id)).filter(a=>a?.sender===event.sender.id);
       if((p.attachments||[]).length!==attachments.length)throw Error('参考图片已失效，请重新添加');
       if(attachments.length&&!selected.some(r=>r.cap==='vision'||r.cap==='video'))throw Error('添加图片后，请勾选视觉或视频能力');
-      const workflow=prefs.multiModel&&['direct','project','plan','review'].includes(p.workflow)?p.workflow:'direct';
+      const workflow=prefs.multiModel&&['direct','project','plan','review','auto'].includes(p.workflow)?p.workflow:'direct';
       if(p.reviewerId&&workflow==='review'){
         const reviewer=(await modelLibrary.list()).find(m=>m.id===p.reviewerId&&m.enabled&&m.capabilities.includes('text'));
-        if(!reviewer)throw Error('审阅模型不可用');selected.push({cap:'text',model:reviewer});
+        if(!reviewer)throw Error('审阅模型不可用');selected.push({cap:'text',model:chatChoices.apply(reviewer)});
       }
       if(workflow==='direct'&&selected.length===1&&selected[0].cap==='text')result=await integrate(text,selected[0].model);
-      else {result=await runWorkflow({selected,workerModels:(await modelLibrary.list()).filter(m=>prefs.multiModel&&m.enabled&&m.capabilities.includes('text')&&(prefs.projectWorkers||[]).includes(m.id)),workflow,parallel:Math.min(3,Math.max(1,Number(prefs.parallelTasks)||2)),prompt:text,system,history,attachments,signal,home:cupboxHome,emit:task=>{if(!event.sender.isDestroyed())event.sender.send('chat:progress',{runId:p.runId,task});},integrate});
+      else {result=await runWorkflow({selected,workerModels:(await modelLibrary.list()).filter(m=>prefs.multiModel&&m.enabled&&m.capabilities.includes('text')&&(prefs.projectWorkers||[]).includes(m.id)).map(chatChoices.apply),workflow,scene:p.scene||'auto',criteria:String(p.criteria||'').slice(0,1000),quality:p.quality||'balanced',workRoot:workspace,executeText:mode==='agent'?(task,model)=>integrate(task.prompt,model,task.outputDir):undefined,parallel:Math.min(3,Math.max(1,Number(prefs.parallelTasks)||2)),prompt:text,system,history,attachments,signal,home:cupboxHome,emit:task=>{if(!event.sender.isDestroyed())event.sender.send('chat:progress',{runId:p.runId,task});},integrate});
         if(mode==='agent'&&['direct','review'].includes(workflow)&&selected.some(r=>r.cap==='text')&&!signal.aborted){
           const merged=await integrate('原始目标：'+text+'\n各模型交付：'+result.text+'\n媒体文件：'+(result.media||[]).map(m=>m.url).join('\n')+'\n请整合交付并按需使用本地工具落实。',selected.find(r=>r.cap==='text').model);
-          result={...result,text:merged.text,trace:merged.trace};
+          result={...result,text:merged.text,trace:[...(result.trace||[]),...(merged.trace||[])]};
         }
       }
-    }else result=await integrate(text,await loadAiConfig());
+    }else result=await integrate(text,aiCfg);
+    delete result.reasoningContent;
     // 成功后才落盘（失败不污染历史）
     const prevMode = sess.mode; // 模式切换检测（记录事件用）
-    sess.messages.push({ role: 'user', text });
-    sess.messages.push({ role: 'assistant', text: result.text, ...(result.trace ? { trace: result.trace } : {}), ...(result.tasks?{tasks:result.tasks}:{}), ...(result.media?{media:result.media}:{}) });
+    sess.messages.push({ id:randomUUID(),role: 'user', text });
+    const assistantMessage={ id:randomUUID(),role:'assistant',text:result.text, ...(result.trace ? { trace: result.trace } : {}), ...(result.tasks?{tasks:result.tasks}:{}), ...(result.media?{media:result.media}:{}) };sess.messages.push(assistantMessage);result={...result,messageId:assistantMessage.id};
+    sess.chatSelection={routes:p.routes||{},reasoningEfforts:p.reasoningEfforts||{},capabilities:p.capabilities||['text']};
     sess.mode = mode;
     sess.updatedAt = new Date().toISOString();
     if (!sess.workspace && workspace) sess.workspace = workspace;
@@ -416,15 +483,13 @@ ipcMain.handle('chat:send', async (event, payload) => {
     {
       const ctx = sess.context && Array.isArray(sess.context.trend) ? sess.context : emptySessionContext();
       const toolSchemas = mode === 'agent' && tools.length
-        ? JSON.stringify(TOOL_DEFS.filter(t => tools.includes(t.name)))
+        ? JSON.stringify([...TOOL_DEFS,...(filesystem?.definitions||[])].filter(t => tools.includes(t.name)))
         : '';
       const bd = contextBreakdown({
         system: baseSystem,
         toolSchemas,
         injected: injectedText,
-        messages: sess.messages
-          .filter(m => typeof m.text === 'string')
-          .map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', text: m.text })),
+        messages: feedbackHistory(sess),
       });
       ctx.window = bd.window;
       ctx.last = bd;
@@ -482,7 +547,7 @@ ipcMain.handle('chat:send', async (event, payload) => {
     return { ok: true, sessionId: sess.id, title: sess.title, result };
   } catch (e) {
     return { ok: false, error: controller.signal.aborted?'任务已停止；已开始的本地操作会完成，服务端生成任务可能继续运行':e.message };
-  } finally {activeChats.delete(event.sender.id);event.sender.removeListener('destroyed',close);}
+  } finally {await filesystem?.close();activeChats.delete(event.sender.id);event.sender.removeListener('destroyed',close);}
 
 });
 

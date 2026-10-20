@@ -1,6 +1,6 @@
 {
   "name": "cupbox",
-  "version": "1.1.0",
+  "version": "1.0.2",
   "description": "把杂活儿交给命令行和 AI —— CLI + MCP + 可视化桌面版 三形态工具箱：文件整理、批量重命名、中文 OCR、剪贴板、哈希、时间戳、压缩、CSV 转换、图片像素混淆、安全执行命令",
   "keywords": [
     "mcp",
@@ -51,6 +51,7 @@
     "dev": "tsc -p tsconfig.build.json --watch",
     "desktop": "electron desktop",
     "pack:exe": "node desktop/pack.mjs",
+    "pack:installer": "node desktop/installer/build.mjs",
     "mcp": "node dist/mcp.js",
     "prepublishOnly": "npm run build && npm test",
     "preversion": "npm test",
@@ -58,8 +59,21 @@
     "postversion": "git push && git push --tags"
   },
   "dependencies": {
+    "@lydell/node-pty": "^1.2.0-beta.15",
     "@modelcontextprotocol/sdk": "^1.12.0",
+    "@modelcontextprotocol/server-filesystem": "^2.0.0",
+    "diff": "^9.0.0",
+    "dompurify": "^3.4.17",
+    "iconv-lite": "^0.7.3",
+    "ignore": "^7.0.12",
+    "ipaddr.js": "^2.5.0",
+    "marked": "^15.0.12",
+    "minimatch": "^10.2.6",
+    "pixelmatch": "^8.0.0",
     "pngjs": "^7.0.0",
+    "safe-regex2": "^5.1.2",
+    "sharp": "^0.35.5",
+    "string-argv": "^0.4.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {

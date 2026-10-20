@@ -28,7 +28,7 @@ window.CupboxProviders=(()=>{
     document.getElementById('tab-api').addEventListener('change',()=>revision++);
     for(const [id,p] of Object.entries(presets)){const option=document.createElement('option');option.value=id;option.textContent=p.name;$('api-preset').appendChild(option);}
     $('api-preset').addEventListener('change',()=>{
-      const p=presets[$('api-preset').value];$('api-provider').value=p.provider;$('api-base').value=p.base;$('api-model').value=p.model;$('api-key').value='';$('api-status').textContent='';$('model-options').replaceChildren();syncKey();
+      const p=presets[$('api-preset').value];$('api-reasoning-mode').value='auto';$('api-provider').value=p.provider;$('api-base').value=p.base;$('api-model').value=p.model;$('api-key').value='';$('api-status').textContent='';$('model-options').replaceChildren();syncKey();
     });
     $('fetch-models').addEventListener('click',async()=>{
       const btn=$('fetch-models');btn.disabled=true;$('models-status').textContent='正在连接并获取模型…';
