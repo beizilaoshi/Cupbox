@@ -8,6 +8,8 @@ import {selectEmoji} from '../desktop/qq/emoji-policy.js';
 import {BotLogger,redact} from '../desktop/qq/logger.js';
 import {createMemeTools,MEME_TOOL} from '../desktop/qq/meme-tools.js';
 import {runFreeWorkflow} from '../src/core/free-workflow.js';
+// sharp 需要 Node≥20：CI 的 Node 18 加载不了，依赖真实解码器的用例按环境跳过
+let sharpOk=true;try{await import('sharp');}catch{sharpOk=false;}
 const cleanups:(()=>any)[]=[];
 afterEach(async()=>{for(const fn of cleanups.splice(0))await fn();vi.restoreAllMocks();});
 class Socket extends EventTarget{
@@ -24,7 +26,7 @@ async function fixture(format='png'){
   const bot=service.bot=new OneBot({url:'ws://127.0.0.1:1234',token:'never-log-this-token',WebSocketImpl:Socket,onLog:(l,m,d)=>service.log(l,'transport',m,d)});bot.connect();Socket.current.open();cleanups.unshift(()=>service.stop());return{service,image,socket:Socket.current,entries};
 }
 const event=(kind='group',id=1):any=>({post_type:'message',message_type:kind,self_id:123456,user_id:654321,group_id:111111,message_id:id,message:[{type:'at',data:{qq:123456}},{type:'text',data:{text:'我成功了'}}]});
-describe('actual emoji delivery path',()=>{
+describe.runIf(sharpOk)('actual emoji delivery path',()=>{
   it('semantic search sends a real picture before the model sees the acknowledged outcome, and persists it across restarts',async()=>{
     const {service,image,socket}=await fixture();await service.store.saveEmoji({id:image.id,meaning:'猫猫比心，表达感谢',triggers:[],selectionMode:'semantic',enabled:true});service.engine.update({...service.config,retainDialogue:true,segmentedStreaming:true,replyMention:true});
     let seen:any;service.customRespond=async(p:any)=>{seen=p;expect(p.onTextDelta).toBeUndefined();expect(p.system).toContain('历史中');expect(p.memeTools.definitions[0].name).toBe('send_meme');const search=await p.memeTools.execute('send_meme',{action:'search',query:'比心'});expect(search.candidates[0].id).toBe(image.id);expect(socket.sent.filter(r=>r.action==='send_group_msg')).toHaveLength(0);const result=await p.memeTools.execute('send_meme',{action:'send',id:image.id});expect(result).toMatchObject({ok:true,status:'accepted',messageId:'123'});expect(socket.sent.filter(r=>r.action==='send_group_msg')).toHaveLength(1);expect((await p.memeTools.execute('send_meme',{action:'send',id:image.id})).status).toBe('already_attempted');return{text:'给你一个比心。'};};

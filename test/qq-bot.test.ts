@@ -10,6 +10,8 @@ import { onebotConfig,NapCatManager,extractZip } from '../desktop/qq/napcat.js';
 import { parseSearch,recognizeImages,isBitmap,searchWeb } from '../desktop/qq/capabilities.js';
 import { QQService } from '../desktop/qq/service.js';
 import { createHash } from 'node:crypto';
+// sharp 需要 Node≥20：CI 的 Node 18 加载不了，依赖真实解码器的用例按环境跳过
+let sharpOk=true;try{await import('sharp');}catch{sharpOk=false;}
 const dirs:string[]=[];const disposals:(()=>any)[]=[];
 afterEach(async()=>{for(const fn of disposals.splice(0))await fn();for(const dir of dirs.splice(0))await rm(dir,{recursive:true,force:true});vi.restoreAllMocks();});
 async function temp(){const dir=await mkdtemp(path.join(os.tmpdir(),'cupbox-qq-'));dirs.push(dir);return dir;}
@@ -86,7 +88,7 @@ describe('controlled emoji and web/vision boundaries',()=>{
     expect(pickEmoji('好耶 [[emoji:happy]]','成功了',list,true).selected?.id).toBe('happy');
     expect(pickEmoji('[[emoji:happy]]','失败了',list,true).selected).toBeFalsy();expect(pickEmoji('[[emoji:happy]]','成功了',list,false).selected).toBeFalsy();expect(pickEmoji('[[emoji:happy]]','成功了',list,true,Date.now()).selected).toBeFalsy();expect(pickEmoji('[[emoji:unknown]]','成功了',list,true).clean).toBe('');
   });
-  it('imports a bitmap as disabled, requires meaning/trigger, preserves original on removal',async()=>{
+  it.runIf(sharpOk)('imports a bitmap as disabled, requires meaning/trigger, preserves original on removal',async()=>{
     const home=await temp(),sharp=(await import('sharp')).default,file=path.join(home,'my.png');await sharp({create:{width:2,height:2,channels:3,background:'red'}}).png().toFile(file);
     const service=await new QQService({home,choices:{},napcat:{installed:async()=>false}}).init();const [item]=await service.importEmoji(file);expect(item.enabled).toBe(false);expect(item.preview).toContain('data:image/png');
     await expect(service.store.saveEmoji({id:item.id,meaning:'开心',triggers:[],enabled:true})).rejects.toThrow('触发词');
