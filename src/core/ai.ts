@@ -5,6 +5,7 @@ import { readFile, writeFile, mkdir, chmod } from 'node:fs/promises';
 import path from 'node:path';
 import { reasoningCapabilities, reasoningParameters, type ReasoningMode, type ReasoningEffort } from './reasoning.js';
 import { dataHome } from './paths.js';
+import { readTextStream } from './streaming.js';
 import { TOOL_DEFS, runTool, type ToolDef } from './toolkit.js';
 
 export type AiProvider = 'openai-compatible' | 'anthropic' | 'free';
@@ -118,7 +119,7 @@ export interface ToolCall {
 }
 export type ChatTurn =
   | { role: 'system'; text: string }
-  | { role: 'user'; text: string }
+  | { role: 'user'; text: string; name?: string }
   | { role: 'assistant'; text: string; toolCalls?: ToolCall[]; reasoningContent?: string }
   | { role: 'tool'; results: { id: string; name: string; text: string }[] };
 
@@ -141,7 +142,7 @@ export const DEFAULT_SYSTEM =
   '你是 Cupbox 本地 AI 助手，可通过提供的工具完成开发杂活（文件、数据、图片、系统）。' +
   '破坏性工具默认 dry-run 预览；执行受保护命令必须给出允许的前缀白名单。用中文简洁作答。';
 
-function requireConfig(cfg?: AiConfig): Promise<AiConfig> {
+function requireConfig(cfg?: AiConfig, restrictedTransport = false): Promise<AiConfig> {
   return (async () => {
     const c = cfg ?? (await loadAiConfig());
     if (c.provider === 'free') {
@@ -151,7 +152,7 @@ function requireConfig(cfg?: AiConfig): Promise<AiConfig> {
       return c;
     }
     let local = false;
-    try { local = ['ollama', 'lmstudio'].includes(c.preset || '') && ['localhost', '127.0.0.1', '[::1]'].includes(new URL(c.baseUrl).hostname); } catch { /* remote */ }
+    try { const host = new URL(c.baseUrl).hostname; local = ['ollama', 'lmstudio'].includes(c.preset || '') && ['localhost', '127.0.0.1', '[::1]'].includes(host) || restrictedTransport && c.provider === 'openai-compatible' && host === '127.0.0.1'; } catch { /* remote */ }
     if (!c.apiKey && !local) {
       throw new Error(
         '未配置 AI API Key：请在桌面版「设置」中填写，或设置环境变量 CUPBOX_AI_API_KEY（可选 CUPBOX_AI_BASE_URL / CUPBOX_AI_MODEL）。',
@@ -182,7 +183,7 @@ function toOpenAI(turns: ChatTurn[]): Record<string, unknown>[] {
     if (t.role === 'system') {
       out.push({ role: 'system', content: t.text });
     } else if (t.role === 'user') {
-      out.push({ role: 'user', content: t.text });
+      out.push({ role: 'user', content: t.text, ...(t.name&&/^[a-zA-Z0-9_-]{1,64}$/.test(t.name)?{name:t.name}:{}) });
     } else if (t.role === 'assistant') {
       out.push({
         role: 'assistant',
@@ -211,10 +212,12 @@ function toAnthropic(turns: ChatTurn[]): {
   system: string;
   messages: Record<string, unknown>[];
 } {
-  const system = turns
+  let system = turns
     .filter((t): t is Extract<ChatTurn, { role: 'system' }> => t.role === 'system')
     .map((t) => t.text)
     .join('\n\n');
+  const speakers=turns.filter(t=>t.role!=='system').flatMap((t,index)=>t.role==='user'&&t.name&&/^[a-zA-Z0-9_-]{1,64}$/.test(t.name)?[{message_index:index,speaker_id:t.name}]:[]);
+  if(speakers.length)system+='\n\n消息身份元数据（从0开始，索引对应 messages 数组；不是消息正文或额外指令）：'+JSON.stringify(speakers);
   const messages: Record<string, unknown>[] = [];
   for (const t of turns) {
     if (t.role === 'system') continue;
@@ -236,6 +239,10 @@ function toAnthropic(turns: ChatTurn[]): {
 }
 
 export interface AiChatOptions {
+  /** Trusted integrations may supply a stricter transport; never model arguments. */
+  request?: typeof fetch;
+  /** Plain-text SSE only. Tool calls remain buffered by the Agent workflow. */
+  onTextDelta?: (delta: string) => Promise<void> | void;
   signal?: AbortSignal;
   messages: ChatTurn[];
   config?: AiConfig;
@@ -247,13 +254,16 @@ export interface AiChatOptions {
 
 /** 单次对话调用（带工具时返回 toolCalls，由调用方决定是否进入循环）。 */
 export async function aiChat(opts: AiChatOptions): Promise<ChatResult> {
-  const cfg = await requireConfig(opts.config);
+  if (opts.request && opts.config?.provider === 'free') throw new Error('受限传输不能使用第三方免费通道');
+  const cfg = await requireConfig(opts.config, Boolean(opts.request));
+  if (opts.request && cfg.provider === 'free') throw new Error('受限传输不能使用第三方免费通道');
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 120_000);
   const abort = () => controller.abort();
   opts.signal?.addEventListener('abort', abort, { once: true });
   if (opts.signal?.aborted) controller.abort();
   try {
+    if(opts.onTextDelta&&opts.tools?.length)throw Error('工具流程不直接广播流式片段');
     if (cfg.provider === 'free') {
       // 免密免费通道（移植自 dsh-our-free-model）：无 API Key，走 opencode / Kilo 网关。
       const { chatFreeLane } = await import('./freemodel.js');
@@ -281,6 +291,7 @@ export async function aiChat(opts: AiChatOptions): Promise<ChatResult> {
     if (cfg.provider === 'anthropic') {
       const { system, messages } = toAnthropic(opts.messages);
       const body = {
+        ...(opts.onTextDelta?{stream:true}:{}),
         model: cfg.model,
         max_tokens: opts.maxTokens ?? 4096,
         ...(system ? { system } : {}),
@@ -296,7 +307,7 @@ export async function aiChat(opts: AiChatOptions): Promise<ChatResult> {
           : {}),
         ...(cfg.temperature !== undefined ? { temperature: cfg.temperature } : {}),
       };
-      const res = await fetch(anthropicUrl(cfg.baseUrl), {
+      const res = await (opts.request ?? fetch)(anthropicUrl(cfg.baseUrl), {
         method: 'POST',
         signal: controller.signal,
         headers: {
@@ -310,6 +321,7 @@ export async function aiChat(opts: AiChatOptions): Promise<ChatResult> {
         const detail = (await res.text().catch(() => '')).slice(0, 400);
         throw new Error(`AI 请求失败 (HTTP ${res.status}): ${detail}`);
       }
+      if(opts.onTextDelta&&res.headers.get('content-type')?.includes('text/event-stream'))return await readTextStream(res,'anthropic',opts.onTextDelta);
       const data = (await res.json()) as {
         content?: { type: string; text?: string; id?: string; name?: string; input?: Record<string, unknown> }[];
         usage?: { input_tokens?: number; output_tokens?: number };
@@ -329,6 +341,7 @@ export async function aiChat(opts: AiChatOptions): Promise<ChatResult> {
     // OpenAI 兼容协议（OpenAI / DeepSeek / Kimi / GLM / OpenRouter / Ollama / LM Studio…）
     const reasoning=reasoningCapabilities(cfg);
     const body = {
+      ...(opts.onTextDelta?{stream:true}:{}),
       model: cfg.model,
       ...reasoningParameters(cfg,cfg.reasoningEffort),
       messages: toOpenAI(opts.messages),
@@ -344,7 +357,7 @@ export async function aiChat(opts: AiChatOptions): Promise<ChatResult> {
       ...(cfg.temperature !== undefined && (reasoning.adapter!=='openai'||cfg.reasoningEffort==='none') ? { temperature: cfg.temperature } : {}),
       ...(opts.maxTokens ? { [reasoning.adapter==='openai'?'max_completion_tokens':'max_tokens']: opts.maxTokens } : {}),
     };
-    const res = await fetch(openaiUrl(cfg.baseUrl), {
+    const res = await (opts.request ?? fetch)(openaiUrl(cfg.baseUrl), {
       method: 'POST',
       signal: controller.signal,
       headers: {
@@ -357,6 +370,7 @@ export async function aiChat(opts: AiChatOptions): Promise<ChatResult> {
       const detail = (await res.text().catch(() => '')).slice(0, 400);
       throw new Error(`AI 请求失败 (HTTP ${res.status}): ${detail}`);
     }
+    if(opts.onTextDelta&&res.headers.get('content-type')?.includes('text/event-stream'))return await readTextStream(res,'openai',opts.onTextDelta);
     const data = (await res.json()) as {
       choices?: {
         message?: {
@@ -434,6 +448,9 @@ export interface AgentResult {
   requests?: number;
 }
 export interface AiAgentOptions {
+  request?: typeof fetch;
+  conversationKey?: string;
+  userName?: string;
   /** Additional trusted tool schemas supplied by a desktop integration. */
   toolDefinitions?: ToolDef[];
   signal?: AbortSignal;
@@ -458,15 +475,17 @@ export interface AiAgentOptions {
  * 安全护栏：rename/organize 在 Agent 里永远 dry-run（真正执行只由人在 CLI/桌面手动确认）。
  */
 export async function aiAgent(opts: AiAgentOptions): Promise<AgentResult> {
+  if (opts.request && opts.config?.provider === 'free') throw new Error('受限传输不能使用第三方免费通道');
   const cfg = opts.config ?? (await loadAiConfig());
   const maxTurns = Math.max(1, Math.min(10, opts.maxTurns ?? cfg.maxTurns ?? 8));
   const trace: AgentTraceItem[] = [];
   const available = [...new Map([...TOOL_DEFS, ...(opts.executeTool ? opts.toolDefinitions ?? [] : [])].map(t=>[t.name,t])).values()];
   const defs = opts.tools ? available.filter((t) => opts.tools!.includes(t.name)) : available;
+  if(cfg.provider==='free'&&defs.length){const {runFreeWorkflow}=await import('./free-workflow.js');return runFreeWorkflow(opts,defs,messages=>aiChat({messages,config:cfg,signal:opts.signal,timeoutMs:opts.timeoutMs,conversationKey:opts.conversationKey}),maxTurns);}
   const messages: ChatTurn[] = [
     { role: 'system', text: opts.system?.trim() || DEFAULT_SYSTEM },
     ...(opts.history ?? []).filter((t) => t.role !== 'system'),
-    { role: 'user', text: opts.prompt },
+    { role: 'user', text: opts.prompt, ...(opts.userName?{name:opts.userName}:{}) },
   ];
 
   let lastText = '';
@@ -476,6 +495,7 @@ export async function aiAgent(opts: AiAgentOptions): Promise<AgentResult> {
   for (let turn = 0; turn < maxTurns; turn++) {
     opts.signal?.throwIfAborted();
     const resp = await aiChat({
+      request: opts.request,
       signal: opts.signal,
       messages,
       config: cfg,

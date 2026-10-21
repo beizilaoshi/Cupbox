@@ -1,0 +1,7 @@
+{
+  "id": "2026-10-21-welcome",
+  "title": "欢迎使用 Cupbox 工具箱",
+  "body": "欢迎使用 Cupbox 工具箱！\n\n这是一个把常用小工具、AI 问答与 QQ 机器人收进同一扇窗的桌面工具箱。\n\n· 左侧工具栏：哈希、编码、时间戳、文本处理等常用工具，即开即用\n· 对话区：问一问 / 执行任务两种模式，可接入自己的模型\n· QQ 机器人：在设置里启用后，可与群友一起用工具\n\n遇到问题或有建议，欢迎到 GitHub 仓库提 Issue。祝使用愉快！",
+  "publishedAt": "2026-10-21",
+  "url": "https://github.com/beizilaoshi/cupbox"
+}

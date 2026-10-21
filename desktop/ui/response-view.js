@@ -43,6 +43,6 @@ window.CupboxResponse=(()=>{
     }
     container.append(actions);
   }
-  const toolNames={fs_read:'分页读取文件',fs_write:'预览/写入文件',fs_edit:'精确编辑文件',fs_patch:'应用补丁',fs_mkdir:'创建目录',fs_mv:'移动文件',fs_cp:'复制文件',fs_rm:'可恢复删除',fs_stat:'文件信息',fs_rollback:'回滚文件操作',http:'联网请求',grep:'搜索代码',replace:'批量替换',pty_spawn:'启动终端',pty_read:'读取终端日志',pty_write:'发送终端输入',pty_kill:'停止终端',git:'Git 操作',pkg:'运行项目脚本',test:'运行测试',clipboard_image:'图片剪贴板',fs_read_text_file:'读取文件',fs_read_multiple_files:'读取多个文件',fs_write_file:'写入文件',fs_edit_file:'编辑文件',fs_create_directory:'创建目录',fs_list_directory:'列出目录',fs_list_directory_with_sizes:'查看目录大小',fs_directory_tree:'读取目录树',fs_search_files:'查找文件',fs_get_file_info:'查看文件信息'};
+  const toolNames={desktop_observe:'查看授权窗口',desktop_capture:'截取授权窗口',desktop_ocr:'本地屏幕识字',desktop_vision:'视觉理解',desktop_mouse:'鼠标操控',desktop_type:'输入文字',desktop_key:'窗口按键',fs_read:'分页读取文件',fs_write:'预览/写入文件',fs_edit:'精确编辑文件',fs_patch:'应用补丁',fs_mkdir:'创建目录',fs_mv:'移动文件',fs_cp:'复制文件',fs_rm:'可恢复删除',fs_stat:'文件信息',fs_rollback:'回滚文件操作',http:'联网请求',grep:'搜索代码',replace:'批量替换',pty_spawn:'启动终端',pty_read:'读取终端日志',pty_write:'发送终端输入',pty_kill:'停止终端',git:'Git 操作',pkg:'运行项目脚本',test:'运行测试',clipboard_image:'图片剪贴板',fs_read_text_file:'读取文件',fs_read_multiple_files:'读取多个文件',fs_write_file:'写入文件',fs_edit_file:'编辑文件',fs_create_directory:'创建目录',fs_list_directory:'列出目录',fs_list_directory_with_sizes:'查看目录大小',fs_directory_tree:'读取目录树',fs_search_files:'查找文件',fs_get_file_info:'查看文件信息'};
   return{render,attach,toolName:name=>toolNames[name]||name,init:options=>hooks=options};
 })();

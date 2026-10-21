@@ -4,6 +4,7 @@ window.CupboxRisk = (() => {
   function describe(tool, args = {}, risk = 'system') {
     const critical = (title, consequence, action) => ({level:'danger',label:'高风险操作',title,consequence,action,ack:true});
     const warn = (title, consequence, action='批准本次操作') => ({level:'warning',label:'需要你的确认',title,consequence,action,ack:false});
+    if(tool.startsWith('desktop_'))return critical('桌面协作会影响真实窗口','只允许你手动授权的目标窗口。截图和OCR可能含隐私；视觉分析会发送截图到所选模型。鼠标和按键可能发送、删除或执行内容；完全控制也需逐次批准。','核对并批准本次');
     if (tool === 'permission_full') return critical('允许更多操作自动执行？','普通文件修改将不再逐次询问。Shell、敏感文件和项目策略仍需单独批准。只在信任当前任务时开启。','开启完全控制');
     if (tool === 'environment_native') return warn('切换到本机运行？','AI 将使用真实工作文件夹，并可请求运行终端、项目脚本和系统工具。已批准的程序可以影响本机。','切换到本机');
     if (/删除|清空/.test(tool) || tool === 'fs_rm') return critical('确认删除这项内容？',tool === 'fs_rm'?'目标文件或目录将从原位置移除。系统回收站与操作备份用于恢复，请先核对路径和递归选项。':'这段任务记录将被永久移除，无法通过应用撤销。需要保留时，请先导出。','确认删除');

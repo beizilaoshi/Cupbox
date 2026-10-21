@@ -94,3 +94,11 @@
 .ctx-empty-note{font-size:11px;color:var(--txt-faint);padding:6px 2px}
 .ctx-modal .upd-foot{margin-top:14px}
 @media(max-width:800px){.ctx-kpis{grid-template-columns:repeat(2,1fr)}.ctx-legend{grid-template-columns:repeat(2,1fr)}}
+
+/* 开屏公告弹窗（announcement.json） */
+.modal.ann-modal{width:620px}
+.ann-meta{display:flex;gap:8px;align-items:center;padding:0 24px 4px}
+.ann-body{padding:16px 24px;overflow:auto;white-space:pre-wrap;font-size:12.5px;line-height:1.75;max-height:46vh;color:var(--txt-dim)}
+.ann-opt{display:flex;align-items:center;gap:9px;padding:2px 24px 6px;font-size:11px;color:var(--txt-faint);cursor:pointer}
+.ann-opt input{width:14px;min-width:14px;height:14px;flex:0 0 14px;padding:0;margin:0;accent-color:var(--accent)}
+@media(max-width:760px){.modal.ann-modal{width:calc(100vw - 36px)}}

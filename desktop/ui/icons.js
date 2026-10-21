@@ -2,6 +2,7 @@
 "use strict";
 window.CupboxIcons = (() => {
   const paths = {
+    'qq-bot': '<rect x="4" y="5" width="16" height="14" rx="5"/><path d="M12 2v3M8 19v3m8-3v3M1 10v5m22-5v5M8 14h8"/><circle cx="8.5" cy="10" r=".8"/><circle cx="15.5" cy="10" r=".8"/>',
     loader: '<circle cx="12" cy="12" r="9" opacity=".2"/><path d="M12 3a9 9 0 0 1 9 9"/>',
     copy: '<rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
     text: '<path d="M4 5h16M12 5v15M8 20h8"/>',
@@ -31,7 +32,7 @@ window.CupboxIcons = (() => {
     proc: '<path d="M4 5h16M4 12h16M4 19h16"/><circle cx="8" cy="5" r="2" fill="var(--surface)"/><circle cx="16" cy="12" r="2" fill="var(--surface)"/><circle cx="10" cy="19" r="2" fill="var(--surface)"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>',
     moon: '<path d="M21 13.3A9 9 0 0 1 10.7 3 9 9 0 1 0 21 13.3Z"/>',
-    monitor: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M12 17v4M8 21h8"/>',
+    desktop_observe:'<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/>',desktop_capture:'<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/><rect x="7" y="7" width="10" height="10" rx="2"/>',desktop_mouse:'<rect x="7" y="2" width="10" height="20" rx="5"/><path d="M12 3v6M7 10h10"/>',desktop_type:'<path d="M4 4h16M12 4v16M8 20h8"/>',desktop_key:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h1m3 0h1m3 0h1m3 0h1M6 13h1m3 0h1m3 0h1M8 16h8"/>',desktop_ocr:'<path d="M4 8V4h4m8 0h4v4M4 16v4h4m8 0h4v-4M9 8v8m6-8v8M9 12h6"/>',desktop_vision:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',monitor: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M12 17v4M8 21h8"/>',
     image: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 4-6 5 7"/>',
     upload: '<path d="M12 16V3m-4 4 4-4 4 4M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>',
     check: '<path d="m5 12 4 4L19 6"/>',

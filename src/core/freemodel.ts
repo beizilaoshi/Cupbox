@@ -480,6 +480,7 @@ export async function listFreeModels(opts: { refresh?: boolean; offline?: boolea
 /* ---------------- 对话调用 ---------------- */
 
 export interface FreeTurn {
+  name?: string;
   role: 'system' | 'user' | 'assistant' | 'tool';
   text?: string;
   toolCalls?: { id: string; name: string; args: Record<string, unknown> }[];
@@ -518,7 +519,7 @@ function toOpenAiMessages(turns: FreeTurn[]): Record<string, unknown>[] {
   const out: Record<string, unknown>[] = [];
   for (const t of turns) {
     if (t.role === 'system') out.push({ role: 'system', content: t.text ?? '' });
-    else if (t.role === 'user') out.push({ role: 'user', content: t.text ?? '' });
+    else if (t.role === 'user') out.push({ role: 'user', content: t.text ?? '',...(t.name&&/^[a-zA-Z0-9_-]{1,64}$/.test(t.name)?{name:t.name}:{}) });
     else if (t.role === 'assistant') {
       out.push({
         role: 'assistant',

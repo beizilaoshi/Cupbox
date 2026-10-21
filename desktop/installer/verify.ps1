@@ -1,4 +1,4 @@
-﻿# End-to-end packaging checks. Run on Windows outside the process sandbox.
+# End-to-end packaging checks. Run on Windows outside the process sandbox.
 # Only install into this workspace's output tree. Never use real Cupbox data.
 $ErrorActionPreference = 'Stop'
 $projectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
@@ -12,9 +12,9 @@ if (Test-Path $regPath) {
 }
 $compilerFile = $env:ISCC_PATH
 if (-not $compilerFile) { $compilerFile = Join-Path $projectRoot 'output\installer-tools\InnoSetup\ISCC.exe' }
-& $compilerFile '/DAppVersion=1.0.2' '/DInstallerTest' (Join-Path $PSScriptRoot 'cupbox.iss')
+& $compilerFile '/DAppVersion=1.0.3' '/DInstallerTest' (Join-Path $PSScriptRoot 'cupbox.iss')
 if ($LASTEXITCODE -ne 0) { throw 'Test installer compile failed' }
-$setupFile = Join-Path $projectRoot 'output\installer-review\Cupbox-Setup-1.0.2-x64-test.exe'
+$setupFile = Join-Path $projectRoot 'output\installer-review\Cupbox-Setup-1.0.3-x64-test.exe'
 $testHome = Join-Path $testRoot 'data'
 $dataDir = Join-Path $testHome '.cupbox'
 New-Item -ItemType Directory -Force $dataDir,(Join-Path $dataDir 'sessions') | Out-Null
@@ -41,10 +41,10 @@ try {
   if (-not (Test-Path -LiteralPath (Join-Path $installedRoot 'Cupbox可视化.exe'))) { throw 'Application missing' }
   Write-Output 'PASS offline installation into a Unicode path containing spaces'
   $installedMetadata = Get-Content -LiteralPath (Join-Path $installedRoot 'resources\app\package.json') -Raw | ConvertFrom-Json
-  if ($installedMetadata.version -ne '1.0.2') { throw 'Version mismatch' }
+  if ($installedMetadata.version -ne '1.0.3') { throw 'Version mismatch' }
   $entry = Get-ItemProperty -LiteralPath $regPath
-  if ($entry.DisplayVersion -ne '1.0.2' -or $entry.InstallLocation.TrimEnd('\') -ne $installedRoot) { throw 'Uninstall registration mismatch' }
-  Write-Output 'PASS per-user uninstall registration and version 1.0.2'
+  if ($entry.DisplayVersion -ne '1.0.3' -or $entry.InstallLocation.TrimEnd('\') -ne $installedRoot) { throw 'Uninstall registration mismatch' }
+  Write-Output 'PASS per-user uninstall registration and version 1.0.3'
   if ((Get-FileHash -LiteralPath $config).Hash -ne $before) { throw 'Install changed configuration' }
   $note = Join-Path $installedRoot 'user-note.txt'
   Set-Content -LiteralPath $note -Value 'not owned by installer'

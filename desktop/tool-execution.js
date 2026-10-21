@@ -50,7 +50,7 @@ export function createToolExecution({getPrefs,home,audit}) {
       if(target){try{const base=directory?await realpath(directory):null;const resolved=await realpath(target);const relative=base?path.relative(base,resolved):'..';outsideRead=!base||relative==='..'||relative.startsWith(`..${path.sep}`)||path.isAbsolute(relative);}catch{outsideRead=true;}}
     }
     signal?.throwIfAborted();
-    if((needsApproval(approval,tool,args)||(approval==='smart'&&outsideRead)) && !await requestApproval(sender,payload))throw new Error('用户未批准此操作，已取消执行');
+    if(((actor!=='manual'&&['run','memory_remember','memory_manage','memory_profile'].includes(tool)&&!(tool==='memory_profile'&&!Object.hasOwn(args,'content'))&&!(tool==='memory_manage'&&!args.forget))||needsApproval(approval,tool,args)||(approval==='smart'&&outsideRead)) && !await requestApproval(sender,payload))throw new Error('用户未批准此操作，已取消执行');
     if(sender.isDestroyed())throw new Error('窗口已关闭');
     signal?.throwIfAborted();
     if(environment==='sandbox') args=(await sandboxArgs(tool,args,sandboxRoot())).args;

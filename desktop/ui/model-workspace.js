@@ -30,7 +30,7 @@ window.CupboxModels=(()=>{
     }
     $('model-library-count').textContent=`${models.length} 个模型`;
     const workers=$('project-workers');workers.replaceChildren();
-    for(const m of models.filter(m=>m.enabled&&m.capabilities.includes('text'))){const label=node('label'),input=node('input');input.type='checkbox';input.checked=(prefs.projectWorkers||[]).includes(m.id);input.addEventListener('change',()=>{const ids=new Set(prefs.projectWorkers||[]);if(input.checked)ids.add(m.id);else ids.delete(m.id);void hooks.save({projectWorkers:[...ids]});});label.append(input,document.createTextNode(m.name));workers.append(label);}
+    for(const m of chatCatalog.models.filter(m=>m.source!=='default'&&m.enabled&&m.capabilities.includes('text'))){const label=node('label'),input=node('input');input.type='checkbox';input.checked=(prefs.projectWorkers||[]).includes(m.id);input.addEventListener('change',()=>{const ids=new Set(prefs.projectWorkers||[]);if(input.checked)ids.add(m.id);else ids.delete(m.id);void hooks.save({projectWorkers:[...ids]});});label.append(input,document.createTextNode(m.name));workers.append(label);}
   }
   function renderRoutes(){
     const enabled=chatCatalog.models.filter(m=>m.enabled);
@@ -41,7 +41,7 @@ window.CupboxModels=(()=>{
       if(old&&![...select.options].some(o=>o.value===old)){const missing=node('option','之前的模型不可用，请重新选择');missing.value=old;missing.disabled=true;select.append(missing);}if(old)select.value=old;
     }
     const reviewer=$('reviewer-model'),old=reviewer.value||prefs.reviewerId;reviewer.replaceChildren(node('option','沿用文本模型'));
-    reviewer.options[0].value='';for(const m of enabled.filter(m=>m.source==='library'&&m.capabilities.includes('text'))){const o=node('option',m.name);o.value=m.id;reviewer.append(o);}if(old&&enabled.some(m=>m.id===old))reviewer.value=old;
+    reviewer.options[0].value='';for(const m of enabled.filter(m=>m.source!=='default'&&m.capabilities.includes('text'))){const o=node('option',m.name);o.value=m.id;reviewer.append(o);}if(old&&enabled.some(m=>m.id===old))reviewer.value=old;
     sync();window.dispatchEvent(new CustomEvent('cupbox:model-routes',{detail:chatCatalog}));
   }
   function edit(m={}){

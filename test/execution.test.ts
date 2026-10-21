@@ -15,6 +15,11 @@ beforeAll(async()=>{
 });
 afterAll(async()=>{await rm(home,{recursive:true,force:true});});
 describe('desktop permission decisions',()=>{
+  it('requires explicit approval before an agent native command even under full control',async()=>{const sender=new Sender();const runtime=createToolExecution({getPrefs:async()=>({approvalMode:'full',executionEnvironment:'native'}),home:()=>home});let prompted=false;sender.on('execution:approval',r=>{prompted=true;runtime.respond(sender,r.id,false);});await expect(runtime.execute(sender,'run',{command:'echo should-not-run'},'agent')).rejects.toThrow('未批准');expect(prompted).toBe(true);});
+  it('agent memory mutations still require human approval under full control, including an empty-profile overwrite',async()=>{
+    const sender=new Sender(),seen:any[]=[];const runtime=createToolExecution({getPrefs:async()=>({approvalMode:'full',executionEnvironment:'sandbox'}),home:()=>home});sender.on('execution:approval',request=>{seen.push(request);runtime.respond(sender,request.id,false);});
+    for(const [tool,args]of [['memory_profile',{kind:'user',content:''}],['memory_manage',{forget:'all'}],['memory_remember',{text:'不应写入'}]] as const)await expect(runtime.execute(sender,tool,args,'agent')).rejects.toThrow('未批准');expect(seen).toHaveLength(3);
+  });
   it('request approval includes reads',()=>expect(needsApproval('ask','hash',{text:'hi'})).toBe(true));
   it('smart permits reads and previews',()=>{for(const [tool,args]of [['hash',{}],['codec',{}],['rename',{dryRun:true}],['organize',{}]])expect(needsApproval('smart',tool,args)).toBe(false);});
   it('smart requests writes and system access',()=>{for(const [tool,args]of [['rename',{dryRun:false}],['organize',{dryRun:false}],['obfuscate',{}],['clip',{action:'read'}],['run',{}],['proc',{action:'kill'}]])expect(needsApproval('smart',tool,args)).toBe(true);});

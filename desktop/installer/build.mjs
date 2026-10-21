@@ -1,6 +1,6 @@
 // Build from a fresh isolated staging tree; preserve existing portable releases.
 import { spawn } from 'node:child_process';
-import { access, readFile, writeFile } from 'node:fs/promises';
+import { access, readFile, writeFile, cp } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,4 +26,12 @@ await run(iscc,[`/DAppVersion=${pkg.version}`,path.join(here,'cupbox.iss')]);
 const name=`Cupbox-Setup-${pkg.version}-x64.exe`,file=path.join(root,'release',name);
 const hash=createHash('sha256').update(await readFile(file)).digest('hex');
 await writeFile(file+'.sha256',`${hash}  ${name}\n`);
+// Keep the visible portable application in sync with the installer payload.
+// Merge only packaged application files; never clear release or user data.
+const portableArg=process.argv.find(arg=>arg.startsWith('--portable-out='));
+const portableDir=path.resolve(root,portableArg?portableArg.slice('--portable-out='.length):'release/Cupbox可视化');
+const relative=path.relative(path.join(root,'release'),portableDir);
+if(!relative||relative.startsWith('..')||path.isAbsolute(relative))throw Error('Portable output must be a subdirectory of release.');
+await cp(path.join(root,'output/installer-stage/Cupbox'),portableDir,{recursive:true,force:true});
+console.log('Portable application synced: '+path.join(portableDir,'Cupbox可视化.exe'));
 console.log(`Installer ready: ${file}\nSHA256: ${hash}`);

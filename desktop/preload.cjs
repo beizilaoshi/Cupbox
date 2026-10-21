@@ -3,6 +3,8 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('cupbox', {
+ computerState:()=>ipcRenderer.invoke('computer:state'),computerConfigure:p=>ipcRenderer.invoke('computer:configure',p),computerWindows:()=>ipcRenderer.invoke('computer:windows'),computerBegin:p=>ipcRenderer.invoke('computer:begin',p),computerStop:()=>ipcRenderer.invoke('computer:stop'),computerPreview:p=>ipcRenderer.invoke('computer:preview',p),onComputerProgress:fn=>{const l=(_e,p)=>fn(p);ipcRenderer.on('computer:progress',l);return()=>ipcRenderer.removeListener('computer:progress',l);},  onUiPrompt:fn=>{const listener=(_e,p)=>fn(p);ipcRenderer.on('ui:prompt',listener);return()=>ipcRenderer.removeListener('ui:prompt',listener);},onUiPromptClosed:fn=>{const listener=(_e,id)=>fn(id);ipcRenderer.on('ui:prompt:closed',listener);return()=>ipcRenderer.removeListener('ui:prompt:closed',listener);},answerUiPrompt:p=>ipcRenderer.send('ui:prompt:answer',p),
+  auditState:()=>ipcRenderer.invoke('audit:state'),auditEnable:p=>ipcRenderer.invoke('audit:enable',p),auditRun:p=>ipcRenderer.invoke('audit:run',p),auditCancel:()=>ipcRenderer.invoke('audit:cancel'),auditCopy:()=>ipcRenderer.invoke('audit:copy'),onAuditProgress:fn=>{const listener=(_e,v)=>fn(v);ipcRenderer.on('audit:progress',listener);return()=>ipcRenderer.removeListener('audit:progress',listener);},
   workbenchList:()=>ipcRenderer.invoke('workbench:list'),
   workbenchRun:p=>ipcRenderer.invoke('workbench:run',p),
   policyGet:sessionId=>ipcRenderer.invoke('workbench:policy:get',sessionId),
@@ -26,6 +28,7 @@ contextBridge.exposeInMainWorld('cupbox', {
   onApprovalCanceled:callback=>{const fn=(_e,id)=>callback(id);ipcRenderer.on('execution:approval-canceled',fn);return()=>ipcRenderer.removeListener('execution:approval-canceled',fn);},
   run: (tool, args) => ipcRenderer.invoke('cupbox:tool', tool, args),
   info: () => ipcRenderer.invoke('cupbox:info'),
+  qqOpen: () => ipcRenderer.invoke('qq:open'),
   aiConfigGet: () => ipcRenderer.invoke('ai:config:get'),
   aiConfigSet: (patch) => ipcRenderer.invoke('ai:config:set', patch),
   aiModels: (draft) => ipcRenderer.invoke('ai:models',draft),
@@ -54,8 +57,9 @@ contextBridge.exposeInMainWorld('cupbox', {
   chatSend: (payload) => ipcRenderer.invoke('chat:send', payload),
   // 上下文洞察（成分分解 / 趋势 / 事件）
   contextStats: (sessionId) => ipcRenderer.invoke('context:stats', sessionId),
-  // 版本检测 / 更新公告 / 外链（GitHub 下载源）
+  // 版本检测 / 更新公告 / 开屏公告 / 外链（GitHub 下载源）
   updateCheck: (force) => ipcRenderer.invoke('update:check', Boolean(force)),
+  announcementCheck: () => ipcRenderer.invoke('announcement:check'),
   openExternal: (url) => ipcRenderer.invoke('open:external', url),
   win: {
     minimize: () => ipcRenderer.invoke('win:minimize'),

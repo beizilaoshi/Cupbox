@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { dataHome, legacyHome, migrateLegacyHome, systemDocumentsDir } from '../src/core/paths.js';
 
-/** v1.0.2 存储目录：默认「文档/Cupbox」，CUPBOX_HOME 覆盖，旧 ~/.cupbox 自动迁移。 */
+/** v1.0.3 存储目录：默认「文档/Cupbox」，CUPBOX_HOME 覆盖，旧 ~/.cupbox 自动迁移。 */
 
 let tmpRoot: string;
 const envSnapshot: string | undefined = process.env.CUPBOX_HOME;

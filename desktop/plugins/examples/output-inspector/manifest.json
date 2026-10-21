@@ -1,0 +1,11 @@
+{
+  "apiVersion": 1,
+  "id": "cupbox.output-inspector",
+  "name": "输出内容检测",
+  "version": "1.0.0",
+  "description": "发送前检查最终文字：命中拦截词则取消发送，脱敏词替换为占位符，也可限制长度。",
+  "kind": "output-rules",
+  "hook": "reply.beforeSend",
+  "entry": "rules.json",
+  "permissions": ["response.read", "response.block", "response.replace"]
+}

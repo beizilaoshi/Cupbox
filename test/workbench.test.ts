@@ -1,5 +1,5 @@
 import { describe,it,expect,beforeEach,afterEach } from 'vitest';
-import { mkdtemp,readFile,writeFile,mkdir,rm,symlink,stat } from 'node:fs/promises';
+import { mkdtemp,readFile,writeFile,mkdir,rm,symlink,stat,realpath } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import iconv from 'iconv-lite';
@@ -11,7 +11,9 @@ import { spawnArgs } from '../desktop/workbench/processes.js';
 let sharp:typeof import('sharp').default|null=null;
 try{sharp=(await import('sharp')).default;}catch{}
 let temp:string,root:string,home:string,b:any,approvals:any[],allow:boolean;
-beforeEach(async()=>{temp=await mkdtemp(path.join(os.tmpdir(),'cupbox-wb-'));root=path.join(temp,'project');home=path.join(temp,'data');approvals=[];allow=true;b=await new Workbench({root,home,session:'session-a',getPrefs:async()=>({approvalMode:'smart',executionEnvironment:'native'}),approve:async p=>{approvals.push(p);return allow;}}).init();});
+beforeEach(async()=>{
+  // 归一化真实路径：Windows CI 临时目录可能是 8.3 短路径（RUNNER~1），策略工作目录按字符串比对会误判“被重定向”
+  temp=await realpath(await mkdtemp(path.join(os.tmpdir(),'cupbox-wb-')));root=path.join(temp,'project');home=path.join(temp,'data');approvals=[];allow=true;b=await new Workbench({root,home,session:'session-a',getPrefs:async()=>({approvalMode:'smart',executionEnvironment:'native'}),approve:async p=>{approvals.push(p);return allow;}}).init();});
 afterEach(async()=>{b.dispose();await rm(temp,{recursive:true,force:true,maxRetries:10,retryDelay:100});});
 async function commit(name:string,args:any){const preview=await b.call(name,args);expect(preview.ok,preview.message).toBe(true);expect(preview.confirmToken).toBeTruthy();return b.call(name,{...args,dryRun:false,confirmToken:preview.confirmToken});}
 describe('文件安全与预览事务',()=>{

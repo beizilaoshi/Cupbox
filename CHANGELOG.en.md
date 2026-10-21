@@ -7,13 +7,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > 📖 **中文文档（默认）：[CHANGELOG.md](./CHANGELOG.md)**
 
-## [1.0.2] - 2026-10-20
+## [1.0.3] - 2026-10-21
+
+### Main window close & tray (2026-10-21)
+
+- Closing the main window now asks whether to hide to the tray or quit, and states that the QQ bot keeps running in the background; quitting asks for confirmation and stops the QQ bot together with the app.
+- Added a system tray icon with show window, hide to tray and quit actions; when the tray is unavailable the close prompt only offers quit or cancel instead of pretending the window was hidden.
+
+### Startup announcement (2026-10-21)
+
+- Added `announcement.json` at the repository root: after the startup animation, Cupbox shows the announcement from GitHub with title, body, date and an optional link; the test announcement reads "欢迎使用 Cupbox 工具箱".
+- The announcement is checked once per launch; when its content (title / body / date / id) changes it is shown again even if the user previously chose "don't show again". With unchanged content, that checkbox keeps it hidden. Check failures stay silent.
+- Body text is rendered as plain text and links only allow https; use `CUPBOX_ANNOUNCEMENT_URL` to override the address or `CUPBOX_ANNOUNCEMENT_DISABLE=1` to disable it. See docs/ANNOUNCEMENTS.md.
+
+### QQ bot (2026-10-21)
+
+- Added the "1021 character dialogue" build: rewrote the Whale-girl identity with tone examples separating in-character questions from real-person probing; the old shell-persona self-description is only skipped in model context, never deleted from original memories. Adds an optional one-off tool-free tone correction that checks first and then writes in segments, explicitly warning that it may add requests.
+
+- Added the "1021 meme direct-send" build tag (version stays 1.0.3) synced to the common portable directory; explicitly requesting any meme now performs the real send directly, distinguishing total gallery size from matched count so the model can no longer claim it cannot send images. Added 3 original transparent cat memes with preview, confirm-to-add/enable and duplicate protection.
+
+- Expanded to 14 built-in personas plus a custom option, with category/search/example cards; added sweet romance, slow-burn courtship, character positioning, forms of address, 4 story scenes and pacing. Courtship proposals cite original lines and archive after actual replies, isolated per account/session/user/persona/scenario, defaulting to private chat, with confirmed single-track reset.
+
+- Adapted companion chat inspired by Amadeus: layered personas, merged consecutive in-group messages, explicit silent/bulk interjection judgment scoped to groups, quiet skip vs direct-@ priority; added a preference profile backed by quoted evidence, time and memory tools, UI suggestion drafts and separate risk confirmations. Existing toggles are not auto-enabled; version stays at 1.0.3.
+
+- Added a session-scoped `send_meme` tool following dsh-meme's search/send/result-feedback flow, meaning-based image selection, free text-model compatibility, and real send results persisted with the conversation; the original keyword restriction is kept, failed sends are never retried, and turns with tools wait for results before emitting further segments.
+
+- Fixed over-reliance on model-chosen meme IDs for the send condition; added trigger-word hit auto-selection vs model-only judgment, single-character trigger words, the master toggle state, local condition checks, and manual testing after confirmation.
+
+- Added image decode normalization plus validation of QQ send return codes and message IDs; errors or unknown results are never resent automatically.
+
+- Added a real-time console: stage/level filters, search, pause, auto-scroll, error alerts, redacted copy and JSONL export; keeps a bounded in-memory log and by default never writes chat bodies, keys or image data.
+
+- Auto-memory persists to the system documents directory, supporting per-account global sharing or isolation per group/private chat; stopping, pausing or disabling auto-memory never deletes the files, with view, edit and confirm-before-delete.
+
+- Free models can join workflows and the experimental JSON tool-compat loop, with warnings about third-party data, rate limits and instability; local operations require per-action approval, format anomalies or execution failures stop immediately, keeping path and preview protections.
+
+- Redesigned the QQ space layout: compact connection area, local chat-pacing preview, on-demand advanced settings; added sidebar, page, toggle, bubble and dialog animations with reduced-motion adaptation.
+
+- Natural semantic segmentation replaces the default mechanical character truncation, keeping short replies, code and lists intact; a character-count compatibility option is retained. Added three chat expression strategies: casual, balanced, detailed.
+
+- Normal conversation memory is independent from bystander listening: already-triggered conversations are remembered by default while bystander listening stays off; group/private isolation and the temporary-memory lifecycle are preserved.
+
+- Redesigned setup steps, saved scopes and draft hints, distinguishing login from auto-reply; added risk confirmations for pause-now, enable, data sharing, context clearing and memory override.
+
+- Added all-groups / whitelist / blacklist plus a post-login checklist of real group lists; excluded groups collect no context, and legacy allowed group numbers migrate automatically.
+
+- Added configurable segmented streaming replies with inter-segment pacing and per-segment rate limiting; plain-text SSE streams as it generates, tool flows segment after completion, and stopped replies never resend already-sent segments.
+
+- Separated the submitted model message body from the QQ identity; history uses an independent identity field so QQ numbers never mix into message content.
+
+- Added a dedicated bot window hosting NapCat preparation, checks, auto-configuration, QR-code login and heartbeat reconnection, with no manual OneBot configuration required.
+
+- Group @/keywords, private chat and address terms, group-number scope, per-subsession context count and rate limits are all configurable; auto-reply and bystander listening default to off.
+
+- Reuses the model library and app-wide global memory, with independent chat/work mode, persona, temperature and effort-depth choices; search and image understanding can be disabled separately.
+
+- Custom meme meanings and trigger words send at most one image after backend verification; local file operations requested by the owner require per-action approval.
+
+- Version stays at 1.0.3; usage and upstream sources are documented in docs/QQ-BOT.md.
 
 ### Windows installer
 
 - Added a complete offline installer, a Chinese branded welcome page, light/dark sakura wizard images, step hints, and a quick-start walkthrough.
 - Optional install location, Start-menu and desktop shortcuts; in-place upgrade and uninstall preserve user conversations and configuration, and no auto-start entry is added.
-- Added `npm run pack:installer` with SHA256 checksum output; the installer builds into its own staging directory and no longer clears the whole release folder. Version stays at 1.0.2.
+- Added `npm run pack:installer` with SHA256 checksum output; the installer builds into its own staging directory and no longer clears the whole release folder. Version stays at 1.0.3.
 - Installation notes and the current code-signing status are documented in docs/WINDOWS-INSTALLER.md.
 
 ### Free models, chat model picker & effort slider
@@ -21,7 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Completed the free-model catalog refresh, the global toggle plus per-model toggles, minimal connection checks, and the "use in chat" entry; unavailable channels are never allowed through, and turning models off never silently switches providers.
 - The model button in the input box is now a searchable grouped menu for direct switching; added a model-aware effort slider with per-model memory that persists and restores per-session choices.
 - Effort maps to real OpenAI / DeepSeek / OpenRouter parameters; unknown models keep their defaults or accept an explicit override. Free requests never reuse paid API keys, and the cancellation signal is propagated into the network layer.
-- The interaction references dsh-codex-effort-slider, adapted independently to the existing desktop UI; reduced-motion remains respected and the version stays at 1.0.2. See docs/CHAT-MODELS-AND-EFFORT.md.
+- The interaction references dsh-codex-effort-slider, adapted independently to the existing desktop UI; reduced-motion remains respected and the version stays at 1.0.3. See docs/CHAT-MODELS-AND-EFFORT.md.
 
 ### Feature illustrations & icon motion
 
@@ -110,6 +167,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Testing
 
 - **198 → 331** test cases, all green, with 12 new test files (freemodel, context, memory, paths, workbench, execution, model-workflow, chat-choice, workflow-scenes, response-context, filesystem-tools, workbench-http).
+- 1.0.3 grows again to **519** test cases across 48 files, all green, adding 19 more: announcement, computer, free-workflow, loopback-audit, plugins, ui-prompts and 13 QQ suites (bot, companion, conversation, emoji-delivery, emoji-import, meme-request, memory, roleplay, romance, security, service, streaming, whale-source).
 
 ## [1.0.1] - 2026-10-18
 

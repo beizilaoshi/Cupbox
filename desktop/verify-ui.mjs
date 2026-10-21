@@ -130,7 +130,7 @@ app.on('browser-window-created', (_event, win) => {
       await new Promise(resolve=>{win.webContents.once('did-finish-load',resolve);win.webContents.reload()});
       await evaluate(`new Promise((resolve,reject)=>{let n=0;const t=setInterval(()=>{if(window.cupboxReady){clearInterval(t);resolve(true)}else if(++n>100){clearInterval(t);reject(Error('Reload timeout'))}},50)})`);
       await check('appearance restored after reload', `prefs.background==='bloom' && document.documentElement.dataset.theme==='dark' && document.documentElement.dataset.accent==='rose'`);
-      await check('all tool icons use SVG', `[...document.querySelectorAll('.tool-item .t-icon')].every(el=>el.querySelector('svg')) && document.querySelectorAll('.tool-item .t-icon svg').length===14`);
+      await check('all tool icons use SVG', `[...document.querySelectorAll('.tool-item .t-icon')].every(el=>el.querySelector('svg')) && document.querySelectorAll('.tool-item .t-icon svg').length===21`);
       await check('SVG logo loads', `document.querySelector('.brand-logo').complete && document.querySelector('.brand-logo').naturalWidth>0`);
       await check('version matches package', `(async()=>{const i=await cupbox.info();return i.version===${JSON.stringify(expectedVersion)}&&document.querySelector('#ver-chip').textContent===${JSON.stringify('v'+expectedVersion)}})()`);
       await check('eight builtin themes plus custom', `Object.keys(CupboxTheme.catalog).length===9 && document.querySelectorAll('.background-card').length===9`);
@@ -205,7 +205,7 @@ app.on('browser-window-created', (_event, win) => {
       await evaluate(`document.querySelector('#reset-startup').click()`);
       await check('startup reset', `prefs.startupEnabled && prefs.startupStyle==='orbit' && prefs.startupDuration===1.6`);
       await evaluate(`closeModal();document.querySelector('#btn-drawer').click()`);
-      await check('tool library opens as a full workspace', `drawerOpen&&document.querySelector('#drawer').dataset.view==='library'&&document.querySelector('#stage').hidden&&document.querySelectorAll('.tool-card').length===14&&document.querySelector('#drawer-scrim').hidden`);
+      await check('tool library opens as a full workspace', `drawerOpen&&document.querySelector('#drawer').dataset.view==='library'&&document.querySelector('#stage').hidden&&document.querySelectorAll('.tool-card').length===21&&document.querySelector('#drawer-scrim').hidden`);
       await capture('13-tool-library.png');
       await evaluate(`document.querySelector('#library-search').value='JSON';document.querySelector('#library-search').dispatchEvent(new Event('input'))`);
       await check('tool library searches descriptions', `document.querySelectorAll('.tool-card').length===2`);

@@ -1,0 +1,6 @@
+'use strict';
+(()=>{
+ const tools=[['desktop_observe','授权窗口信息',[]],['desktop_capture','截取授权窗口',[]],['desktop_ocr','屏幕文字识别',[{k:'captureId',label:'截图 ID',type:'text'}]],['desktop_vision','视觉理解画面',[{k:'captureId',label:'截图 ID',type:'text'},{k:'question',label:'需要理解或定位的内容',type:'textarea'}]],['desktop_mouse','鼠标操控',[{k:'captureId',label:'截图 ID',type:'text'},{k:'action',label:'动作',type:'select',options:['move','click','double_click','right_click','scroll'],value:'click'},{k:'x',label:'截图像素 X',type:'text'},{k:'y',label:'截图像素 Y',type:'text'},{k:'direction',label:'滚动方向（仅滚动时）',type:'select',options:['up','down'],value:'down'},{k:'steps',label:'滚动步数（1～5）',type:'text',value:'1'}]],['desktop_type','向窗口输入文字',[{k:'captureId',label:'截图 ID',type:'text'},{k:'text',label:'输入文字（不含换行）',type:'textarea'}]],['desktop_key','窗口按键',[{k:'captureId',label:'截图 ID',type:'text'},{k:'key',label:'按键',type:'select',options:['tab','shift+tab','enter','escape','backspace','delete','left','right','up','down','ctrl+a','ctrl+c','ctrl+v','ctrl+z','ctrl+y'],value:'tab'}]]];
+ window.CupboxComputerTools=tools.map(([id,name,fields])=>({id,name,fields,group:'系统',warn:'高风险 · 默认关闭 · 仅已授权窗口 · 逐次人工批准',hint:'先在「桌面协作」授权窗口，Agent 模式才会获得这些工具。截图60秒失效；每次操控后重新截图。'}));
+
+})();

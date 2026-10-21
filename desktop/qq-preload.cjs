@@ -1,0 +1,12 @@
+const {contextBridge,ipcRenderer}=require('electron');
+const call=(name,payload)=>ipcRenderer.invoke(name,payload).then(r=>{if(!r.ok)throw Error(r.error);return r.value;});
+contextBridge.exposeInMainWorld('qqBot',{  onUiPrompt:fn=>{const listener=(_e,p)=>fn(p);ipcRenderer.on('ui:prompt',listener);return()=>ipcRenderer.removeListener('ui:prompt',listener);},onUiPromptClosed:fn=>{const listener=(_e,id)=>fn(id);ipcRenderer.on('ui:prompt:closed',listener);return()=>ipcRenderer.removeListener('ui:prompt:closed',listener);},answerUiPrompt:p=>ipcRenderer.send('ui:prompt:answer',p),
+  plugins:()=>call('qq:plugins:list'),savePlugin:p=>call('qq:plugins:save',p),testPlugin:p=>call('qq:plugins:preview',p),importPlugin:()=>call('qq:plugins:import'),removePlugin:id=>call('qq:plugins:remove',{id}),openPluginExample:()=>call('qq:plugins:example'),
+  get:()=>call('qq:get'),review:p=>call('qq:review',p),save:(p,confirmationToken)=>call('qq:save',{patch:p,confirmationToken}),groups:()=>call('qq:groups'),start:()=>call('qq:start'),stop:()=>call('qq:stop'),refreshQR:()=>call('qq:qr'),
+  models:()=>call('qq:models'),theme:()=>call('qq:theme'),clearContext:()=>call('qq:clear-context'),testRule:p=>call('qq:rule',p),
+  previewSegments:p=>call('qq:preview-segments',p),
+  memory:()=>call('qq:memory:get'),saveMemory:p=>call('qq:memory:save',p),importEmoji:()=>call('qq:emoji:import'),saveEmoji:p=>call('qq:emoji:save',p),removeEmoji:id=>call('qq:emoji:remove',id),
+  romanceRecords:()=>call('qq:romance:records'),romanceReset:p=>call('qq:romance:reset',p),autoMemoryForget:p=>call('qq:auto-memory:forget',p),autoMemoryList:()=>call('qq:auto-memory:list'),autoMemoryRead:p=>call('qq:auto-memory:read',p),autoMemoryEdit:p=>call('qq:auto-memory:edit',p),autoMemoryDelete:p=>call('qq:auto-memory:delete',p),autoMemoryOpen:()=>call('qq:auto-memory:open'),
+  starterEmojis:()=>call('qq:emoji:starter'),diagnoseEmoji:p=>call('qq:emoji:diagnose',p),testEmoji:p=>call('qq:emoji:test',p),logs:p=>call('qq:logs',p),clearLogs:()=>call('qq:logs:clear'),copyLogs:()=>call('qq:logs:copy'),exportLogs:()=>call('qq:logs:export'),onLog:fn=>{const listener=(_e,value)=>fn(value);ipcRenderer.on('qq:log',listener);return()=>ipcRenderer.removeListener('qq:log',listener);},
+  window:action=>ipcRenderer.invoke('qq:window',action),onState:fn=>{const listener=(_e,v)=>fn(v);ipcRenderer.on('qq:state',listener);return()=>ipcRenderer.removeListener('qq:state',listener);},
+});

@@ -97,6 +97,7 @@ const TOOLS = [
     ] },
 ];
 
+TOOLS.push(...(window.CupboxComputerTools||[]));
 const GROUP_ORDER = ["数据", "文件", "图片", "系统"];
 const OPTION_LABELS = { whitelist:"已批准的项目白名单", shell:"Shell · 每次请求批准", b64e: "Base64 编码", b64d: "Base64 解码", urle: "URL 编码", urlde: "URL 解码", "html-esc": "HTML 转义", "html-unesc": "HTML 还原", json: "JSON 格式化", "json-min": "JSON 压缩", category: "按文件类型", date: "按日期", regex: "按正则规则", create: "创建压缩包", extract: "解压文件", list: "查看列表", read: "读取剪贴板", write: "写入剪贴板", kill: "结束进程", auto: "自动选择", windows: "Windows 原生识别" };
 TOOLS.find(t=>t.id==="run").hint="白名单在设置 → 开发与授权 → 项目策略中维护；未授权命令可选择 Shell 逐次请求批准。";
@@ -110,7 +111,7 @@ const $ = (id) => document.getElementById(id);
 const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const api = window.cupbox || {};
-let prefs = { theme: "light", accent: "aurora", mode: "ask", workspace: "", disabledTools: [], dismissedVersion: "", background: "sakura", backgroundVeil: 72, backgroundBlur: 0, backgroundFit: "cover", startupEnabled:true, startupStyle:'orbit', startupDuration:1.6, startupCaption:'让灵感，轻轻启程。' };
+let prefs = { theme: "light", accent: "aurora", mode: "ask", workspace: "", disabledTools: [], dismissedVersion: "", background: "sakura", backgroundVeil: 72, backgroundBlur: 0, backgroundFit: "cover", startupEnabled:true, startupStyle:'orbit', startupDuration:1.6, startupCaption:'让灵感，轻轻启程。', announcementSeenVersion:"", announcementMuted:false };
 const toolDrafts = new Map();
 const toolResults = new Map();
 let toolRunning = false;
@@ -126,6 +127,8 @@ let sending = false;
 let drawerOpen = false;
 let modalOpen = false;
 let updOpen = false;    // 更新公告弹窗
+let annOpen = false;    // 开屏公告弹窗
+let announcement = null; // 当前展示的公告
 let ctxOpen = false;    // 上下文洞察弹窗
 let updateInfo = null;  // 最近一次检测结果（UpdateInfo）
 
@@ -401,7 +404,7 @@ function collect() {
   for (const el of $("tool-form").querySelectorAll("[data-key]")) {
     const k = el.dataset.key;
     if (el.type === "checkbox") args[k] = el.checked;
-    else args[k] = el.value;
+    else args[k] = current.id.startsWith('desktop_')&&['x','y','steps'].includes(k)?Number(el.value):el.value;
   }
   return args;
 }
@@ -916,7 +919,7 @@ async function fillApiForm() {
     set("api-temp", c.temperature);
     set("api-turns", c.maxTurns);
   } catch { /* 读取失败保持占位 */ }
-  // 储存管理：显示数据目录（v1.0.2 起默认 文档/Cupbox）
+  // 储存管理：显示数据目录（v1.0.3 起默认 文档/Cupbox）
   try {
     const s = await api.storageInfo?.();
     if (s && sequence === apiFillSequence) {
@@ -1123,6 +1126,67 @@ function closeUpdateAnnounce() {
   setTimeout(() => {
     if (!updOpen) { scrim.hidden = true; m.hidden = true; }
   }, 300);
+}
+
+/* ---------------- 开屏公告（GitHub announcement.json） ---------------- */
+
+/** 展示公告。正文只用 textContent，杜绝公告文件里的 HTML/脚本注入。 */
+function openAnnouncement(item, source) {
+  if (!item) return;
+  announcement = item;
+  $("ann-title").textContent = item.title;
+  $("ann-body").textContent = item.body;
+  const date = $("ann-date");
+  date.hidden = !item.publishedAt;
+  if (item.publishedAt) date.textContent = item.publishedAt;
+  const src = $("ann-source");
+  src.hidden = !source;
+  if (source) src.textContent = source === "raw.githubusercontent.com" ? "GitHub" : source;
+  const github = $("btn-ann-github");
+  github.hidden = !item.url;
+  $("ann-mute").checked = false;
+  const scrim = $("ann-scrim");
+  const m = $("ann-modal");
+  scrim.hidden = false;
+  m.hidden = false;
+  annOpen = true;
+  requestAnimationFrame(() => {
+    scrim.classList.add("open");
+    m.classList.add("open");
+  });
+  setTimeout(() => $("btn-ann-ok")?.focus(), 240);
+}
+
+function closeAnnouncement() {
+  if (!annOpen) return;
+  annOpen = false;
+  const scrim = $("ann-scrim");
+  const m = $("ann-modal");
+  scrim.classList.remove("open");
+  m.classList.remove("open");
+  setTimeout(() => {
+    if (!annOpen) { scrim.hidden = true; m.hidden = true; }
+  }, 300);
+  if (announcement) {
+    const muted = $("ann-mute")?.checked === true;
+    void savePrefs({ announcementSeenVersion: announcement.version, announcementMuted: muted });
+  }
+  setTimeout(() => $("chat-text")?.focus(), 320);
+}
+
+/**
+ * 启动时检测公告：已读同一版本且勾过「不再提示」→ 跳过；有新内容 → 无论是否静音都显示。
+ * force=true 时忽略已读状态（验证脚本用）。检查失败完全静默。
+ */
+async function maybeShowAnnouncement(force) {
+  if (!force && SMOKE) return null; // 冒烟截图不联网
+  let result = null;
+  try { result = await api.announcementCheck?.(); } catch { result = null; }
+  if (!result || !result.ok || !result.announcement) return null;
+  const item = result.announcement;
+  if (!force && String(prefs.announcementSeenVersion || "") === item.version && prefs.announcementMuted === true) return null;
+  openAnnouncement(item, result.source);
+  return item;
 }
 
 /* —— 上下文洞察弹窗（成分 / 趋势 / 事件） —— */
@@ -1408,6 +1472,7 @@ async function boot() {
   
   // 模型管理：侧栏直达模型库（多模型增删、能力多选 文本/视觉/绘图…）
   $("btn-models-nav")?.addEventListener("click", () => openModal("models"));
+  $("btn-qq-nav")?.addEventListener("click", () => api.qqOpen().catch(e => toast(e.message)));
   // 储存管理：打开 / 定位数据目录
   $("storage-open")?.addEventListener("click", () => void api.storageOpen?.());
   $("storage-reveal")?.addEventListener("click", () => void api.storageReveal?.());
@@ -1505,9 +1570,15 @@ async function boot() {
     }
   });
 
+  // —— 开屏公告 ——
+  $("ann-close")?.addEventListener("click", closeAnnouncement);
+  $("ann-scrim")?.addEventListener("click", closeAnnouncement);
+  $("btn-ann-ok")?.addEventListener("click", closeAnnouncement);
+  $("btn-ann-github")?.addEventListener("click", () => { void api.openExternal?.(announcement?.url || RELEASES_URL); });
+
   window.addEventListener("keydown", (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "n") { e.preventDefault(); if (!modalOpen && !drawerOpen && !updOpen && !ctxOpen) void newChat(); }
-    const overlay = modalOpen ? $("settings-modal") : updOpen ? $("upd-modal") : ctxOpen ? $("ctx-modal") : null;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "n") { e.preventDefault(); if (!modalOpen && !drawerOpen && !updOpen && !annOpen && !ctxOpen) void newChat(); }
+    const overlay = annOpen ? $("ann-modal") : modalOpen ? $("settings-modal") : updOpen ? $("upd-modal") : ctxOpen ? $("ctx-modal") : null;
     if (overlay && e.key === "Tab") {
       const focusable = [...overlay.querySelectorAll('button:not(:disabled),input:not(:disabled),textarea:not(:disabled),select:not(:disabled),[tabindex="0"]')].filter(el => el.getClientRects().length);
       const first = focusable[0], last = focusable.at(-1);
@@ -1515,7 +1586,8 @@ async function boot() {
       else if (!e.shiftKey && (document.activeElement === last || !overlay.contains(document.activeElement))) { e.preventDefault(); first?.focus(); }
     }
     if (e.key === "Escape") {
-      if (modalOpen) closeModal();
+      if (annOpen) closeAnnouncement();
+      else if (modalOpen) closeModal();
       else if (updOpen) closeUpdateAnnounce();
       else if (ctxOpen) closeContextModal();
       else if (drawerOpen) closeDrawer();
@@ -1614,6 +1686,7 @@ async function boot() {
   // 首次进入聚焦输入框
   await startup;
   $("chat-text")?.focus();
+  void maybeShowAnnouncement(); // 开屏公告：每次启动检测 GitHub 上的 announcement.json
   window.cupboxReady = true;
 }
 

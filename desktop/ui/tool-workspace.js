@@ -2,8 +2,8 @@
 window.CupboxToolWorkspace=(()=>{
   const $=id=>document.getElementById(id);
   let hooks,category='全部',query='';
-  const summaries={hash:'计算文本或文件的校验值',time:'秒、毫秒与日期互相转换',codec:'格式化 JSON、编码与解码',csv:'CSV 和 JSON 数据互转',search:'按名称或内容查找文件',rename:'按规则批量修改文件名',organize:'按类型或日期整理文件',zip:'创建、解压或查看压缩包',obfuscate:'图片像素混淆与还原',ocr:'提取图片中的文字',clip:'读取或写入系统剪贴板',shot:'截取屏幕并保存图片',run:'执行允许列表中的命令',proc:'查看进程或结束指定进程'};
-  const system=new Set(['zip','ocr','clip','shot','run','proc']);
+  const summaries={desktop_observe:'查看已授权窗口与会话额度',desktop_capture:'截取已授权窗口，图片不自动上传',desktop_ocr:'本地OCR，文字可能进入当前模型',desktop_vision:'确认截图后交给所选视觉模型分析',desktop_mouse:'移动、点击、右击、双击和滚动',desktop_type:'向授权窗口输入普通文本',desktop_key:'向授权窗口发送受限按键',hash:'计算文本或文件的校验值',time:'秒、毫秒与日期互相转换',codec:'格式化 JSON、编码与解码',csv:'CSV 和 JSON 数据互转',search:'按名称或内容查找文件',rename:'按规则批量修改文件名',organize:'按类型或日期整理文件',zip:'创建、解压或查看压缩包',obfuscate:'图片像素混淆与还原',ocr:'提取图片中的文字',clip:'读取或写入系统剪贴板',shot:'截取屏幕并保存图片',run:'执行允许列表中的命令',proc:'查看进程或结束指定进程'};
+  const system=new Set(['zip','ocr','clip','shot','run','proc','desktop_observe','desktop_capture','desktop_ocr','desktop_vision','desktop_mouse','desktop_type','desktop_key']);
   function library(){ $('drawer').dataset.view='library';render();$('library-search').focus(); }
   function editor(){ $('drawer').dataset.view='editor'; }
   function render(){
@@ -33,7 +33,7 @@ window.CupboxToolWorkspace=(()=>{
     $('tool-environment-hint').hidden=!blocked;
     $('btn-run').disabled=blocked||hooks.busy();
     const get=key=>$('tool-form').querySelector('[data-key="'+key+'"]');const action=get('action')?.value;const modifying=['rename','organize'].includes(id)&&!get('dryRun')?.checked;
-    const warn=modifying||id==='run'||id==='proc'&&action==='kill'||id==='clip'||id==='shot'||id==='zip'&&action!=='list';$('tool-risk-notice').hidden=!warn;
+    const warn=id.startsWith('desktop_')||modifying||id==='run'||id==='proc'&&action==='kill'||id==='clip'||id==='shot'||id==='zip'&&action!=='list';$('tool-risk-notice').hidden=!warn;
     if(warn){const profile=CupboxRisk.describe(id,{action},modifying||id==='zip'?'write':'system');$('tool-risk-title').textContent=id==='shot'?'截图会包含当前屏幕内容':profile.title;$('tool-risk-text').textContent=id==='shot'?'请确认屏幕没有私人信息。截图保存位置由下方参数决定。':profile.consequence;$('tool-risk-notice').dataset.level=profile.level;}
     $('btn-run').dataset.risk=warn?'warning':'normal';
     if(!hooks.busy())$('btn-run').querySelector('.btn-label').textContent=['rename','organize'].includes(id)?($('tool-form').querySelector('[data-key="dryRun"]')?.checked?'预览变更':'执行变更'):'运行工具';

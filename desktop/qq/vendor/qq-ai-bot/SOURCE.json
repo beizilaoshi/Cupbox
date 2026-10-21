@@ -1,0 +1,9 @@
+{
+  "repository": "https://github.com/chennianlaobai/qq-ai-bot",
+  "commit": "5f998029bd90bacace68fa2c719722976470f44d",
+  "files": {
+    "LICENSE": "5abd0f1341831d176711ecd03c61f2805aecc2d45e8296605a17aec8d9276376",
+    "persona.md": "ca8739bf477f75133721df1c17aadc52f02947411cf6a8514041619842131b6c",
+    "persona_rules.json": "efe7d6d5230e3d4d8fa72c187c41f66662fde8b400557ece486e23d7e3f7a218"
+  }
+}
