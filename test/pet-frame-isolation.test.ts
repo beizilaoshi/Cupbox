@@ -26,14 +26,14 @@ describe('isolated mascot atlas frames',()=>{
   expect(result.data[(5*10+5)*4+3]).toBe(255);
   expect(result.data[(5*10+0)*4+3]).toBe(255);
  });
- it('keeps every shipped pose visible and never invents colour or alpha pixels',()=>{
+ it('keeps every shipped pose visible and never invents colour or alpha pixels',async()=>{
   const root=new URL('../desktop/ui/assets/pet/',import.meta.url);let removed=0,frames=0;
   for(const name of readdirSync(root).filter(n=>/-(expressions|motion)\.png$/.test(n))){const png=PNG.sync.read(readFileSync(new URL(name,root)));const resource={width:png.width,height:png.height,pixels:png.data};for(let index=0;index<16;index++){
    const result=extract(resource,index);removed+=result.removed;frames++;
    let visible=0;for(let p=3;p<result.data.length;p+=4)if(result.data[p]>=128)visible++;
    expect(visible,name+':'+index).toBeGreaterThan(1500);
    const cw=png.width/4,ch=png.height/4,x0=Math.ceil(index%4*cw),y0=Math.ceil(Math.floor(index/4)*ch);
-   let errors=0;for(let y=0;y<result.height;y+=4)for(let x=0;x<result.width;x+=4){const old=((y+y0)*png.width+x+x0)*4,next=(y*result.width+x)*4;if(result.data[next+3]>png.data[old+3])errors++;if(result.data[next+3])for(let channel=0;channel<3;channel++)if(result.data[next+channel]!==png.data[old+channel])errors++;}expect(errors,name+':'+index).toBe(0);
+   let errors=0;for(let y=0;y<result.height;y+=4)for(let x=0;x<result.width;x+=4){const old=((y+y0)*png.width+x+x0)*4,next=(y*result.width+x)*4;if(result.data[next+3]>png.data[old+3])errors++;if(result.data[next+3])for(let channel=0;channel<3;channel++)if(result.data[next+channel]!==png.data[old+channel])errors++;}expect(errors,name+':'+index).toBe(0);await new Promise(r=>setImmediate(r));
   }}expect(frames).toBe(readdirSync(root).filter(n=>/-(expressions|motion)\.png$/.test(n)).length*16);expect(removed).toBeGreaterThan(0);
  },300000);
 });
