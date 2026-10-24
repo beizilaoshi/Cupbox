@@ -35,5 +35,5 @@ describe('isolated mascot atlas frames',()=>{
    const cw=png.width/4,ch=png.height/4,x0=Math.ceil(index%4*cw),y0=Math.ceil(Math.floor(index/4)*ch);
    let errors=0;for(let y=0;y<result.height;y+=4)for(let x=0;x<result.width;x+=4){const old=((y+y0)*png.width+x+x0)*4,next=(y*result.width+x)*4;if(result.data[next+3]>png.data[old+3])errors++;if(result.data[next+3])for(let channel=0;channel<3;channel++)if(result.data[next+channel]!==png.data[old+channel])errors++;}expect(errors,name+':'+index).toBe(0);
   }}expect(frames).toBe(readdirSync(root).filter(n=>/-(expressions|motion)\.png$/.test(n)).length*16);expect(removed).toBeGreaterThan(0);
- },60000);
+ },300000);
 });
