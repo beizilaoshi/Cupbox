@@ -137,7 +137,7 @@ describe('上下文压缩', () => {
     expect(r.fallback).toBeUndefined();
   });
 
-  it('无模型时降级为截断，摘要沿用旧值', async () => {
+  it('无模型时保留既往摘要和本机原文节选', async () => {
     const r = await compactHistory(turns(20), {
       budgetChars: 2000,
       keepTurns: 4,
@@ -146,7 +146,8 @@ describe('上下文压缩', () => {
     });
     expect(r.compactedTurns).toBe(16);
     expect(r.kept).toHaveLength(4);
-    expect(r.summary).toBe('既往摘要');
+    expect(r.summary).toContain('既往摘要');
+    expect(r.summary).toContain('第 15 轮内容');
     expect(r.fallback).toContain('no api key');
   });
 
@@ -161,6 +162,17 @@ describe('上下文压缩', () => {
       },
     });
     expect(r.summary).toBe('合并后的新摘要');
+  });
+
+  it('token 预算会先于字符预算触发，工具消息不被拆开',async()=>{
+    const messages:ChatTurn[]=[...turns(20),{role:'assistant',text:'读取',toolCalls:[{id:'a',name:'fs_read',args:{path:'a'}}]},{role:'tool',results:[{id:'a',name:'fs_read',text:'返回内容'}]},{role:'assistant',text:'已读'}];
+    const r=await compactHistory(messages,{budgetChars:999999,budgetTokens:1000,keepTurns:2,summarize:async()=>''});
+    expect(r.compactedTurns).toBeGreaterThan(0);expect(r.kept[0].role).toBe('user');expect(r.kept.some(t=>t.role==='tool')).toBe(true);expect(r.summary).toContain('本机原文节选');
+  });
+
+  it('取消摘要请求时传播取消，不保存降级摘要',async()=>{
+    const controller=new AbortController();
+    await expect(compactHistory(turns(20),{budgetChars:2000,signal:controller.signal,summarize:async()=>{controller.abort();throw Error('aborted');}})).rejects.toThrow('aborted');
   });
 
   it('historyChars 与 summaryPromptBlock', () => {

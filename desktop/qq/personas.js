@@ -22,6 +22,7 @@ export function personaPrompt(c){
   if(upstreamWhale(c))return WHALE_PROMPT;
   if(c.rolePresentation==='assistant')return '你是 Cupbox 的聊天助手。按已选人格的语气自然回应，能力与已开启工具一致。';
   if(c.identityPersonality)return '以本地配置的稳定性格为准，不把人物设定复述给对方。';
+  if(c.persona==='whale'&&c.whaleFreedom)return '你是鲸鱼娘，平级群友风格：有自己的主见，嘴贫但讲分寸，会接梗、吐槽，也认真回应实际问题。不要机械卖萌或复述人设。使用本机用户填写的名字、性格与相处约定作为自由演绎的依据；工具能力只按当前程序提供的工具判断。';
   const text=PERSONAS[c.persona]||'';return c.persona==='whale'&&c.identityName?text.replace('你叫蓝色大肥鱼','你叫'+JSON.stringify(c.identityName)):text;
 }
 export const presetCatalogue=()=>PRESETS.map(({prompt,...p})=>p);

@@ -11,6 +11,15 @@ const model={id:'coordinator',name:'协调',model:'m'};
 const args=()=>({selected:[{cap:'text',model}],workflow:'project',parallel:3,prompt:'制作完整应用',system:'系统',history:[],signal:new AbortController().signal,home:()=>'',emit:vi.fn(),integrate:vi.fn(async()=>({text:'整合完成'}))});
 const plan=(tasks:any[])=>({text:JSON.stringify({tasks})});
 beforeEach(()=>vi.mocked(invokeCapability).mockReset());
+describe('Office workflow scenes',()=>{
+ it('detects Office deliverables and supplies executable scene requirements to workers',async()=>{
+  expect(resolveScene('auto','制作项目汇报.pptx')).toBe('office_ppt');expect(resolveScene('auto','读取原始数据.xlsx')).toBe('office_excel');expect(resolveScene('auto','制作 Word 报告')).toBe('office_word');
+  const dir=await mkdtemp(path.join(os.tmpdir(),'cupbox-office-flow-'));dirs.push(dir);
+  vi.mocked(invokeCapability).mockResolvedValueOnce(plan([{id:'read',title:'核对资料',prompt:'读取输入',cap:'text'},{id:'write',title:'制作文档',prompt:'编写报告',cap:'text',dependsOn:['read']}]) as any);
+  const calls:any[]=[];const r=await runWorkflow({...args(),scene:'office_word',workRoot:dir,executeText:async t=>{calls.push(t.prompt);return{text:'已按本地工具结果处理'};}});
+  expect(r.scene).toBe('office_word');expect(calls).toHaveLength(2);expect(calls.every(p=>p.includes('word_create')&&p.includes('word_read')&&p.includes('批准'))).toBe(true);expect(calls[1]).toContain('核对资料 的交付');
+ });
+});
 afterAll(async()=>{for(const dir of dirs)await rm(dir,{recursive:true,force:true});});
 describe('场景、依赖、验收工作流',()=>{
   it('识别不同场景并校验依赖，拒绝循环和未选择能力',()=>{

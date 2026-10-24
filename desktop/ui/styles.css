@@ -102,3 +102,23 @@
 .ann-opt{display:flex;align-items:center;gap:9px;padding:2px 24px 6px;font-size:11px;color:var(--txt-faint);cursor:pointer}
 .ann-opt input{width:14px;min-width:14px;height:14px;flex:0 0 14px;padding:0;margin:0;accent-color:var(--accent)}
 @media(max-width:760px){.modal.ann-modal{width:calc(100vw - 36px)}}
+/* Office tools use the same quiet cards and accessible buttons as settings. */
+.office-tool-shortcuts{margin:16px 0;padding:16px;border:1px solid var(--border-color,rgba(128,128,168,.22));border-radius:16px;background:var(--panel-bg,rgba(128,128,168,.06))}
+.office-tool-shortcuts p{font-size:12px;line-height:1.7;opacity:.75;margin:7px 0 12px}
+.office-tool-buttons{display:flex;flex-wrap:wrap;gap:8px}
+.office-tool-buttons button{font-size:12px;min-height:34px;transition:transform .16s ease,background .16s ease}
+.office-tool-buttons button:active{transform:scale(.97)}
+.office-read-block{padding:12px 0;border-bottom:1px solid var(--border-color,rgba(128,128,168,.22))}
+.office-read-block pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;line-height:1.7}
+@media(prefers-reduced-motion:reduce){.office-tool-buttons button{transition:none}}
+
+.office-tool-buttons button{padding:8px 12px;border:1px solid rgba(128,128,168,.24);border-radius:9px;background:rgba(128,128,168,.08);color:inherit;cursor:pointer}
+.office-tool-buttons button:hover{background:rgba(128,128,198,.18)}
+
+.office-workflow-presets{padding:12px 0;border-top:1px solid var(--stroke);margin-top:12px}.office-workflow-presets p{font-size:12px;color:var(--txt-dim);line-height:1.65;margin:6px 0 10px}.office-workflow-presets .office-tool-buttons{margin-bottom:4px}#result-body pre{white-space:pre-wrap;overflow-wrap:anywhere}
+
+body .composer-capabilities[open]{max-height:min(48vh,420px);overflow-y:auto;scrollbar-gutter:stable}
+#result-body h3,#result-body h4{margin:14px 0 8px}#result-body p{line-height:1.75;margin:7px 0}
+
+
+#office-family-filters{margin:0 0 16px}#office-family-filters[hidden]{display:none}#office-family-filters button[aria-pressed=true]{background:var(--raised);border-color:var(--accent);color:var(--accent)}

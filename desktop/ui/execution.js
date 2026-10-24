@@ -30,7 +30,7 @@ window.CupboxExecution=(()=>{
     $('approval-context').textContent=(active.actor==='agent'?'AI 请求':'本地工具请求')+' · '+(active.environment==='sandbox'?'沙箱运行':'本机运行')+' · '+(active.risk==='read'?'读取 / 预览':active.risk==='write'?'修改文件':'系统或网络操作');
     $('approval-args').textContent=JSON.stringify(active.args,(key,value)=>/api.?key|password|authorization|secret|confirmToken/i.test(key)?'[已隐藏]':value,2);document.querySelector('.approval-details').open=false;
     $('approval-diff').textContent=active.args?.diff||'';$('approval-change').hidden=!active.args?.diff;
-    const targets=$('approval-targets');targets.replaceChildren();for(const [key,value]of CupboxRisk.targets(active.args||{})){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=({path:'目标路径',from:'来源',to:'目标',input:'输入',output:'输出',saveTo:'保存到',url:'请求目标',command:'执行命令',cwd:'运行目录',pid:'进程 PID',name:'名称'}[key]||key);dd.textContent=value;targets.append(dt,dd);}
+    const targets=$('approval-targets');targets.replaceChildren();for(const [key,value]of CupboxRisk.targets(active.args||{})){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=({source:'源文档',path:'目标路径',from:'来源',to:'目标',input:'输入',output:'输出',saveTo:'保存到',url:'请求目标',command:'执行命令',cwd:'运行目录',pid:'进程 PID',name:'名称'}[key]||key);dd.textContent=value;targets.append(dt,dd);}
     $('approval-directory').textContent=active.directory||'按参数中指定的路径执行';queueLabel();
     surfaces=[...document.querySelectorAll('#app,#notice-panel,.toast')].map(el=>[el,el.inert]);surfaces.forEach(([el])=>el.inert=true);
     $('approval-screen').hidden=false;$('approval-deny').focus();

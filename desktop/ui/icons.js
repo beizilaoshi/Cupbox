@@ -2,6 +2,10 @@
 "use strict";
 window.CupboxIcons = (() => {
   const paths = {
+    model: '<rect x="4" y="4" width="16" height="16" rx="5"/><path d="M8 9h8M8 15h5"/><circle cx="16" cy="15" r="1"/>',
+    palette: '<path d="M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 1-3.7c-.8-.5-.5-1.8.5-1.8H17A4 4 0 0 0 21 11c0-4.4-4-8-9-8Z"/><circle cx="7" cy="11" r=".8"/><circle cx="10" cy="7" r=".8"/><circle cx="15" cy="7" r=".8"/>',
+    heart: '<path d="M20 5a5 5 0 0 0-8 1 5 5 0 0 0-8-1c-4 4 1 10 8 15 7-5 12-11 8-15Z"/>',
+    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>',
     'qq-bot': '<rect x="4" y="5" width="16" height="14" rx="5"/><path d="M12 2v3M8 19v3m8-3v3M1 10v5m22-5v5M8 14h8"/><circle cx="8.5" cy="10" r=".8"/><circle cx="15.5" cy="10" r=".8"/>',
     loader: '<circle cx="12" cy="12" r="9" opacity=".2"/><path d="M12 3a9 9 0 0 1 9 9"/>',
     copy: '<rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
@@ -40,6 +44,11 @@ window.CupboxIcons = (() => {
     arrow: '<path d="M4 12h16m-6-6 6 6-6 6"/>',
     sparkle: '<path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z"/>',
   };
+  const documentIcon='<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 12h8M8 16h6"/>';
+  for(const id of ['word_read','word_create','word_replace','word_template','word_mailmerge','office_export','office_import_csv'])paths[id]=documentIcon;
+  for(const id of ['ppt_read','ppt_create','ppt_replace','ppt_reorder'])paths[id]='<rect x="3" y="3" width="18" height="13" rx="2"/><path d="M12 16v5M7 21h10M7 8h10M7 12h6"/>';
+  for(const id of ['excel_read','excel_create','excel_update','excel_analyze','excel_transform','excel_format','excel_merge'])paths[id]='<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 9v12"/>';
+  for(const id of ['pdf_read','pdf_create','pdf_merge','pdf_extract','pdf_stamp'])paths[id]=documentIcon+'<path d="M8 19h8"/>';
   const html = (name, cls = "") => `<svg data-glyph="${Object.hasOwn(paths,name)?name:'tools'}" class="ui-icon ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.tools}</svg>`;
   const mount = (root = document) => root.querySelectorAll("[data-icon]").forEach(el => { el.innerHTML = html(el.dataset.icon); });
   return { html, mount, names: Object.keys(paths) };

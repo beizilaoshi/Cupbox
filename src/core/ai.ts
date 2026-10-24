@@ -477,7 +477,8 @@ export interface AiAgentOptions {
 export async function aiAgent(opts: AiAgentOptions): Promise<AgentResult> {
   if (opts.request && opts.config?.provider === 'free') throw new Error('受限传输不能使用第三方免费通道');
   const cfg = opts.config ?? (await loadAiConfig());
-  const maxTurns = Math.max(1, Math.min(10, opts.maxTurns ?? cfg.maxTurns ?? 8));
+  // Explicit scoped adapters may expose a larger, user-selected tool budget.
+  const maxTurns = Math.max(1, Math.min(opts.executeTool && opts.toolDefinitions ? 16 : 10, opts.maxTurns ?? cfg.maxTurns ?? 8));
   const trace: AgentTraceItem[] = [];
   const available = [...new Map([...TOOL_DEFS, ...(opts.executeTool ? opts.toolDefinitions ?? [] : [])].map(t=>[t.name,t])).values()];
   const defs = opts.tools ? available.filter((t) => opts.tools!.includes(t.name)) : available;

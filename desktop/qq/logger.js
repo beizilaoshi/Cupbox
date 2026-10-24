@@ -1,4 +1,4 @@
-const fields=new Set(['conversation','requestId','action','model','provider','status','retcode','code','emojiId','count','characters','bytes','reason','phase','messageId','durationMs','groupId','userId']);
+const fields=new Set(['conversation','requestId','action','model','provider','status','retcode','code','emojiId','count','characters','bytes','reason','phase','messageId','durationMs','seed','requestCount','estimatedCost','groupId','userId']);
 export function redact(value){return String(value??'').replace(/(?:data:[^\s,]+;base64,|base64:\/\/)[A-Za-z0-9+/=\s]+/gi,'[图片数据已隐藏]').replace(/Bearer\s+[^\s,;"'}]+/gi,'Bearer [已隐藏]').replace(/\b(?:sk|sess)-[A-Za-z0-9_-]{8,}/g,'[密钥已隐藏]').replace(/((?:api[_-]?key|access[_-]?token|web[_-]?token|credential|authorization|password|secret|token)["']?\s*[:=]\s*["']?)[^\s,"';}]+/gi,'$1[已隐藏]').replace(/https?:\/\/[^\s<>"']+/gi,url=>{try{const u=new URL(url);return u.origin+u.pathname+(u.search?'?[参数已隐藏]':'');}catch{return'[地址已隐藏]';}}).replace(/[\r\n\t]+/g,' ').slice(0,600);}
 export class BotLogger{
   constructor(notify=()=>{},limit=1000){this.notify=notify;this.limit=limit;this.entries=[];this.sequence=0;}

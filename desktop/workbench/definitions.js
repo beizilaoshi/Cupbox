@@ -1,3 +1,4 @@
+import {OFFICE_DEFINITIONS} from './office-definitions.js';
 const string={type:'string'},number={type:'number'},bool={type:'boolean'},strings={type:'array',items:string};
 const fs={encoding:{type:'string',enum:['utf8','utf8bom','gbk','utf16le','binary']},eol:{type:'string',enum:['preserve','lf','crlf']},dryRun:bool,confirmToken:string};
 const schema=(properties,required=[])=>({type:'object',properties,required,additionalProperties:false});
@@ -34,5 +35,6 @@ export const DEFINITIONS=[
  d('memory_manage','列出/遗忘指定命名空间的事实。导出只生成 fs_write 预览。',{...fs,list:bool,forget:string,scope:{type:'string',enum:['global','project']},exportTo:string},[],'write'),
  d('task','当前项目跨会话待办。清除需人工批准。',{action:{type:'string',enum:['add','list','done','clear']},workspaceKey:string,text:string,id:string},['action'],'write'),
  d('context_stats','本次项目会话按文件与工具归因的 token 近似开销。',{byFile:bool,byTool:bool}),
+ ...OFFICE_DEFINITIONS,
  d('clipboard_image','读写图片剪贴板，仅本机运行，访问始终人工批准。写入需项目内图片路径。',{action:{type:'string',enum:['read','write']},path:string},['action'],'system'),
 ];

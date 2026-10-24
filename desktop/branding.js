@@ -1,0 +1,18 @@
+import {app,ipcMain,BrowserWindow,dialog,nativeImage,shell,powerMonitor} from 'electron';
+import path from 'node:path';import {pathToFileURL} from 'node:url';
+import {BrandingStore,syncLogoShortcuts} from './branding-store.js';
+export function installBranding(options){const store=new BrandingStore(options),host=pathToFileURL(path.join(options.desktopDir,'ui/index.html')).href,allowed=new Set([host,pathToFileURL(path.join(options.desktopDir,'ui/qq-bot.html')).href]);let pending=Promise.resolve(),current=null;
+ const trust=(e,owner=false)=>{if(e.senderFrame!==e.sender.mainFrame||!(owner?e.sender.getURL()===host:allowed.has(e.sender.getURL())))throw Error('Logo 设置仅接受本机应用窗口');};
+ const applyWindow=win=>{if(!current||win.isDestroyed())return;win.setIcon(current.image);if(process.platform==='win32')win.setAppDetails({appId:'Cupbox.Desktop',appIconPath:current.icoPath,appIconIndex:0,relaunchCommand:'"'+process.execPath+'"'+(process.defaultApp?' "'+app.getAppPath()+'"':''),relaunchDisplayName:'Cupbox'});};
+ async function syncShortcuts(){if(process.platform!=='win32'||process.defaultApp||!current)return;await syncLogoShortcuts({directories:[app.getPath('desktop'),path.join(app.getPath('appData'),'Microsoft/Windows/Start Menu/Programs/Cupbox'),path.join(app.getPath('appData'),'Microsoft/Internet Explorer/Quick Launch/User Pinned/TaskBar')],executable:process.execPath,iconPath:current.icoPath,readShortcut:link=>shell.readShortcutLink(link),writeShortcut:(...args)=>shell.writeShortcutLink(...args),onError:error=>console.warn('[branding] 快捷方式图标未同步：',error.message)});}
+ const emit=async state=>{const icon=await store.prepareNative(state.selected),image=nativeImage.createFromBuffer(icon.png);if(image.isEmpty())throw Error('无法生成系统 Logo 图标');const changed=current?.revision!==icon.revision;current={...icon,image};for(const win of BrowserWindow.getAllWindows()){if(win.isDestroyed())continue;if(changed)applyWindow(win);if(allowed.has(win.webContents.getURL()))win.webContents.send('branding:changed',state);}if(changed){options.onNativeIcon?.(image);await syncShortcuts();}return state;};
+ const queue=fn=>{const result=pending.catch(()=>{}).then(fn);pending=result;return result;};
+ ipcMain.handle('branding:state',async e=>{trust(e);await pending.catch(()=>{});return store.snapshot();});
+ ipcMain.handle('branding:select',(e,id)=>{trust(e,true);return queue(async()=>emit(await store.select(id)));});
+ ipcMain.handle('branding:configure',(e,patch)=>{trust(e,true);return queue(async()=>emit(await store.configure(patch)));});
+ ipcMain.handle('branding:import',async e=>{trust(e,true);const result=await dialog.showOpenDialog(BrowserWindow.fromWebContents(e.sender),{title:'选择自定义 Logo',properties:['openFile'],filters:[{name:'图片 · 最大 10 MB',extensions:['png','jpg','jpeg','webp']}]});if(result.canceled||!result.filePaths[0])return{canceled:true};return queue(async()=>emit(await store.importFile(result.filePaths[0])));});
+ app.on('browser-window-created',(_event,win)=>applyWindow(win));
+ store.ready=()=>queue(async()=>emit(await store.snapshot()));store.windowIcon=()=>current?.image||null;
+ let calendarKey=new Date().toDateString()+'|'+new Date().getTimezoneOffset();const refreshCalendar=()=>{if(current)void queue(async()=>emit(await store.snapshot())).catch(error=>console.warn('[branding] 节日换装未同步：',error.message));};const calendarTimer=setInterval(()=>{const date=new Date(),key=date.toDateString()+'|'+date.getTimezoneOffset();if(key!==calendarKey){calendarKey=key;refreshCalendar();}},30000);calendarTimer.unref();void app.whenReady().then(()=>powerMonitor.on('resume',refreshCalendar));app.on('will-quit',()=>{clearInterval(calendarTimer);powerMonitor.removeListener('resume',refreshCalendar);});
+ return store;
+}

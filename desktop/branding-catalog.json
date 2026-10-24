@@ -1,0 +1,245 @@
+[
+  {
+    "id": "original",
+    "name": "经典原标",
+    "caption": "Cupbox 原始立方标识",
+    "src": "assets/cupbox-logo.svg",
+    "kind": "symbol"
+  },
+  {
+    "id": "sakura",
+    "name": "樱花信笺",
+    "caption": "花瓣印章 · 柔粉珠光",
+    "src": "assets/logos/sakura.svg",
+    "kind": "symbol"
+  },
+  {
+    "id": "prism",
+    "name": "折光晶体",
+    "caption": "透明切面 · 冰蓝水晶",
+    "src": "assets/logos/prism.svg",
+    "kind": "symbol"
+  },
+  {
+    "id": "aurora",
+    "name": "极光缎带",
+    "caption": "流动光环 · 青紫交织",
+    "src": "assets/logos/aurora.svg",
+    "kind": "symbol"
+  },
+  {
+    "id": "ink",
+    "name": "墨染玉印",
+    "caption": "玉石方印 · 墨绿鎏金",
+    "src": "assets/logos/ink.svg",
+    "kind": "symbol"
+  },
+  {
+    "id": "lunar",
+    "name": "月海琉璃",
+    "caption": "银月圆环 · 海蓝微光",
+    "src": "assets/logos/lunar.svg",
+    "kind": "symbol"
+  },
+  {
+    "id": "honey",
+    "name": "鎏金蜂巢",
+    "caption": "黑金六边 · 精密几何",
+    "src": "assets/logos/honey.svg",
+    "kind": "symbol"
+  },
+  {
+    "id": "orbit",
+    "name": "霓虹星轨",
+    "caption": "倾斜轨道 · 蓝紫电光",
+    "src": "assets/logos/orbit.svg",
+    "kind": "symbol"
+  },
+  {
+    "id": "academy",
+    "name": "筑梦徽章",
+    "caption": "学院盾徽 · 星与猫爪",
+    "src": "assets/logos/academy.svg",
+    "kind": "symbol"
+  },
+  {
+    "id": "paper",
+    "name": "折纸星盒",
+    "caption": "轻盈折角 · 雾紫奶白",
+    "src": "assets/logos/paper.svg",
+    "kind": "symbol"
+  },
+  {
+    "id": "liquid",
+    "name": "流银之环",
+    "caption": "液态金属 · 月白曲面",
+    "src": "assets/logos/liquid.svg",
+    "kind": "symbol"
+  },
+  {
+    "id": "pixel",
+    "name": "像素方舟",
+    "caption": "复古积木 · 明快蓝绿",
+    "src": "assets/logos/pixel.svg",
+    "kind": "symbol"
+  },
+  {
+    "id": "mascot-sakura",
+    "name": "樱晴抱抱",
+    "caption": "筑梦喵 · 樱花与拥抱",
+    "src": "assets/logos/mascot-sakura.png",
+    "kind": "mascot",
+    "motion": "hug"
+  },
+  {
+    "id": "mascot-academy",
+    "name": "筑梦学院",
+    "caption": "筑梦喵 · 学院制服",
+    "src": "assets/logos/mascot-academy.png",
+    "kind": "mascot",
+    "motion": "greeting"
+  },
+  {
+    "id": "mascot-night",
+    "name": "星夜守护",
+    "caption": "筑梦喵 · 星月披风",
+    "src": "assets/logos/mascot-night.png",
+    "kind": "mascot",
+    "motion": "nod"
+  },
+  {
+    "id": "mascot-wave",
+    "name": "挥爪欢迎",
+    "caption": "筑梦喵 · 单手招呼",
+    "src": "assets/logos/mascot-wave.png",
+    "kind": "mascot",
+    "group": "action",
+    "motion": "greeting"
+  },
+  {
+    "id": "mascot-peek",
+    "name": "探头见你",
+    "caption": "筑梦喵 · 躲在方盒后",
+    "src": "assets/logos/mascot-peek.png",
+    "kind": "mascot",
+    "group": "action",
+    "motion": "peek"
+  },
+  {
+    "id": "mascot-heart",
+    "name": "指尖比心",
+    "caption": "筑梦喵 · 心意送达",
+    "src": "assets/logos/mascot-heart.png",
+    "kind": "mascot",
+    "group": "action",
+    "motion": "heart"
+  },
+  {
+    "id": "mascot-snuggle",
+    "name": "贴贴抱紧",
+    "caption": "筑梦喵 · 脸颊蹭蹭",
+    "src": "assets/logos/mascot-snuggle.png",
+    "kind": "mascot",
+    "group": "action",
+    "motion": "hug"
+  },
+  {
+    "id": "mascot-spring",
+    "name": "新春抱福",
+    "caption": "春节 · 红金锦绣",
+    "src": "assets/logos/mascot-spring.png",
+    "kind": "mascot",
+    "festival": "spring",
+    "motion": "hug"
+  },
+  {
+    "id": "mascot-christmas",
+    "name": "圣诞暖抱",
+    "caption": "圣诞 · 雪绒礼服",
+    "src": "assets/logos/mascot-christmas.png",
+    "kind": "mascot",
+    "festival": "christmas",
+    "motion": "hug"
+  },
+  {
+    "id": "mascot-lantern",
+    "name": "灯语团圆",
+    "caption": "元宵 · 灯花汉服",
+    "src": "assets/logos/mascot-lantern.png",
+    "kind": "mascot",
+    "festival": "lantern",
+    "motion": "nod"
+  },
+  {
+    "id": "mascot-halloween",
+    "name": "绮夜守护",
+    "caption": "万圣 · 紫夜魔女",
+    "src": "assets/logos/mascot-halloween.png",
+    "kind": "mascot",
+    "festival": "halloween",
+    "motion": "peek"
+  },
+  {
+    "id": "mascot-midautumn",
+    "name": "桂月入怀",
+    "caption": "中秋 · 月桂汉服",
+    "src": "assets/logos/mascot-midautumn.png",
+    "kind": "mascot",
+    "festival": "midautumn",
+    "motion": "nod"
+  },
+  {
+    "id": "mascot-april",
+    "name": "奇想心意",
+    "caption": "愚人节 · 彩糖奇想",
+    "src": "assets/logos/mascot-april.png",
+    "kind": "mascot",
+    "festival": "april",
+    "motion": "heart"
+  },
+  {
+    "id": "mascot-labor",
+    "name": "小匠搭档",
+    "caption": "劳动节 · 牛仔工装",
+    "src": "assets/logos/mascot-labor.png",
+    "kind": "mascot",
+    "festival": "labor",
+    "motion": "greeting"
+  },
+  {
+    "id": "mascot-dragonboat",
+    "name": "粽叶清抱",
+    "caption": "端午 · 粽叶青绣",
+    "src": "assets/logos/mascot-dragonboat.png",
+    "kind": "mascot",
+    "festival": "dragonboat",
+    "motion": "hug"
+  },
+  {
+    "id": "mascot-qixi",
+    "name": "星桥心约",
+    "caption": "七夕 · 星河绫罗",
+    "src": "assets/logos/mascot-qixi.png",
+    "kind": "mascot",
+    "festival": "qixi",
+    "motion": "heart"
+  },
+  {
+    "id": "mascot-national",
+    "name": "云锦招呼",
+    "caption": "国庆 · 星徽披肩",
+    "src": "assets/logos/mascot-national.png",
+    "kind": "mascot",
+    "festival": "national",
+    "motion": "greeting"
+  },
+  {
+    "id": "mascot-winter",
+    "name": "暖雪相依",
+    "caption": "冬至 · 雪绒围巾",
+    "src": "assets/logos/mascot-winter.png",
+    "kind": "mascot",
+    "festival": "winter",
+    "motion": "hug"
+  }
+]

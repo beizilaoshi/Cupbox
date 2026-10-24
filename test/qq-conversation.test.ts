@@ -6,6 +6,7 @@ import { DEFAULTS } from '../desktop/qq/store.js';
 const text='先不用急着把所有事情都做完。挑一件最容易开始的小事，做一点也算进展。累了就歇一会儿，今天也不一定要那么高效。';
 const c={...DEFAULTS,segmentedStreaming:true};
 describe('natural conversation and delivery',()=>{
+  it('splits short casual bubbles consistently and gives longer bubbles a longer typing pause',async()=>{const body='今天终于忙完啦。一起喝杯奶茶吧。',settings={...c,segmentMode:'bubbles',typingDelay:true};const expected=previewParts(body,settings);expect(expected).toEqual(['今天终于忙完啦。','一起喝杯奶茶吧。']);const sent:string[]=[],wait=vi.fn(async()=>{}),writer=new SegmentWriter({mode:'bubbles',typingDelay:true,interval:600,wait,send:async(text:string)=>{sent.push(text);}});await writer.push(body);await writer.finish(body);expect(sent).toEqual(expected);expect(wait.mock.calls[0][0]).toBeGreaterThanOrEqual(600);expect(previewParts('```js\na(); b();\n```',settings)).toEqual(['```js\na(); b();\n```']);});
   it('keeps short messages intact and splits long ones at complete meanings',()=>{
     expect(previewParts('好呀，晚点见。',c)).toEqual(['好呀，晚点见。']);const parts=previewParts(text,c);expect(parts.length).toBeGreaterThan(1);expect(parts.join('')).toBe(text);expect(parts.every(p=>/[。！？]$/.test(p))).toBe(true);expect(parts.length).toBeLessThanOrEqual(c.maxSegments);
     expect(naturalCut('完全没有标点也没有空格的长句'.repeat(30))).toBe(0);

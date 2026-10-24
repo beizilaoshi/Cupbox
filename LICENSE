@@ -19,3 +19,26 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+# 素材与形象许可声明 / Assets & Character License
+
+> 本声明是本许可协议的一部分，效力优先级高于上文的 MIT 正文。
+> This notice is part of this license and takes precedence over the MIT text above.
+
+**上文 MIT 许可证仅适用于本仓库的源代码与文档。** 下列内容不包含在 MIT 许可范围内，其全部权利由项目团队保留：
+
+1. **任何图片与音频素材**：包括但不限于随项目或安装包分发的插画、角色立绘、服装与动作像素图、图标、界面背景、启动动画素材、表情包、背景音乐、音效及其他任何音频文件。未经项目团队书面许可，不得复制、修改、再分发、再许可，或用于任何衍生作品及任何商业或非商业项目。
+2. **「筑梦喵」（Dream Weaving Meow）团队 IP 形象**：包括其形象、名称、设定、服饰、动作与任何衍生造型，属项目团队专属 IP，**不可复用**。无论公益或商业用途，均不得使用、仿制、二次创作、商标化，或作为其他项目、产品或角色的形象。
+3. 违反上述声明的，项目团队将视情节追究法律责任，包括但不限于要求停止使用与删除、赔偿损失以及提起诉讼。
+
+如需取得授权（含公益用途），请先联系项目团队获得书面许可。
+
+**The MIT License above applies only to the source code and documentation of this repository.** The following assets are NOT covered by the MIT License, and all rights are reserved by the project team:
+
+1. **All image and audio assets** — including but not limited to illustrations, character art, costume and animation pixel art, icons, UI backgrounds, startup-animation assets, emoji, background music, sound effects and any other audio files shipped with the project or its installers. You may not copy, modify, redistribute, sublicense, or use them in any derivative work or in any commercial or non-commercial project without prior written permission from the project team.
+2. **The "Dream Weaving Meow" (筑梦喵) team IP character** — including its appearance, name, lore, costumes, gestures and any derivative form — is the project team's exclusive intellectual property and **may not be reused**. It may not be used, imitated, re-created, trademarked, or used as the character of any other project or product, whether for charitable, commercial or any other purpose.
+3. The project team will pursue legal liability to the extent the circumstances warrant for any violation, including but not limited to demanding cessation of use and removal, damages, and legal proceedings.
+
+For authorization (including charitable use), contact the project team to obtain written permission first.

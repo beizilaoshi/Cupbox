@@ -144,7 +144,7 @@ app.on('browser-window-created', (_event, win) => {
       await evaluate(`closeModal()`);
       await capture('10-moonlake.png');
       await evaluate(`openModal('startup')`);
-      await check('startup settings tab', `!document.querySelector('#tab-startup').hidden && document.querySelectorAll('.startup-card').length===4`);
+      await check('startup settings tab', `!document.querySelector('#tab-startup').hidden && document.querySelectorAll('.startup-card').length===15`);
       await capture('11-startup-settings.png');
       for(const style of ['orbit','cinema','pulse']) {
         await evaluate(`void CupboxStartup.play({...prefs,startupStyle:${JSON.stringify(style)},startupDuration:3},{preview:true})`);

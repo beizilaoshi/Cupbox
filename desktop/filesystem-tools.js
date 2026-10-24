@@ -14,7 +14,7 @@ export async function openFilesystem({directory,sandbox=true,signal,executable=p
   await mkdir(directory,{recursive:true});const root=await realpath(directory);
   const entry=path.join(ROOT,'node_modules','@modelcontextprotocol','server-filesystem','dist','index.js');
   const args=[...(sandbox?['--permission',`--allow-fs-read=${root}`,`--allow-fs-write=${root}`,`--allow-fs-read=${path.join(ROOT,'node_modules')}`]:[]),entry,root];
-  const client=new Client({name:'cupbox-filesystem',version:'1.0.3'},{capabilities:{}});
+  const client=new Client({name:'cupbox-filesystem',version:'1.1.0'},{capabilities:{}});
   const transport=new StdioClientTransport({command:executable,args,cwd:root,stderr:'pipe',env:{ELECTRON_RUN_AS_NODE:'1',SystemRoot:process.env.SystemRoot||'',WINDIR:process.env.WINDIR||'',TEMP:root,TMP:root}});
   let detail='';transport.stderr?.on('data',c=>{detail=(detail+String(c)).slice(-1000);});
   let closed=false;

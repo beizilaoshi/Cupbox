@@ -10,13 +10,13 @@ export function visibleStream(raw,final=false){
 export function clipText(text,limit){let value=String(text).slice(0,limit);if(/[\uD800-\uDBFF]$/.test(value))value=value.slice(0,-1);return value;}
 /** Backpressure-aware QQ delivery. Reserve the last message for the remaining text/emoji. */
 export class SegmentWriter{
-  constructor({send,signal,chars=160,max=4,interval=1000,limit=1800,mode='natural',wait=delay}){Object.assign(this,{send,signal,chars,max,interval,limit,mode,wait});this.raw='';this.offset=0;this.count=0;this.delivered='';}
-  async part(text,emoji){this.signal?.throwIfAborted();if(!text.trim()&&!emoji)return;if(this.count)await this.wait(this.interval,undefined,{signal:this.signal});this.signal?.throwIfAborted();await this.send(text.trim(),{first:this.count===0,emoji});this.count++;this.delivered+=text;}
+  constructor({send,signal,chars=160,max=4,interval=1000,limit=1800,mode='natural',typingDelay=false,wait=delay}){Object.assign(this,{send,signal,chars,max,interval,limit,mode,typingDelay,wait});this.raw='';this.offset=0;this.count=0;this.delivered='';}
+  async part(text,emoji){this.signal?.throwIfAborted();if(!text.trim()&&!emoji)return;if(this.count)await this.wait(this.typingDelay?Math.max(this.interval,Math.min(5000,400+text.length*35)):this.interval,undefined,{signal:this.signal});this.signal?.throwIfAborted();await this.send(text.trim(),{first:this.count===0,emoji});this.count++;this.delivered+=text;}
   async push(delta){
     this.raw+=delta;if(this.mode==='lines')return;const text=clipText(visibleStream(this.raw),this.limit);
     while(this.count<this.max-1){const rest=text.slice(this.offset);let cut=0;const window=rest.slice(0,this.chars);
       for(const match of window.matchAll(/[。！？!?\n](?:[”"’])?/g))if(match.index+match[0].length>=40){cut=match.index+match[0].length;break;}
-      if(this.mode==='natural')cut=naturalCut(rest,this.chars);else if(!cut&&rest.length>=this.chars)cut=this.chars;if(!cut)break;
+      if(this.mode==='natural'||this.mode==='bubbles')cut=naturalCut(rest,this.chars,this.mode==='bubbles');else if(!cut&&rest.length>=this.chars)cut=this.chars;if(!cut)break;
       if(/[\uD800-\uDBFF]/.test(rest[cut-1]))cut--;if(!cut)break;
       await this.part(rest.slice(0,cut));this.offset+=cut;
     }

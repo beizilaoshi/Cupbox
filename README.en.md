@@ -33,6 +33,16 @@
 
 ---
 
+## ⚠️ License & Asset Notice
+
+- **Code and documentation:** MIT — free to use, modify and distribute.
+- **All artwork and audio** — images, illustrations, character art, pixel art, icons, startup-animation assets, emoji, background music, sound effects and any other media shipped with the project or its installers — are **NOT covered by the MIT License**. All rights are reserved by the project team; they may not be copied, modified, redistributed or used in any derivative work without written permission.
+- **"Dream Weaving Meow" (筑梦喵) is the team's IP character** — including its appearance, name, lore, costumes and derivative forms. It **may not be reused**: it may not be used, imitated, re-created, or used as another project's or product's character, for either commercial or non-commercial purposes. Violations will be pursued to the extent the law allows.
+
+See [LICENSE](./LICENSE) for the full terms.
+
+---
+
 ## 📦 What Is Cupbox?
 
 **Cupbox is a lightweight toolbox for everyday development tasks.**

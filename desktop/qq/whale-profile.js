@@ -4,7 +4,7 @@ export const WHALE_SOURCE={repository:'https://github.com/chennianlaobai/qq-ai-b
 export const WHALE_PROMPT=readFileSync(new URL('./vendor/qq-ai-bot/persona.md',import.meta.url),'utf8');
 export const WHALE_RULES=JSON.parse(readFileSync(new URL('./vendor/qq-ai-bot/persona_rules.json',import.meta.url),'utf8'));
 export const WHALE_MOODS=['开心','无语','生气','卖萌','得意','委屈','震惊'];
-export const upstreamWhale=c=>c.mode==='chat'&&c.persona==='whale';
+export const upstreamWhale=c=>c.mode==='chat'&&c.persona==='whale'&&!c.whaleFreedom;
 export const whaleRuntime=c=>upstreamWhale(c)?{...c,identityName:'鲸鱼娘',identityPersonality:'',identityRules:'',customPrompt:'',rolePresentation:'character',replyStyle:'casual',romanceMode:'off',segmentedStreaming:c.whaleSplitLines!==false,segmentMode:'lines'}:c;
 export const stripWhaleMarkers=text=>String(text||'').replace(/\[表情\s*[:：][^\]\r\n]*\]/g,'').trim();
 export function whaleEmojiPrompt(list,input,c,last,now){

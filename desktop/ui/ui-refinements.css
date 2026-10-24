@@ -1,0 +1,53 @@
+/* Shared interaction finish. Keep existing theme/artwork and semantic risk colours. */
+:root{--ui-control-radius:9px;--ui-card-radius:14px}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn-run,.btn-ghost2,.ghost-btn{border-radius:var(--ui-control-radius)}
+.switch>input[type=checkbox]{inset:0;width:100%;max-width:none;height:100%;margin:0;cursor:pointer}
+.filesystem-enable{display:flex;align-items:center;gap:10px;min-height:40px}
+.filesystem-enable input[type=checkbox]{width:16px;height:16px;margin:0;accent-color:var(--accent);flex:0 0 16px}
+.nav-tool{white-space:nowrap;min-width:0}
+.nav-tool>.nav-models{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#settings-modal .settings-sidebar{overflow:hidden;min-height:0}
+#settings-modal .settings-search,#settings-modal .settings-nav-foot{flex-shrink:0}
+#settings-modal #modal-tabs{flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;overscroll-behavior:contain;padding-right:3px}
+#settings-modal .settings-nav-foot{margin-top:0;padding-top:12px}
+#settings-modal #modal-close{min-height:32px;padding:5px 10px;border-radius:8px}
+#settings-modal .settings-content>.modal-body{overscroll-behavior:contain;scroll-padding-block:24px}
+.settings-content-head h3,.page-heading h1{text-wrap:balance}
+.settings-content-head>p{overflow-wrap:anywhere}
+.settings-search-target{outline:2px solid var(--accent);outline-offset:4px;border-radius:6px}
+.model-library-layout{grid-template-columns:180px minmax(0,1fr);align-items:start;margin-top:22px}
+.model-library-layout.is-empty{grid-template-columns:minmax(0,1fr)}
+.model-library-layout.is-empty>div:first-child{display:none}
+.model-editor{padding:18px;border:1px solid var(--stroke);border-radius:var(--ui-card-radius);background:var(--surface)}
+.model-editor-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--stroke);padding-bottom:12px;margin-bottom:4px}
+.model-editor-heading h4{margin:0}
+.model-editor-heading button{font-size:11px;flex-shrink:0}
+#model-collaboration-options{padding:4px 0 12px}
+.model-library-layout>div>.actions{margin:0 0 12px}
+.model-studio-top .feature-illustration{width:64px;height:64px}
+.office-tool-shortcuts{border-color:var(--stroke);border-radius:var(--ui-card-radius);background:var(--surface)}
+.office-shortcut-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px;align-items:start}
+.office-shortcut-group{min-width:0;border:1px solid var(--stroke);border-radius:10px;background:var(--bg)}
+.office-shortcut-group[open]{grid-column:1/-1}
+.office-shortcut-group>summary{display:flex;align-items:center;gap:9px;padding:12px 14px;cursor:pointer;list-style:none;font-size:12px;font-weight:600}
+.office-shortcut-group>summary::after{content:'＋';margin-left:auto;font-weight:400;color:var(--txt-dim)}
+.office-shortcut-group[open]>summary::after{content:'−'}
+.office-shortcut-group>summary small{font-size:10px;font-weight:400;color:var(--txt-dim)}
+.office-shortcut-group .office-tool-buttons{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;padding:0 12px 12px}
+.office-shortcut-group .office-tool-buttons button{background:var(--surface);border:1px solid var(--stroke);padding:10px 12px;text-align:left;line-height:1.6;white-space:normal}
+.office-shortcut-group .office-tool-buttons button:hover{background:var(--raised);border-color:var(--accent)}
+.wb-header{scroll-margin-top:12px}.wb-layout>div{min-width:0}.wb-actions{flex-wrap:wrap}
+#tab-freemodel>.hint{border:1px solid color-mix(in srgb,var(--warn) 35%,var(--stroke));border-left:3px solid var(--warn);background:color-mix(in srgb,var(--warn) 7%,var(--surface))}
+#tab-freemodel>.hint::before{content:'第三方通道 · 请留意数据范围';display:block;font-weight:600;color:var(--warn);margin-bottom:5px}
+.app-risk-dialog #app-risk-buttons button{white-space:normal;overflow-wrap:anywhere}
+.app-risk-dialog[data-level=danger] .btn-danger{box-shadow:0 0 0 1px color-mix(in srgb,var(--err) 70%,transparent)}
+body.qq-settings-layout .bot-main{scroll-padding-block:20px 104px;overscroll-behavior:contain}
+body.qq-settings-layout .bot-card{border-radius:var(--ui-card-radius)}
+body.qq-settings-layout .qq-page-outline button{border-radius:8px;min-height:32px}
+body.qq-settings-layout .page-heading p{line-height:1.8;max-width:74ch}
+body.qq-settings-layout .bot-savebar{backdrop-filter:blur(18px);background:color-mix(in srgb,var(--surface) 95%,transparent)}
+@media(max-width:1150px){.sidebar .nav-tool>.nav-models{display:none}.sidebar .nav-tool{gap:10px}}
+@media(max-width:1050px){.model-library-layout:not(.is-empty){grid-template-columns:155px minmax(0,1fr);gap:14px}.model-editor{padding:14px}.settings-content-head>p{max-width:220px}}
+@media(max-height:740px){#settings-modal .settings-content-head{min-height:64px}.settings-content-head>p{font-size:10px}.model-editor-heading{flex-wrap:wrap}}
+@media(prefers-reduced-motion:no-preference){.office-shortcut-group,.model-editor{transition:border-color .18s,background .18s}.office-shortcut-group>summary:hover{background:var(--raised);border-radius:9px}}

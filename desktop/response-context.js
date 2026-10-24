@@ -6,6 +6,11 @@ export function ensureMessageIds(session) {
 export function feedbackHistory(session) {
   return (session.messages||[]).filter(m=>['user','assistant'].includes(m.role)&&typeof m.text==='string'&&!(m.role==='assistant'&&m.feedback==='down')).map(m=>({role:m.role,text:m.text}));
 }
+/** Saved messages remain intact; only submit turns after the summary boundary. */
+export function pendingHistory(session) {
+  const history=feedbackHistory(session),through=session.summaryThrough;
+  return session.summary&&Number.isInteger(through)&&through>0&&through<=history.length?history.slice(through):history;
+}
 export function preferredContext(session) {
   const accepted=(session.messages||[]).filter(m=>m.role==='assistant'&&m.feedback==='up').slice(-3);
   return accepted.length?'【用户标记有帮助的历史答复，仅作参考，当前指令优先】\n'+accepted.map(m=>m.text.slice(0,1200)).join('\n\n'):'';
@@ -17,5 +22,6 @@ export function updateFeedback(session,id,value) {
   message.feedback=value==='none'?undefined:value;
   // Summaries may contain the rejected answer: rebuild from the filtered full history.
   session.summary=null;
+  session.summaryThrough=0;
   return message;
 }

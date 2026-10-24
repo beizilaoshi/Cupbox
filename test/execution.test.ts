@@ -15,6 +15,11 @@ beforeAll(async()=>{
 });
 afterAll(async()=>{await rm(home,{recursive:true,force:true});});
 describe('desktop permission decisions',()=>{
+  it('balances pet approval activity on denial and sender shutdown without granting access',async()=>{
+    const sender=new Sender();let waiting=0,ended=0;const runtime=createToolExecution({getPrefs:async()=>({}),home:()=>home,onApproval:()=>{waiting++;return()=>{waiting--;ended++;};}});
+    let id='';sender.once('execution:approval',r=>{id=r.id;});const first=runtime.authorizeAdvanced(sender,{tool:'fixture'});await new Promise(r=>setTimeout(r,0));expect(waiting).toBe(1);runtime.respond(sender,id,false);expect(await first).toBe(false);runtime.respond(sender,id,true);expect(waiting).toBe(0);expect(ended).toBe(1);
+    const second=runtime.authorizeAdvanced(sender,{tool:'fixture'});await new Promise(r=>setTimeout(r,0));sender.emit('destroyed');expect(await second).toBe(false);expect(waiting).toBe(0);expect(ended).toBe(2);
+  });
   it('requires explicit approval before an agent native command even under full control',async()=>{const sender=new Sender();const runtime=createToolExecution({getPrefs:async()=>({approvalMode:'full',executionEnvironment:'native'}),home:()=>home});let prompted=false;sender.on('execution:approval',r=>{prompted=true;runtime.respond(sender,r.id,false);});await expect(runtime.execute(sender,'run',{command:'echo should-not-run'},'agent')).rejects.toThrow('未批准');expect(prompted).toBe(true);});
   it('agent memory mutations still require human approval under full control, including an empty-profile overwrite',async()=>{
     const sender=new Sender(),seen:any[]=[];const runtime=createToolExecution({getPrefs:async()=>({approvalMode:'full',executionEnvironment:'sandbox'}),home:()=>home});sender.on('execution:approval',request=>{seen.push(request);runtime.respond(sender,request.id,false);});

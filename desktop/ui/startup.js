@@ -2,16 +2,21 @@
 window.CupboxStartup = (() => {
   const $ = id => document.getElementById(id);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-  const defaults = {startupEnabled:true,startupStyle:'orbit',startupDuration:1.6,startupCaption:'让灵感，轻轻启程。'};
+  const defaults = {startupEnabled:true,startupStyle:'orbit',startupDuration:5,startupCaption:'让灵感，轻轻启程。'};
   let hooks, finish = null, timer, textTimer, generation=0;
+  let sakura,scene;
+  const styleIds=[...new Set(['orbit','cinema','pulse','custom',...Object.keys(window.CupboxStartupScenes?.catalog||{})])];
 
   function sync(p) {
+    const selected=styleIds.includes(p.startupStyle)?p.startupStyle:'orbit';
+    document.querySelector('.startup-settings-hero').dataset.style=selected;
+    const description=$('startup-style-description');if(description)description.textContent=window.CupboxStartupScenes?.catalog[selected]?.caption||'';
     $('startup-enabled').checked = p.startupEnabled !== false;
-    $('startup-duration').value = String(p.startupDuration || 1.6);
-    $('startup-duration-output').value = `${Number(p.startupDuration || 1.6).toFixed(1)} 秒`;
+    $('startup-duration').value = String(p.startupDuration || defaults.startupDuration);
+    $('startup-duration-output').value = `${Number(p.startupDuration || defaults.startupDuration).toFixed(1)} 秒`;
     if (document.activeElement !== $('startup-caption')) $('startup-caption').value = p.startupCaption ?? defaults.startupCaption;
     document.querySelectorAll('.startup-card').forEach(b => {
-      const active = b.dataset.startupStyle === (p.startupStyle || 'orbit');
+      const active = b.dataset.startupStyle === selected;
       b.classList.toggle('active',active); b.setAttribute('aria-pressed',String(active));
     });
     $('startup-media-name').textContent = p.customStartupName || 'GIF、MP4、WebM 或图片 · 最大 40 MB';
@@ -23,20 +28,22 @@ window.CupboxStartup = (() => {
     if ((!options.preview && p.startupEnabled === false) || reduced.matches) return Promise.resolve(false);
     const screen = $('startup-screen');
     const token=++generation;
-    const style = ['orbit','cinema','pulse','custom'].includes(p.startupStyle) ? p.startupStyle : 'orbit';
-    const duration = Math.max(.8,Math.min(5,Number(p.startupDuration) || 1.6));
+    const style = styleIds.includes(p.startupStyle) ? p.startupStyle : 'orbit';
+    const duration = Math.max(.8,Math.min(20,Number(p.startupDuration) || defaults.startupDuration));
+    const isScene=Boolean(window.CupboxStartupScenes?.catalog[style]);
     const previousFocus = document.activeElement;
     const surfaces = [...document.querySelectorAll('#app,.layout,.modal,.drawer,#notice-panel,.toast')].map(el => [el,el.inert]);
     surfaces.forEach(([el]) => { el.inert = true; });
     screen.dataset.style = style;
-    $('startup-backdrop').onerror=()=>{if(token===generation)screen.dataset.style='pulse';};
+    window.CupboxStartupScenes?.configure(screen,style);
+    $('startup-backdrop').onerror=()=>{if(token===generation&&!isScene){screen.dataset.style='pulse';sakura?.stop();}};
     screen.style.setProperty('--startup-duration',`${duration}s`);
     $('startup-display-caption').textContent = p.startupCaption ?? defaults.startupCaption;
     $('startup-display-version').textContent = $('ver-chip').textContent;
     $('startup-media-error').textContent = '';
     const media = $('startup-media'); media.replaceChildren();
     const background = CupboxTheme.sourceFor(p,document.documentElement.dataset.theme);
-    $('startup-backdrop').src = style==='orbit'?'assets/startup-atelier.png':background || 'assets/bloom-light.png';
+    $('startup-backdrop').src = style==='orbit'||isScene?'assets/startup-sakura-frost.png':background || 'assets/bloom-light.png';
     if (style === 'custom' && p.customStartupUrl) {
       const el = document.createElement(p.customStartupKind === 'video' ? 'video' : 'img');
       if (el.tagName === 'VIDEO') { el.muted=true; el.autoplay=true; el.loop=true; el.playsInline=true; }
@@ -49,11 +56,15 @@ window.CupboxStartup = (() => {
     screen.hidden=false;
     void screen.offsetWidth;
     screen.classList.add('playing');
+    if(style==='orbit'){sakura ||= CupboxSakuraScene.mount(screen);sakura.start(duration);}
+    if(isScene){scene ||= CupboxStartupScenes.mount(screen);scene.start(style,duration);}
     $('skip-startup').focus();
     return new Promise(resolve => {
       finish = () => {
         generation++;
+        window.CupboxStartupScenes?.configure(screen,null);
         clearTimeout(timer);
+        sakura?.stop();scene?.stop();
         screen.classList.remove('playing'); screen.hidden=true;
         media.querySelector('video')?.pause(); media.replaceChildren();
         surfaces.forEach(([el,wasInert]) => { el.inert=wasInert; });
@@ -81,6 +92,9 @@ window.CupboxStartup = (() => {
 
   function init(options) {
     hooks=options;
+    window.CupboxStartupScenes?.cards();
+    window.CupboxStartupScenes?.filters();
+    const description=document.createElement('p');description.id='startup-style-description';description.className='startup-style-description';description.setAttribute('role','status');document.querySelector('.startup-grid').after(description);
     $('skip-startup').addEventListener('click',()=>finish?.());
     window.addEventListener('keydown',e=>{
       if(!finish)return;
@@ -96,7 +110,7 @@ window.CupboxStartup = (() => {
     $('startup-duration').addEventListener('input',()=>{
       hooks.getPrefs().startupDuration=Number($('startup-duration').value);sync(hooks.getPrefs());
     });
-    $('startup-duration').addEventListener('change',()=>void hooks.save({startupDuration:Number($('startup-duration').value)}));
+    $('startup-duration').addEventListener('change',()=>void hooks.save({startupDuration:Number($('startup-duration').value),startupDurationCustomized:true}));
     $('startup-caption').addEventListener('input',()=>{
       hooks.getPrefs().startupCaption=$('startup-caption').value.slice(0,60);
       $('startup-settings-caption').textContent=hooks.getPrefs().startupCaption;
@@ -105,8 +119,8 @@ window.CupboxStartup = (() => {
     $('startup-caption').addEventListener('change',()=>{clearTimeout(textTimer);void hooks.save({startupCaption:$('startup-caption').value.slice(0,60)});});
     $('choose-startup-media').addEventListener('click',()=>void choose());
     $('preview-startup').addEventListener('click',()=>{if(reduced.matches)$('startup-status').textContent='系统已开启减少动态效果，启动动画将自动跳过。';else void play(hooks.getPrefs(),{preview:true});});
-    $('reset-startup').addEventListener('click',()=>{clearTimeout(textTimer);void hooks.save({...defaults});sync(hooks.getPrefs());$('startup-status').textContent='已恢复默认启动动画。';});
+    $('reset-startup').addEventListener('click',()=>{clearTimeout(textTimer);void hooks.save({...defaults,startupDurationCustomized:false});sync(hooks.getPrefs());$('startup-status').textContent='已恢复默认启动动画。';});
     sync(hooks.getPrefs());
   }
-  return {init,sync,play,skip:()=>finish?.(),defaults};
+  return {init,sync,play,skip:()=>finish?.(),defaults,styleIds,get sceneRunning(){return scene?.running===true;}};
 })();

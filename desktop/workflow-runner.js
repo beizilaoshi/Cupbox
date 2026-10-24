@@ -22,6 +22,7 @@ export async function runWorkflow({selected,workerModels=[],workflow='direct',pa
     try{
       let result;
       if(task.cap==='text'&&executeText){
+        task.prompt+='\n场景执行要求：'+spec.brief;
         if(taskRoot){task.outputDir=path.join(taskRoot,String(tasks.indexOf(task)+1));await mkdir(task.outputDir,{recursive:true});task.prompt+=`\n本子项目独立交付目录：${task.outputDir}。仅在这个目录写入成果。可读取上游交付文件；最终由协调模型整合到工作目录。必须先读再改，完成后读取验证。`;}
         result=await executeText(task,route.model);
       }else result=await invokeCapability({...route,prompt:task.prompt,system:system+'\n场景要求：'+spec.brief,history,attachments,signal,home,progress:note=>emit({...task,note})});

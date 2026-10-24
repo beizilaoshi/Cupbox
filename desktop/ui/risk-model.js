@@ -4,6 +4,7 @@ window.CupboxRisk = (() => {
   function describe(tool, args = {}, risk = 'system') {
     const critical = (title, consequence, action) => ({level:'danger',label:'高风险操作',title,consequence,action,ack:true});
     const warn = (title, consequence, action='批准本次操作') => ({level:'warning',label:'需要你的确认',title,consequence,action,ack:false});
+    if (/^(word_|ppt_|excel_|pdf_|office_)/.test(tool)) return (/_read$/.test(tool)||tool==='excel_analyze')?{level:'info',label:'办公资料读取',title:'允许读取办公文档？',consequence:'提取的文字、表格和备注可能提交给当前模型；不会执行宏、外部链接或公式，不代表图片已识别。',action:'允许本次读取',ack:false}:warn('允许写入办公文件？','将修改或生成真实 Word、PPT、Excel、PDF 或交换文件。请核对内容摘要与路径；覆盖会替换原文件，复杂 Excel 图表和透视表可能无法完整保留，建议另存。','批准本次写入');
     if(tool.startsWith('desktop_'))return critical('桌面协作会影响真实窗口','只允许你手动授权的目标窗口。截图和OCR可能含隐私；视觉分析会发送截图到所选模型。鼠标和按键可能发送、删除或执行内容；完全控制也需逐次批准。','核对并批准本次');
     if (tool === 'permission_full') return critical('允许更多操作自动执行？','普通文件修改将不再逐次询问。Shell、敏感文件和项目策略仍需单独批准。只在信任当前任务时开启。','开启完全控制');
     if (tool === 'environment_native') return warn('切换到本机运行？','AI 将使用真实工作文件夹，并可请求运行终端、项目脚本和系统工具。已批准的程序可以影响本机。','切换到本机');
@@ -20,7 +21,7 @@ window.CupboxRisk = (() => {
     return warn('允许执行这项操作？','此工具会访问本机能力。请核对操作参数和目标范围。');
   }
   function targets(args) {
-    return ['path','from','to','input','output','saveTo','url','command','cwd','pid','name'].filter(k=>args[k]!==undefined&&typeof args[k]!=='object').map(k=>[k,String(args[k]).slice(0,3000)]);
+    return ['source','path','from','to','input','output','saveTo','url','command','cwd','pid','name'].filter(k=>args[k]!==undefined&&typeof args[k]!=='object').map(k=>[k,String(args[k]).slice(0,3000)]);
   }
   return {describe,targets};
 })();

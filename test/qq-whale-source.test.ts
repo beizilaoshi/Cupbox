@@ -7,6 +7,7 @@ import {personaPrompt} from '../desktop/qq/personas.js';
 import {DEFAULTS,validateSettings} from '../desktop/qq/store.js';
 import {BotEngine} from '../desktop/qq/engine.js';
 import {SegmentWriter} from '../desktop/qq/segments.js';
+it('keeps the original whale default but permits an explicit freely customized character',async()=>{const strict=validateSettings({persona:'whale'});expect(whaleRuntime(strict).identityName).toBe('鲸鱼娘');const custom=validateSettings({persona:'whale',whaleFreedom:true,identityName:'小梦',identityPersonality:'有主见的猫系室友',customPrompt:'聊天时少用问号',segmentMode:'bubbles',romanceMode:'sweet'});expect(whaleRuntime(custom).identityName).toBe('小梦');expect(whaleRuntime(custom).segmentMode).toBe('bubbles');expect(whaleRuntime(custom).romanceMode).toBe('sweet');expect(personaPrompt(custom)).not.toBe(WHALE_PROMPT);let payload:any;const engine=new BotEngine({settings:{...custom,enabled:true,globalMemory:false},respond:async p=>{payload=p;return{text:'嗯，坐这儿聊。'};},send:async()=>({message_id:8})});try{await engine.receive({post_type:'message',message_type:'private',self_id:123456,user_id:654321,message_id:1,message:[{type:'text',data:{text:'你好'}}]});expect(payload.whaleSource).toBe(false);expect(payload.system).toContain('有主见的猫系室友');expect(payload.system).toContain('聊天时少用问号');}finally{engine.stop();}});
 const c={...DEFAULTS,mode:'chat',persona:'whale',emojiEnabled:true};
 const image={id:'happy',enabled:true,meaning:'开心打招呼',selectionMode:'semantic',mood:'开心'};
 describe('pinned upstream whale profile',()=>{

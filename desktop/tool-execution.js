@@ -8,15 +8,17 @@ import { classifyTool, needsApproval, sandboxArgs } from './execution-policy.js'
 const desktop=path.dirname(fileURLToPath(import.meta.url));
 const root=path.dirname(desktop);
 
-export function createToolExecution({getPrefs,home,audit}) {
+export function createToolExecution({getPrefs,home,audit,onApproval}) {
   const pending=new Map();
   const sandboxRoot=()=>path.join(home(),'sandbox');
   function requestApproval(sender,payload) {
+    if(sender.isDestroyed())return Promise.resolve(false);
     return new Promise(resolve=>{
       const id=randomUUID();
+      let endApproval;try{endApproval=onApproval?.();}catch{}
       const timeout=setTimeout(()=>done(false),300000);
       const destroyed=()=>done(false);
-      const done=allow=>{clearTimeout(timeout);sender.removeListener('destroyed',destroyed);pending.delete(id);if(!sender.isDestroyed())sender.send('execution:approval-canceled',id);resolve(allow);};
+      const done=allow=>{if(!pending.delete(id))return;clearTimeout(timeout);sender.removeListener('destroyed',destroyed);try{endApproval?.();}catch{}if(!sender.isDestroyed())sender.send('execution:approval-canceled',id);resolve(allow);};
       pending.set(id,{sender:sender.id,done});
       sender.once('destroyed',destroyed);
       sender.send('execution:approval',{id,...payload});

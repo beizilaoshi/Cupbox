@@ -1,6 +1,6 @@
-# Cupbox 1.0.3 Windows 安装版
+# Cupbox 1.1.0 Windows 安装版
 
-双击 `release/Cupbox-Setup-1.0.3-x64.exe`，按中文引导选择安装位置与快捷方式。
+双击 `release/Cupbox-Setup-1.1.0-x64.exe`，按中文引导选择安装位置与快捷方式。
 支持 Windows 10 2004（19041）及以上的 x64 兼容系统；Windows 11 ARM64 需使用系统 x64 模拟。
 默认仅为当前用户安装到 `%LOCALAPPDATA%\Programs\Cupbox`，不要求管理员权限。
 
@@ -30,7 +30,7 @@
 
 脚本重新编译 TypeScript、生成引导图片，并在 `output/installer-stage/Cupbox` 独立暂存完整应用，
 随后输出安装 EXE 和同名 `.sha256` 校验文件，并同步更新 `release/Cupbox可视化` 中的便携版，保证两种启动方式功能一致。不会清空 `release` 或删除用户数据。
-根目录与桌面版本必须一致；版本保持 1.0.3。未引入应用运行依赖。
+根目录与桌面版本必须一致；版本保持 1.1.0。未引入应用运行依赖。
 
 入口：`desktop/installer/build.mjs`；界面文案与安装规则：`desktop/installer/cupbox.iss`；
 图片合成：`desktop/installer/build-assets.mjs`。修改图片后重新构建即可。
@@ -43,7 +43,7 @@
 此本地构建没有配置发行者的代码签名证书，生成的安装包未签名；产品名与图标不等于数字签名。
 正式公开分发时可接入自己的 Authenticode 证书后重新计算 SHA256。不要修改系统安全设置。
 
-PowerShell 校验：`Get-FileHash .\release\Cupbox-Setup-1.0.3-x64.exe -Algorithm SHA256`，
+PowerShell 校验：`Get-FileHash .\release\Cupbox-Setup-1.1.0-x64.exe -Algorithm SHA256`，
 与同目录 `.sha256` 文件比较。SHA256 用于核对文件完整性，不证明发行者身份。
 
 ## 本次验证

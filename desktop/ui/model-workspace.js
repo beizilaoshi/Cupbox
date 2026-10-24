@@ -8,7 +8,7 @@ window.CupboxModels=(()=>{
   function message(text){$('ml-status').textContent=text;}
   function activeCaps(){return [...document.querySelectorAll('[data-chat-cap]:checked')].map(c=>c.dataset.chatCap);}
   function sync(){
-    const multi=prefs.multiModel===true;$('multi-model-enabled').checked=multi;$('parallel-tasks').value=prefs.parallelTasks||2;
+    const multi=prefs.multiModel===true;$('multi-model-enabled').checked=multi;$('model-collaboration-options').hidden=!multi;$('parallel-tasks').value=prefs.parallelTasks||2;
     $('workflow-picker').disabled=!multi||busy;$('workflow-picker').value=multi?(prefs.workflow||'direct'):'direct';
     $('multi-state').textContent=multi?'协作已开启':'单模型工作';
     $('workflow-note').textContent={auto:'按任务规模选择流程；场景决定交付和验收要求。',direct:'按勾选能力处理；多模型开启时可同时调用。',plan:'规划 2–6 个子项目，依次制作后整合。',project:'自动拆成 2–6 个独立子项目，并行制作后整合。',review:'先生成初稿，再由审阅模型检查并改进。'}[$('workflow-picker').value];
@@ -23,7 +23,7 @@ window.CupboxModels=(()=>{
     try{models=await cupbox.modelsList();const c=await cupbox.aiConfigGet();legacy=c.config||{};chatCatalog=await cupbox.chatModels();renderList();renderRoutes();return chatCatalog.models.some(m=>m.enabled);}catch(e){message(e.message);return Boolean(legacy.model);}
   }
   function renderList(){
-    const list=$('model-library-list');list.replaceChildren();
+    const list=$('model-library-list');list.replaceChildren();list.closest('.model-library-layout').classList.toggle('is-empty',!models.length);
     if(!models.length){const empty=CupboxVisuals.empty('workflow','让模型各展所长','在右侧添加模型，并选择文本、绘图、视觉等能力。默认连接仍可使用。');empty.classList.add('model-visual-empty');list.append(empty);}
     for(const m of models){
       const row=node('button',undefined,'ml-model'+(m.id===editing?' active':''));row.type='button';row.append(node('b',m.name),node('small',`${m.enabled?'可用':'已停用'} · ${m.capabilities.map(c=>labels[c]).join(' / ')}`),node('span',m.model));row.addEventListener('click',()=>edit(m));list.append(row);
@@ -99,6 +99,7 @@ window.CupboxModels=(()=>{
     $('multi-model-enabled').addEventListener('change',async()=>{await hooks.save({multiModel:$('multi-model-enabled').checked});if(!prefs.multiModel){const checks=[...document.querySelectorAll('[data-chat-cap]:checked')];checks.slice(1).forEach(c=>c.checked=false);}sync();});
     $('parallel-tasks').addEventListener('change',()=>void hooks.save({parallelTasks:Number($('parallel-tasks').value)}));
     $('workflow-picker').addEventListener('change',()=>{void hooks.save({workflow:$('workflow-picker').value});sync();});
+    window.CupboxOfficeWorkflows?.init({busy:()=>busy,mode:options.mode,toast:hooks.toast});
     $('workflow-scene').value=prefs.workflowScene||'auto';$('workflow-quality').value=prefs.workflowQuality||'balanced';$('workflow-criteria').value=prefs.workflowCriteria||'';
     $('workflow-scene').addEventListener('change',()=>void hooks.save({workflowScene:$('workflow-scene').value}));$('workflow-quality').addEventListener('change',()=>void hooks.save({workflowQuality:$('workflow-quality').value}));$('workflow-criteria').addEventListener('change',()=>void hooks.save({workflowCriteria:$('workflow-criteria').value}));
     for(const c of document.querySelectorAll('[data-chat-cap]'))c.addEventListener('change',()=>{if(c.checked&&!prefs.multiModel)document.querySelectorAll('[data-chat-cap]').forEach(o=>{if(o!==c)o.checked=false;});window.dispatchEvent(new Event('cupbox:selection-change'));});

@@ -33,6 +33,16 @@
 
 ---
 
+## ⚠️ 许可与素材声明
+
+- **代码与文档**：MIT 许可证，可自由使用、修改与分发。
+- **全部美术与音频资源**（插画、角色立绘、服装与动作像素图、图标、界面背景、启动动画素材、表情包、背景音乐与音效等，含随安装包分发的内容）：**不在 MIT 许可范围内**，权利归项目团队所有，未经书面许可不得复制、修改、分发或用于任何衍生作品。
+- **「筑梦喵」（Dream Weaving Meow）是团队 IP 形象**（含形象、名称、设定、服饰与衍生造型）：**不可复用**——无论公益或商业用途均不得使用、仿制、二次创作，或作为其他项目/产品的形象；违者将视情节追究法律责任。
+
+完整条款见 [LICENSE](./LICENSE) 与 [素材许可说明](./docs/ASSETS-LICENSE.md)。
+
+---
+
 ## 📦 Cupbox 是什么？
 
 **Cupbox 是一个面向日常开发工作的轻量级工具箱。**
@@ -534,7 +544,7 @@ Cupbox 再次校验并执行操作
 npm install          # 首次会经 npmmirror 镜像下载 Electron 运行时
 npm run desktop      # 开发运行
 npm run pack:exe     # 打包绿色便携 exe → release/Cupbox可视化/Cupbox可视化.exe
-npm run pack:installer # Windows 安装包（需 Inno Setup 6.7+）→ release/Cupbox-Setup-1.0.3-x64.exe
+npm run pack:installer # Windows 安装包（需 Inno Setup 6.7+）→ release/Cupbox-Setup-1.1.0-x64.exe
 ```
 
 安装版提供樱花主题中文引导、深浅色外观、安装位置与快捷方式选择，卸载保留对话和配置。
@@ -739,7 +749,7 @@ Cupbox 使用 [MIT License](./LICENSE) 开源。
 
 ### 本机渗透测试 Agent（默认关闭）
 
-设置 → 权限与环境可开启隐藏的本机渗透测试 Agent，开启时需确认风险。工具和本机模型请求都只允许固定127.0.0.1，不解析域名、不跟随重定向。复用 MIT node-portscanner 检查端口，并提供有界HTTP安全头/配置暴露检查；没有本机模型也可运行固定流程。详见 [边界、来源与使用说明](docs/LOOPBACK-AGENT.md)。版本保持1.0.3。
+设置 → 权限与环境可开启隐藏的本机渗透测试 Agent，开启时需确认风险。工具和本机模型请求都只允许固定127.0.0.1，不解析域名、不跟随重定向。复用 MIT node-portscanner 检查端口，并提供有界HTTP安全头/配置暴露检查；没有本机模型也可运行固定流程。详见 [边界、来源与使用说明](docs/LOOPBACK-AGENT.md)。版本保持1.1.0。
 
 ### 桌面协作：鼠标、读屏与视觉
 

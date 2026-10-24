@@ -97,9 +97,9 @@ const TOOLS = [
     ] },
 ];
 
-TOOLS.push(...(window.CupboxComputerTools||[]));
-const GROUP_ORDER = ["数据", "文件", "图片", "系统"];
-const OPTION_LABELS = { whitelist:"已批准的项目白名单", shell:"Shell · 每次请求批准", b64e: "Base64 编码", b64d: "Base64 解码", urle: "URL 编码", urlde: "URL 解码", "html-esc": "HTML 转义", "html-unesc": "HTML 还原", json: "JSON 格式化", "json-min": "JSON 压缩", category: "按文件类型", date: "按日期", regex: "按正则规则", create: "创建压缩包", extract: "解压文件", list: "查看列表", read: "读取剪贴板", write: "写入剪贴板", kill: "结束进程", auto: "自动选择", windows: "Windows 原生识别" };
+TOOLS.push(...(window.CupboxComputerTools||[]),...(window.CupboxOfficeLocal?.tools||[]));
+const GROUP_ORDER = ["办公", "数据", "文件", "图片", "系统"];
+const OPTION_LABELS = {sakura:"樱花蓝紫",ink:"墨染青绿",minimal:"极简灰蓝", whitelist:"已批准的项目白名单", shell:"Shell · 每次请求批准", b64e: "Base64 编码", b64d: "Base64 解码", urle: "URL 编码", urlde: "URL 解码", "html-esc": "HTML 转义", "html-unesc": "HTML 还原", json: "JSON 格式化", "json-min": "JSON 压缩", category: "按文件类型", date: "按日期", regex: "按正则规则", create: "创建压缩包", extract: "解压文件", list: "查看列表", read: "读取剪贴板", write: "写入剪贴板", kill: "结束进程", auto: "自动选择", windows: "Windows 原生识别" };
 TOOLS.find(t=>t.id==="run").hint="白名单在设置 → 开发与授权 → 项目策略中维护；未授权命令可选择 Shell 逐次请求批准。";
 for (const t of TOOLS) {
   if (["organize", "rename"].includes(t.id)) {
@@ -111,7 +111,7 @@ const $ = (id) => document.getElementById(id);
 const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const api = window.cupbox || {};
-let prefs = { theme: "light", accent: "aurora", mode: "ask", workspace: "", disabledTools: [], dismissedVersion: "", background: "sakura", backgroundVeil: 72, backgroundBlur: 0, backgroundFit: "cover", startupEnabled:true, startupStyle:'orbit', startupDuration:1.6, startupCaption:'让灵感，轻轻启程。', announcementSeenVersion:"", announcementMuted:false };
+let prefs = { theme: "light", accent: "aurora", mode: "ask", workspace: "", disabledTools: [], dismissedVersion: "", background: "sakura", backgroundVeil: 72, backgroundBlur: 0, backgroundFit: "cover", startupEnabled:true, startupStyle:'orbit', startupDuration:5, startupCaption:'让灵感，轻轻启程。', announcementSeenVersion:"", announcementMuted:false };
 const toolDrafts = new Map();
 const toolResults = new Map();
 let toolRunning = false;
@@ -459,7 +459,7 @@ function renderResult(res, ms) {
   meta.appendChild(copy);
   const pre = document.createElement("div");
   pre.className = "ok-block";
-  if (CupboxToolWorkspace.result(r,body)) {
+  if (window.CupboxOfficeLocal?.result(r,body)||CupboxToolWorkspace.result(r,body)) {
     // Tables and file lists include an expandable raw JSON view.
   } else if (typeof r === "string") {
     pre.textContent = r;
@@ -484,7 +484,7 @@ function renderResult(res, ms) {
 
 /* ---------------- 工具运行 ---------------- */
 
-async function run() {
+async function run(options={}) {
   if (toolRunning || !visibleTools().some(t => t.id === current.id)) return;
   toolRunning = true;
   const btn = $("btn-run");
@@ -496,10 +496,11 @@ async function run() {
   const t0 = performance.now();
   const runningId=current.id;
   try {
-    const res = await api.run(runningId, collect());
+    const raw=collect(),office=window.CupboxOfficeLocal?.handles(runningId);const args=office?CupboxOfficeLocal.request(runningId,raw,options.officeCommit===true):raw;
+    const res = await api.run(runningId,args);if(office)CupboxOfficeLocal.remember(runningId,raw,res.ok?res.result:null);
     const ms=Math.round(performance.now()-t0);toolResults.set(runningId,{res,ms});
     if(current.id===runningId)renderResult(res,ms);
-    toast(res.ok?"工具处理完成，可在结果区查看":"工具执行失败："+(res.error||"请检查参数"));
+    toast(res.ok?(res.result?.dryRun?"预览已准备好，文件尚未写入":"工具处理完成，可在结果区查看"):"工具执行失败："+(res.error||"请检查参数"));
   } catch (e) {
     const res={ ok: false, error: String((e && e.message) || e) };const ms=Math.round(performance.now()-t0);toolResults.set(runningId,{res,ms});if(current.id===runningId)renderResult(res,ms);toast("工具执行失败："+res.error);
   } finally {
@@ -858,19 +859,22 @@ async function openSession(id) {
 /* ---------------- 设置弹窗 ---------------- */
 
 function openModal(tab) {
+  const opening = !modalOpen;
   if (!modalOpen) restoreFocus = document.activeElement;
   const scrim = $("modal-scrim");
   const m = $("settings-modal");
+  const focusBefore = document.activeElement;
   scrim.hidden = false;
   m.hidden = false;
   requestAnimationFrame(() => {
+    if (!modalOpen) return;
     scrim.classList.add("open");
     m.classList.add("open");
-    m.querySelector("button")?.focus();
+    if (opening && document.activeElement === focusBefore) m.querySelector("button")?.focus();
   });
   modalOpen = true;
-  if (tab) switchTab(tab);
-  if (tab === "api" || !tab) void fillApiForm();
+  switchTab(tab || 'general');
+  if (opening) void fillApiForm();
 }
 
 function closeModal() {
@@ -891,10 +895,12 @@ function switchTab(name) {
     b.classList.toggle("active", b.dataset.tab === name);
     b.setAttribute("aria-selected", String(b.dataset.tab === name));
   });
-  ["api", "models", "theme", "execution", "workbench", "startup", "plugins", "about", "freemodel"].forEach((n) => {
+  ["general", "api", "models", "agent-presets", "pet", "march7th", "theme", "branding", "music", "execution", "workbench", "startup", "plugins", "about", "freemodel"].forEach((n) => {
     const page = $(`tab-${n}`);
     if (page) page.hidden = n !== name;
   });
+  CupboxSettingsLayout.sync(name);
+  document.querySelector('#settings-modal .modal-body').scrollTop=0;
   if (name === "freemodel") loadFreemodelTab();
 }
 
@@ -1415,6 +1421,7 @@ async function boot() {
   CupboxUX.init();
   CupboxResponse.init({toast,updated:()=>{if(typeof refreshContextStats==="function")void refreshContextStats();}});
   CupboxProviders.init();
+  CupboxOfficeLocal.init({current:()=>current.id,run});
   CupboxToolWorkspace.init({tools:visibleTools,select:selectTool,current:()=>current.id,busy:()=>toolRunning,toast,native:()=>void CupboxExecution.setEnvironment('native')});
   bindWindowControls();
 
@@ -1427,6 +1434,9 @@ async function boot() {
   CupboxTheme.init({ getPrefs: () => prefs, save: savePrefs, theme: applyTheme, pick: () => api.pickWallpaper() });
   $("filesystem-enabled").checked=prefs.filesystemTools!==false;$("filesystem-enabled").addEventListener("change",()=>void savePrefs({filesystemTools:$("filesystem-enabled").checked}));
   CupboxStartup.init({getPrefs:()=>prefs,save:savePrefs,pick:()=>api.pickStartupMedia()});
+  await CupboxMarch7th.init({getPrefs:()=>prefs,toast,settings:openModal}).catch(e=>toast('三月七面板加载失败：'+e.message));
+  await CupboxPetSettings.init({settings:openModal,closeSettings:closeModal,toast}).catch(e=>toast('桌宠面板加载失败：'+e.message));
+  await CupboxAgentPresets.init({getPrefs:()=>prefs,save:savePrefs,mode:setMode,settings:openModal,toast,isBusy:()=>sending||toolRunning}).catch(e=>toast('预设面板加载失败：'+e.message));
   await CupboxExecution.init({getPrefs:()=>prefs,save:savePrefs,settings:openModal,toolName:id=>TOOLS.find(t=>t.id===id)?.name||CupboxResponse.toolName(id),toast,onChange:(environment,root)=>{
     $("ws-path").textContent=environment==='sandbox'?'沙箱工作目录':prefs.workspace||'未选择';
     CupboxToolWorkspace.availability(current.id);
@@ -1438,12 +1448,13 @@ async function boot() {
   if (wsEl) wsEl.textContent = prefs.executionEnvironment==='native'?(prefs.workspace||"未选择"):'沙箱工作目录';
 
   renderDrawerTools();
+  await CupboxPluginSettings.init({getPrefs:()=>prefs,toast,isBusy:()=>sending||toolRunning}).catch(e=>toast(e.message));
   renderPlugins();
   if (visibleTools()[0]) selectTool(visibleTools()[0].id, true);
   $("btn-run").disabled = !visibleTools().length;
   clearChatDom();
   await CupboxWorkbench.init({session:()=>sessionId,toast});
-  await CupboxModels.init({prefs,save:savePrefs,refresh:refreshModel,toast,confirm:confirmAction,session:()=>sessionId,retry:task=>sendChat({retry:task})});
+  await CupboxModels.init({prefs,mode:setMode,save:savePrefs,refresh:refreshModel,toast,confirm:confirmAction,session:()=>sessionId,retry:task=>sendChat({retry:task})});
   await CupboxChatPicker.init({getPrefs:()=>prefs,save:savePrefs,refresh:refreshModel,settings:openModal,closeSettings:closeModal,mode:setMode,toast});
   await refreshModel();
   $("btn-send").disabled = true;
@@ -1483,6 +1494,7 @@ async function boot() {
   $("drawer-scrim")?.addEventListener("click", closeDrawer);
 
   $("btn-settings")?.addEventListener("click", () => openModal());
+  CupboxSettingsLayout.init({open:openModal,switchPage:switchTab});
   $("modal-close")?.addEventListener("click", closeModal);
   $("modal-scrim")?.addEventListener("click", closeModal);
   document.querySelectorAll("#modal-tabs .tab").forEach((b) => {
@@ -1704,3 +1716,4 @@ async function refreshModel() {
 function confirmAction(message, options) { return CupboxUX.confirm(message, options); }
 
 boot();
+
