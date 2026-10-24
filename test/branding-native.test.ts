@@ -1,10 +1,12 @@
 import {describe,it,expect} from 'vitest';
 import {mkdtemp,readFile,writeFile,mkdir,rm} from 'node:fs/promises';
-import os from 'node:os';import path from 'node:path';import sharp from 'sharp';
+import os from 'node:os';import path from 'node:path';
+const SharpModule:any=await import('sharp').catch(()=>null);
+const sharp=SharpModule?.default as any;
 import {BrandingStore,syncLogoShortcuts,resolveLogoSelection} from '../desktop/branding-store.js';
 const desktopDir=path.resolve('desktop');
 async function cleanup(dir:string){const target=path.resolve(dir);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cupbox-branding-'))throw Error('Unexpected test cleanup path');await rm(target,{recursive:true,force:true});}
-describe('native logo assets',()=>{
+describe.skipIf(!sharp)('native logo assets',()=>{
  it('has eleven festival variants and four genuinely separate action illustrations',async()=>{const catalog=JSON.parse(await readFile(path.join(desktopDir,'branding-catalog.json'),'utf8'));expect(catalog).toHaveLength(30);expect(new Set(catalog.map((x:any)=>x.id)).size).toBe(30);expect(catalog.filter((x:any)=>x.festival)).toHaveLength(11);expect(catalog.filter((x:any)=>x.group==='action')).toHaveLength(4);});
  it('changes mascot clothing on all festival dates and restores the manual choice without changing custom or geometric logos',async()=>{
   const catalog=JSON.parse(await readFile(path.join(desktopDir,'branding-catalog.json'),'utf8')),prefs={logoStyle:'mascot-sakura',logoHolidayAuto:true};

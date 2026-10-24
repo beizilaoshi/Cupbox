@@ -2,6 +2,7 @@ import {describe,it,expect,beforeEach,afterEach} from 'vitest';
 import {mkdtemp,mkdir,writeFile,readFile,readdir,rm} from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
+import {randomUUID} from 'node:crypto';
 import {MusicLibrary,nextMusicId,validateMusicFile,SYSTEM_MUSIC} from '../desktop/music-library.js';
 let root:string,prefs:any,library:MusicLibrary;
 beforeEach(async()=>{root=await mkdtemp(path.join(os.tmpdir(),'cupbox-music-'));prefs={};library=make();await library.init();});
@@ -33,7 +34,7 @@ describe('persistent local music library',()=>{
  it('rejects disguised files and ignores tampered filenames in stored metadata',async()=>{
   const bad=path.join(root,'fake.mp3');await writeFile(bad,'<script>bad media is not accepted</script>');await expect(validateMusicFile(bad)).rejects.toThrow('格式不符');
   expect((await library.importFiles([bad])).added).toBe(0);
-  prefs.musicTracks=[{id:'../../source',ext:'wav',title:'bad',hash:'a'.repeat(64)},{id:'custom-'+crypto.randomUUID(),ext:'../wav',title:'bad',hash:'a'.repeat(64)}];
+  prefs.musicTracks=[{id:'../../source',ext:'wav',title:'bad',hash:'a'.repeat(64)},{id:'custom-'+randomUUID(),ext:'../wav',title:'bad',hash:'a'.repeat(64)}];
   const restored=make();await restored.init();expect(restored.snapshot().tracks).toHaveLength(SYSTEM_MUSIC.length);
  });
  it('rolls back imported files and live changes if persistence fails',async()=>{
