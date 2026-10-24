@@ -22,7 +22,8 @@
   <a href="#-quick-start">Quick Start</a> ·
   <a href="#-connect-your-ai">Connect Your AI</a> ·
   <a href="#-security-by-design">Security</a> ·
-  <a href="#-contributing">Contributing</a>
+  <a href="#-contributing">Contributing</a> ·
+  <a href="#-community-chat">Community</a>
 </p>
 
 <p align="center">
@@ -692,6 +693,15 @@ npm test
 ```
 
 Whenever possible, include reproducible test cases and describe the motivation, expected behavior, and potential compatibility impact of your changes.
+
+---
+
+## 💬 Community Chat
+
+- QQ group: **638500178**
+- Join link: <https://qm.qq.com/q/R6s16Mc4ay>
+
+The group is for usage questions, release notices, and feature discussions. For reproducible bugs, please still open an Issue first so it can be tracked properly.
 
 ---
 
