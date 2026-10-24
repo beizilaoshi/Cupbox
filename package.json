@@ -78,7 +78,7 @@
     "marked": "^15.0.12",
     "minimatch": "^10.2.6",
     "pdf-lib": "1.17.1",
-    "pdfjs-dist": "6.4.299",
+    "pdfjs-dist": "^4.8.69",
     "pixelmatch": "^8.0.0",
     "pngjs": "^7.0.0",
     "pptxgenjs": "4.0.1",
