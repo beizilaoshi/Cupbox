@@ -1,7 +1,7 @@
 {
   "name": "cupbox",
   "version": "1.2.0",
-  "description": "把杂活儿交给命令行和 AI —— CLI + MCP + 可视化桌面版 三形态工具箱：文件整理、批量重命名、中文 OCR、剪贴板、哈希、时间戳、压缩、CSV 转换、图片像素混淆、安全执行命令",
+  "description": "把杂活交给 AI —— CLI + MCP + Electron 桌面版三形态的本地工具箱：文件与办公处理、OCR/图片、Agent 与三层记忆、多平台 QQ 机器人",
   "keywords": [
     "mcp",
     "cli",
