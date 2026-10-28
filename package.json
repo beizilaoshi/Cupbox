@@ -1,7 +1,7 @@
 {
   "name": "cupbox",
   "version": "1.2.0",
-  "description": "把杂活交给 AI —— CLI + MCP + Electron 桌面版三形态的本地工具箱：文件与办公处理、OCR/图片、Agent 与三层记忆、多平台 QQ 机器人",
+  "description": "把杂活交给 AI —— CLI + MCP + Electron 桌面版三形态的本地工具箱：桌面工具箱 121 项、原生工作引擎 66 项、CLI/MCP 21 项，覆盖文件与办公处理、OCR/图片、Agent 与三层记忆、多平台 QQ 机器人",
   "keywords": [
     "mcp",
     "cli",

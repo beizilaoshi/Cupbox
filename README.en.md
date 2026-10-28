@@ -157,7 +157,43 @@ Platform-specific tools, permissions, and system behavior may differ. Individual
 
 ## 🧰 Features
 
-Cupbox brings together 15 everyday utilities plus 2 AI capabilities (21 MCP tools in total). Every local capability has a CLI entry point and a corresponding MCP tool.
+Cupbox tools are counted per interface, so the numbers are not meant to be added together:
+
+| Interface | Count | What it covers |
+|---|---|---|
+| Desktop toolbox | **121** | 51 local tools + 70 work-mode catalog entries |
+| Native work engine | **66** | Local tools the AI can call directly in Work Mode |
+| CLI / MCP | **21** | Terminal commands and MCP clients |
+
+### 🧰 Desktop toolbox (121)
+
+The toolbox groups cards under Office, Local tools, Files, Data, Images, and Work Mode, and supports search:
+
+| Category | Count | Contents |
+|---|---|---|
+| Office | 23 | Word read / create / replace / template / mail merge; PPT read / create / replace / reflow; Excel read / create / modify / analyze / convert / format / merge; PDF read / create / merge / split / stamp; Office import and export |
+| Local tools | 20 | Use-It 7 (PPT, Word, Excel, AutoCAD, desktop screenshot and actions, status, action catalog), desktop collaboration 6 (observe, screenshot, OCR, vision, mouse, keyboard), archive, OCR, clipboard, screenshot, shell command, process |
+| Files | 3 | File organization, batch rename, file search |
+| Data | 4 | Hash, timestamp, encode/decode, CSV/JSON |
+| Images | 1 | Pixel obfuscation and restore |
+| Work-mode catalog | 70 | Harness catalog: 38 original runtime, 22 require an extension, 6 need browser and model, 2 upstream unpublished, 1 Windows pwsh, 1 language server |
+
+### 🛠️ Native work engine (66)
+
+Tools the AI can call in Work Mode (Advanced Task); writes still go through preview and approval:
+
+| Area | Count | Tools |
+|---|---|---|
+| Files | 10 | Read, write, edit, patch, mkdir, move, copy, delete, info, rollback |
+| Terminal and processes | 7 | PTY create / write / read / kill / list, guarded command, process management |
+| Images | 6 | Convert, resize, crop, compare, info, pick color |
+| Office documents | 23 | Word 5, PPT 4, Excel 7, Office 2, PDF 5 |
+| Use-It | 7 | Status, action catalog, PPT, Word, Excel, AutoCAD, desktop |
+| Memory / tasks / context | 5 | Memo, recall, manage, task, context stats |
+| Network / compare / search / replace / clipboard | 5 | HTTP, diff, grep, replace, clipboard image |
+| Git / packages / tests | 3 | Git, package manager, tests |
+
+The 21 tools below are available from both the CLI and MCP:
 
 ### 📁 File Management
 
@@ -711,8 +747,9 @@ Whenever possible, include reproducible test cases and describe the motivation, 
 
 ## 💬 Community Chat
 
-- QQ group: **638500178**
-- Join link: <https://qm.qq.com/q/R6s16Mc4ay>
+- QQ group: **1005188752**
+- Join link: <https://qm.qq.com/q/V2pNRPkW0G>
+- Afdian: <https://afdian.com/a/beilaishi>
 
 The group is for usage questions, release notices, and feature discussions. For reproducible bugs, please still open an Issue first so it can be tracked properly.
 
