@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <strong>Let the CLI and AI handle the busywork.</strong>
+  <strong>Let the CLI, MCP and desktop workspace take the busywork.</strong>
 </p>
 
 <p align="center">
@@ -18,8 +18,8 @@
 <p align="center"><em>Dream Weaving Meow helps turn ideas into work you can ship.</em></p>
 
 <p align="center">
-  One toolkit, two ways to work.<br>
-  A practical command-line toolbox for developers and an MCP server for AI agents.
+  One toolkit, three forms.<br>
+  A command-line toolbox for developers, an MCP server for AI agents, and a desktop app with a native AI work mode.
 </p>
 
 <p align="center">
@@ -68,18 +68,18 @@ Each task may seem trivial on its own. Together, however, they consume time, int
 
 Cupbox brings these scattered utilities together in one reusable toolkit.
 
-### One toolkit. Two interfaces.
+### One toolkit. Three interfaces.
 
 ```text
                        Cupbox
                           |
-                +---------+---------+
-                |                   |
-             CLI                 MCP Server
-                |                   |
-        Direct developer use    AI agent access
-                |                   |
-                +---------+---------+
+          +---------------+---------------+
+          |               |               |
+       CLI           MCP Server       Desktop
+          |               |               |
+ Direct developer use  AI agent access  Normal/Advanced tasks
+          |               |               |
+          +---------------+---------------+
                           |
                     Shared core
                           |
@@ -94,10 +94,11 @@ Cupbox brings these scattered utilities together in one reusable toolkit.
 
 - **CLI:** For developers working directly in the terminal, writing scripts, and automating repetitive tasks.
 - **MCP:** For AI agents that need structured access to local utilities through the Model Context Protocol.
-- **Shared core:** Both interfaces reuse the same underlying functionality instead of maintaining separate implementations.
+- **Desktop:** An Electron workspace where normal tasks keep their conversation and advanced tasks run the native AI engine embedded in the main window; tool calls, questions, approvals, traces, and task resume all happen in the same interface.
+- **Shared core:** All three interfaces reuse the same underlying functionality instead of maintaining separate implementations.
 - **Safety first:** File modifications, command execution, and process management have explicit safeguards.
 
-Whether you run the commands yourself or ask an AI assistant to do the work, you can use the same toolkit.
+Whether you run the commands yourself, chat in the desktop workspace, or ask an AI assistant to do the work, it is the same toolkit.
 
 ## ✨ Why Cupbox?
 
