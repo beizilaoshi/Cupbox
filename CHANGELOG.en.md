@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > 📖 **中文文档（默认）：[CHANGELOG.md](./CHANGELOG.md)**
 
+## [1.2.0] - 2026-10-28
+
+This release brings the workflow experience back into Cupbox itself and refreshes the GitHub presentation.
+
+- Work mode now uses the native Cupbox interface: normal chat does not ask for a folder, while work mode selects a workspace only when needed.
+- Tool calls, AI questions, approvals, plan reviews, execution traces, task resume and legacy Harness imports all stay inside the same Cupbox chat surface.
+- Added the native work engine and tool adapters for file access, hashing, cancellation and context cleanup without launching an external WebView or Harness window.
+- Added the Dream Weaving Meow hero visual and project positioning copy to the Chinese and English README home pages.
+- Added coverage for native work mode, tool calls, question approval, history restore and process cleanup.
+
 ## [1.1.1] - 2026-10-25
 
 - Add remembered QQ login, negative affection and memories, a centered affection meter, live relationship updates, and local user data management.
