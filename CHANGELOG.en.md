@@ -12,10 +12,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 This release brings the workflow experience back into Cupbox itself and refreshes the GitHub presentation.
 
 - Work mode now uses the native Cupbox interface: normal chat does not ask for a folder, while work mode selects a workspace only when needed.
+- The Work page gains a Normal / Advanced task switch and defaults to Normal; Advanced tasks run embedded in the main window instead of a separate window or external WebView.
+- The sidebar's recent tasks list now unifies normal sessions and advanced tasks (marked "Advanced"); clicking one resumes the matching mode, and switching view never interrupts a running task.
 - Tool calls, AI questions, approvals, plan reviews, execution traces, task resume and legacy Harness imports all stay inside the same Cupbox chat surface.
-- Added the native work engine and tool adapters for file access, hashing, cancellation and context cleanup without launching an external WebView or Harness window.
+- Added the native work engine and tool adapters for file access, hashing, cancellation and context cleanup.
+- Added a chat rail with per-turn ticks, hover previews and click-to-jump that expands folded history; long chats fold messages in batches (40 kept, 30 per expansion) instead of rendering everything at once.
+- Fixed forced scrolling during streaming: the view follows only while pinned to the bottom, and reading history above is no longer yanked back; following resumes at the bottom.
+- Added Use-It live Office tools (status, action catalogue, PPT/Word/Excel/AutoCAD, desktop capture and actions) that drive already-open Office windows through a local engine; when the engine is missing the tool prints install and start commands. See [docs/USEIT-ENGINE.md](docs/USEIT-ENGINE.md).
+- Fixed network song playback: tolerate the Kugou CDN's HTTP URLs and shared-certificate hosts; after switching accounts, old network tracks play with the current account's authorisation instead of failing with a "log in with the account used to sync" error.
+- Live tool cards now have dark/light backgrounds, running-state highlights and status pills, making tool execution easier to follow.
 - Added the Dream Weaving Meow hero visual and project positioning copy to the Chinese and English README home pages.
-- Added coverage for native work mode, tool calls, question approval, history restore and process cleanup.
+- Added coverage for native work mode, tool calls, question approval, history restore, the unified task list, the chat rail, network music and Use-It tools.
 
 ## [1.1.1] - 2026-10-25
 

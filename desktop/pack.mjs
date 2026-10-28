@@ -38,7 +38,17 @@ await writeFile(
   ),
 );
 const harnessRoot=path.join(ROOT,'desktop','harness-runtime');
-await cp(path.join(ROOT, 'desktop'), path.join(APP, 'desktop'), { recursive: true,filter:source=>source!==harnessRoot&&!source.startsWith(harnessRoot+path.sep) });
+// 只打包运行所需文件：安装器构建目录、验证/截图脚本、单元测试和本地临时工具都不进安装包。
+const SKIP_NAMES=new Set(['installer','harness-runtime','pack.mjs','runtime-dependencies.mjs','build-brand.mjs','prompt-test-driver.mjs']);
+const shipDesktop=source=>{
+  const relative=path.relative(path.join(ROOT,'desktop'),source);
+  if(!relative||relative.startsWith('..'))return true;
+  const parts=relative.split(path.sep),base=parts[parts.length-1];
+  if(parts.includes('installer')||parts[0]==='harness-runtime')return false;
+  if(/\.test\.ts$/.test(base)||/^(?:verify-|capture-)/.test(base))return false;
+  return !SKIP_NAMES.has(base);
+};
+await cp(path.join(ROOT, 'desktop'), path.join(APP, 'desktop'), { recursive: true,filter:shipDesktop });
 // Keep the original npm package layout intact while shortening installation
 // paths; the official DevTools assets otherwise exceed Win32 MoveFile limits.
 await cp(harnessRoot,path.join(OUT,'dsh'),{recursive:true});

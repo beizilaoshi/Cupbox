@@ -1,6 +1,6 @@
 // Build from a fresh isolated staging tree; preserve existing portable releases.
 import { spawn } from 'node:child_process';
-import { access, readFile, writeFile, cp } from 'node:fs/promises';
+import { access, open, readFile, writeFile, cp } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,7 +33,18 @@ const skipPortableSync=process.argv.includes('--skip-portable-sync');
 const portableDir=path.resolve(root,portableArg?portableArg.slice('--portable-out='.length):'release/Cupbox可视化');
 const relative=path.relative(path.join(root,'release'),portableDir);
 if(!relative||relative.startsWith('..')||path.isAbsolute(relative))throw Error('Portable output must be a subdirectory of release.');
-if(!skipPortableSync){await cp(path.join(root,'output/installer-stage/Cupbox'),portableDir,{recursive:true,force:true});
-console.log('Portable application synced: '+path.join(portableDir,'Cupbox可视化.exe'));}
+if(!skipPortableSync){
+  // Windows image locks deny writes to a running app; avoid a half-copied portable tree.
+  const portableExe=path.join(portableDir,'Cupbox可视化.exe');
+  let portableBusy=false;
+  try{const handle=await open(portableExe,'r+');await handle.close();}
+  catch(error){portableBusy=['EPERM','EBUSY','EACCES'].includes(error?.code);}
+  if(portableBusy){
+    console.warn('Portable copy is running; skipped sync to '+portableDir+'. Quit Cupbox, then copy output/installer-stage/Cupbox over it (or re-run npm run pack:installer). The installer itself is complete.');
+  }else{
+    await cp(path.join(root,'output/installer-stage/Cupbox'),portableDir,{recursive:true,force:true});
+    console.log('Portable application synced: '+portableExe);
+  }
+}
 else console.log('Portable executable sync skipped; the installer was built from the complete isolated staging tree.');
 console.log(`Installer ready: ${file}\nSHA256: ${hash}`);

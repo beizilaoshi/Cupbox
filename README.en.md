@@ -543,6 +543,10 @@ A local Electron desktop app rebuilt as a workbench (since v1.0.0):
 - **Update check & release announcement** (v1.0.1) — a silent startup check lights up a breathing "vX.Y.Z available" badge in the title bar and pops a one-time announcement (version diff + release notes + **Download on GitHub** / View changelog / Remind later); click the version chip or use **Settings → About & Updates** for a manual check, dismissed versions stay reachable from the badge, `CUPBOX_UPDATE_DISABLE=1` turns checking off.
 - **Data defaults to your Documents folder** (v1.0.3) — config / keys / model library / sessions / memory all live in `Documents/Cupbox`; the **API storage card** in Settings → Model connection opens the folder or reveals `config.json` in one click. The legacy `~/.cupbox` migrates on first launch (copy-only, never overwrites; `CUPBOX_HOME` overrides), and the sidebar **Model management** entry jumps straight to multi-model + capability multi-select.
 - **Live tool-call stream + assistant bubbles** (v1.0.3) — while the agent runs a task each tool call appears as a card in real time (name / args / executing animation → duration or failure detail), then the final message's full trace takes over; assistant replies are now bubble cards mirroring the user's, with an entrance animation.
+- **Normal / Advanced tasks in one place** (v1.2.0) — the Work page switches between normal tasks and advanced tasks; advanced tasks run embedded in the main window. The recent-tasks sidebar lists both, marks advanced entries, and returns to the matching mode without interrupting a running task.
+- **Chat rail and history folding** (v1.2.0) — per-turn ticks on the right show hover previews, jump to a turn and expand folded history; long chats render only the latest batch and expand older messages in chunks.
+- **Streaming scroll follow** (v1.2.0) — new output is followed only while you are at the bottom; scrolling up through history is no longer yanked back, and following resumes at the bottom.
+- **Use-It live Office tools** (v1.2.0) — drives already-open PowerPoint / Word / Excel / AutoCAD through a local engine, with status, action catalogue and desktop capture tools; missing engines print install and start commands. See [docs/USEIT-ENGINE.md](docs/USEIT-ENGINE.md).
 
 It shares the exact same engines and safety defaults as the CLI and MCP server (dry-run, allowlists, and extraction pre-flights all active).
 
@@ -550,6 +554,7 @@ It shares the exact same engines and safety defaults as the CLI and MCP server (
 npm install          # first run downloads the Electron runtime through the npmmirror mirror
 npm run desktop      # run in development
 npm run pack:exe     # build a portable exe → release/Cupbox可视化/Cupbox可视化.exe
+npm run pack:installer # Windows installer (Inno Setup 6.7+) → release/Cupbox-Setup-1.2.0-x64.exe
 ```
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the three-stage roadmap (tool cockpit → multi-engine ACP integration → skills marketplace / scheduling / multi-session) and the rationale behind each choice.

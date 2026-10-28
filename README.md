@@ -545,7 +545,11 @@ Cupbox 再次校验并执行操作
 - **版本检测与更新公告**（v1.0.1）—— 启动静默检查更新，发现新版顶栏亮「vX.Y.Z 可用」呼吸徽标并自动弹出一次更新公告（版本对比 + Release 说明 + **前往 GitHub 下载** / 查看更新日志 / 稍后提醒）；点击顶栏版本号或在「设置 → 关于更新」可手动检查（转圈反馈），静默过的版本仍可从徽标再进，`CUPBOX_UPDATE_DISABLE=1` 一键关闭检查。
 - **数据默认存「文档」**（v1.0.3）—— 配置 / 密钥 / 模型库 / 会话 / 记忆都在 `文档/Cupbox`，设置 → 模型连接的「API 储存管理」可一键打开文件夹、定位 `config.json`；旧 `~/.cupbox` 首次启动自动迁移（只复制不覆盖，`CUPBOX_HOME` 可覆盖），侧栏「模型管理」直达多模型与能力多选页面。
 - **工具调用实时直播 + AI 气泡**（v1.0.3）—— Agent 执行任务时每次工具调用以卡片逐条出现（工具名 / 参数 / 执行中动画 → 完成耗时或失败详情），结束后由完整轨迹接管；AI 回复改为与用户气泡对偶的卡片气泡样式，带入场动画。
-- **Use-It 实时 Office 集成** —— 通过 use-it-agent 本地引擎用 COM 操作**已打开的** PowerPoint / Word / Excel / AutoCAD 与桌面 GUI；工具箱「办公 / 系统」新增 6 个工具，Agent 在本机模式下可调用，写入逐次批准。引擎安装与启动见 [docs/USEIT-ENGINE.md](docs/USEIT-ENGINE.md)。
+- **Use-It 实时 Office 集成** —— 通过 use-it-agent 本地引擎用 COM 操作**已打开的** PowerPoint / Word / Excel / AutoCAD 与桌面 GUI；工具箱「办公 / 系统」新增 7 个工具，Agent 在本机模式下可调用，写入逐次批准。引擎安装与启动见 [docs/USEIT-ENGINE.md](docs/USEIT-ENGINE.md)。
+- **普通 / 高级任务统一入口** —— 工作页顶部切换普通任务与高级任务，默认普通任务；高级任务在主窗口内嵌运行。侧栏「最近任务」同时列出普通会话与高级任务（带“高级”标记），点击即回到对应模式，切换视图不会打断正在运行的任务。
+- **聊天定位条与历史折叠** —— 右侧按轮次显示刻度，悬停预览、点击跳转并自动展开折叠的历史；长会话只渲染最近一批消息，向上按批展开，避免一次渲染整个历史。
+- **流式滚动跟随** —— 只有停留在对话底部时才自动跟随新内容；向上翻看历史时不会被流式输出拽回，回到底部后恢复跟随。
+
 
 与 CLI、MCP 共用同一套引擎和安全默认（dry-run、白名单、解压预检全部生效）。
 
@@ -553,7 +557,7 @@ Cupbox 再次校验并执行操作
 npm install          # 首次会经 npmmirror 镜像下载 Electron 运行时
 npm run desktop      # 开发运行
 npm run pack:exe     # 打包绿色便携 exe → release/Cupbox可视化/Cupbox可视化.exe
-npm run pack:installer # Windows 安装包（需 Inno Setup 6.7+）→ release/Cupbox-Setup-1.1.1-x64.exe
+npm run pack:installer # Windows 安装包（需 Inno Setup 6.7+）→ release/Cupbox-Setup-1.2.0-x64.exe
 ```
 
 安装版提供樱花主题中文引导、深浅色外观、安装位置与快捷方式选择，卸载保留对话和配置。
@@ -767,7 +771,7 @@ Cupbox 使用 [MIT License](./LICENSE) 开源。
 
 ### 本机渗透测试 Agent（默认关闭）
 
-设置 → 权限与环境可开启隐藏的本机渗透测试 Agent，开启时需确认风险。工具和本机模型请求都只允许固定127.0.0.1，不解析域名、不跟随重定向。复用 MIT node-portscanner 检查端口，并提供有界HTTP安全头/配置暴露检查；没有本机模型也可运行固定流程。详见 [边界、来源与使用说明](docs/LOOPBACK-AGENT.md)。当前版本为1.1.1。
+设置 → 权限与环境可开启隐藏的本机渗透测试 Agent，开启时需确认风险。工具和本机模型请求都只允许固定127.0.0.1，不解析域名、不跟随重定向。复用 MIT node-portscanner 检查端口，并提供有界HTTP安全头/配置暴露检查；没有本机模型也可运行固定流程。详见 [边界、来源与使用说明](docs/LOOPBACK-AGENT.md)。当前版本为1.2.0。
 
 ### 桌面协作：鼠标、读屏与视觉
 
