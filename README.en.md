@@ -35,6 +35,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/cupbox">npm</a> ·
   <a href="https://github.com/beizilaoshi/cupbox">GitHub</a> ·
+  <a href="https://github.com/beizilaoshi/cupbox/stargazers">⭐ Star the project</a> ·
   <a href="./README.md">简体中文</a>
 </p>
 
