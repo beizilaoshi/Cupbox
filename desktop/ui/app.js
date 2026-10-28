@@ -185,6 +185,7 @@ let modalOpen = false;
 let updOpen = false;    // 更新公告弹窗
 let annOpen = false;    // 开屏公告弹窗
 let announcement = null; // 当前展示的公告
+let homeDashboardCleanup = null;
 let ctxOpen = false;    // 上下文洞察弹窗
 let updateInfo = null;  // 最近一次检测结果（UpdateInfo）
 
@@ -1147,7 +1148,24 @@ async function refreshSessions(activeId) {
   });
 }
 
+function mountHomeSnake(root) {
+  const canvas=root.querySelector(".snake-board"),ctx=canvas.getContext("2d"),scoreNode=root.querySelector("[data-snake-score]"),statusNode=root.querySelector("[data-snake-status]"),toggle=root.querySelector("[data-snake-toggle]"),overlay=root.querySelector("[data-snake-overlay]"),overlayTitle=root.querySelector("[data-snake-overlay-title]"),overlayCopy=root.querySelector("[data-snake-overlay-copy]");
+  const size=18,step=18,dirs={up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}},opposite={up:"down",down:"up",left:"right",right:"left"};
+  let snake,dir,nextDir,food,score,playing=true,over=false,timer,disposed=false,autoPilot=true;
+  const pickFood=()=>{const free=[];for(let y=0;y<size;y++)for(let x=0;x<size;x++)if(!snake.some(p=>p.x===x&&p.y===y))free.push({x,y});return free.length?free[Math.floor(Math.random()*free.length)]:null;};
+  function draw(){const ratio=window.devicePixelRatio||1,w=canvas.clientWidth||324,h=canvas.clientHeight||324;if(canvas.width!==Math.round(w*ratio)||canvas.height!==Math.round(h*ratio)){canvas.width=Math.round(w*ratio);canvas.height=Math.round(h*ratio);}ctx.setTransform(canvas.width/324,0,0,canvas.height/324,0,0);ctx.clearRect(0,0,324,324);ctx.fillStyle="#10182a";ctx.fillRect(0,0,324,324);ctx.strokeStyle="rgba(169,194,255,.055)";ctx.lineWidth=1;for(let i=0;i<=size;i++){ctx.beginPath();ctx.moveTo(i*step+.5,0);ctx.lineTo(i*step+.5,324);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i*step+.5);ctx.lineTo(324,i*step+.5);ctx.stroke();}if(food){ctx.shadowColor="#ffd68a";ctx.shadowBlur=18;ctx.fillStyle="#ffd68a";ctx.beginPath();ctx.arc(food.x*step+9,food.y*step+9,5.5,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}snake.forEach((p,i)=>{const inset=i?2.2:1.3;ctx.fillStyle=i?`rgba(124,185,255,${Math.max(.42,1-i/snake.length*.55)})`:"#a6d4ff";ctx.shadowColor=i?"transparent":"#74bfff";ctx.shadowBlur=i?0:13;ctx.beginPath();ctx.roundRect(p.x*step+inset,p.y*step+inset,step-inset*2,step-inset*2,i?5:6);ctx.fill();});ctx.shadowBlur=0;const head=snake[0];if(head){const d=dirs[dir],cx=head.x*step+9,cy=head.y*step+9,px=-d.y,py=d.x;ctx.fillStyle="#16294a";for(const side of [-1,1]){ctx.beginPath();ctx.arc(cx+d.x*3+px*side*3,cy+d.y*3+py*side*3,1.5,0,Math.PI*2);ctx.fill();}}}
+  function updateStatus(){statusNode.innerHTML=`<i></i> ${over?"本局结束":playing?"正在玩":"已暂停"}`;statusNode.classList.toggle("paused",!playing&&!over);statusNode.classList.toggle("ended",over);toggle.textContent=playing?"暂停":over?"再来一局":"继续";overlay.hidden=playing;overlayTitle.textContent=over?"再试一次？":"暂停中";overlayCopy.textContent=over?`本局得分 ${String(score).padStart(2,"0")}`:"准备好后继续";}
+  function reset(){snake=[{x:6,y:9},{x:5,y:9},{x:4,y:9},{x:3,y:9}];dir="right";nextDir="right";score=0;over=false;playing=true;autoPilot=true;food=pickFood();scoreNode.textContent="00";updateStatus();draw();}
+  function autoDirection(){const choices=Object.keys(dirs).filter(name=>name!==opposite[dir]).map(name=>{const d=dirs[name],x=snake[0].x+d.x,y=snake[0].y+d.y,blocked=x<0||x>=size||y<0||y>=size||snake.slice(0,-1).some(p=>p.x===x&&p.y===y);return{name,distance:food?Math.abs(food.x-x)+Math.abs(food.y-y):0,blocked};}).filter(item=>!item.blocked);choices.sort((a,b)=>a.distance-b.distance||(a.name===dir?-1:b.name===dir?1:0));return choices[0]?.name||dir;}
+  function tick(){if(!playing||disposed)return;if(autoPilot)nextDir=autoDirection();dir=nextDir;const d=dirs[dir],head={x:snake[0].x+d.x,y:snake[0].y+d.y},eats=food&&head.x===food.x&&head.y===food.y,body=eats?snake:snake.slice(0,-1);if(head.x<0||head.x>=size||head.y<0||head.y>=size||body.some(p=>p.x===head.x&&p.y===head.y)){playing=false;over=true;updateStatus();draw();return;}snake.unshift(head);if(eats){score+=10;scoreNode.textContent=String(score).padStart(2,"0");food=pickFood();if(!food){playing=false;over=true;overlayTitle.textContent="满分通关！";}}else snake.pop();updateStatus();draw();}
+  function setDir(name){if(!dirs[name]||name===opposite[dir]||name===opposite[nextDir])return;autoPilot=false;nextDir=name;canvas.focus({preventScroll:true});}
+  function onKey(e){const keys={ArrowUp:"up",w:"up",W:"up",ArrowDown:"down",s:"down",S:"down",ArrowLeft:"left",a:"left",A:"left",ArrowRight:"right",d:"right",D:"right"},value=keys[e.key];if(!value)return;e.preventDefault();if(!playing){if(over)reset();else{playing=true;updateStatus();}}setDir(value);}
+  canvas.addEventListener("keydown",onKey);root.querySelectorAll("[data-snake-dir]").forEach(button=>button.addEventListener("click",()=>{if(!playing){if(over)reset();else{playing=true;updateStatus();}}setDir(button.dataset.snakeDir);}));root.querySelector("[data-snake-reset]").addEventListener("click",reset);toggle.addEventListener("click",()=>{if(over)reset();else{playing=!playing;updateStatus();canvas.focus({preventScroll:true});}});const onVisibility=()=>{if(document.hidden&&playing){playing=false;updateStatus();}};document.addEventListener("visibilitychange",onVisibility);const resize=()=>draw();window.addEventListener("resize",resize);let observer;const cleanup=()=>{disposed=true;clearInterval(timer);canvas.removeEventListener("keydown",onKey);document.removeEventListener("visibilitychange",onVisibility);window.removeEventListener("resize",resize);observer?.disconnect();};observer=new MutationObserver(()=>{if(!root.isConnected)cleanup();});observer.observe(document.body,{childList:true,subtree:true});reset();timer=window.setInterval(tick,145);return cleanup;
+}
+
 function clearChatDom() {
+  homeDashboardCleanup?.();
+  homeDashboardCleanup = null;
   const scroll = $("chat-scroll");
   chatFold = { messages: [], nodes: [] };
   chatBatch = false;
@@ -1159,12 +1177,13 @@ function clearChatDom() {
   const empty = document.createElement("div");
   empty.className = "chat-empty";
   empty.id = "chat-empty";
-  empty.innerHTML = `<div class="welcome-kicker">A LITTLE HELP, A LOVELY DAY</div>
-    <div class="welcome-art"><img src="assets/sakura-companion.png" alt="樱花晴空下，银发猫耳女孩与白猫在桌边陪伴你" /><div class="hero-copy"><span>CUPBOX · 樱晴</span><h1>把琐事交给我，<br>把时间留给喜欢的事。</h1><p>你的每一个小想法，都可以从这里开始。</p></div></div>
-    <div class="ce-title">今天，想一起完成什么？</div><div class="ce-sub">整理文件、处理数据，或只是聊聊你的新想法。</div>
-    <div class="quick-heading"><span>从这里轻松开始</span><button class="ghost-btn" data-open-tools>查看全部工具 ↗</button></div>
-    <div class="quick-grid"><button class="quick-card" data-quick="organize"><span class="quick-icon">⌑</span><span><b>给文件安个家</b><small>按类型整理，先预览再操作</small></span></button><button class="quick-card" data-quick="codec"><span class="quick-icon">{ }</span><span><b>整理一段 JSON</b><small>格式化、编码与文本转换</small></span></button><button class="quick-card" data-quick="ocr"><span class="quick-icon">▤</span><span><b>读出图片里的文字</b><small>提取文字，少一点手动输入</small></span></button></div>
-    <button class="setup-link" id="setup-link"><span>✧ 配置你的 AI 搭子，开始第一段对话</span><span>去设置 →</span></button>`;
+  empty.innerHTML = `<div class="welcome-kicker"><span class="live-dot"></span> CUPBOX WORKSPACE · READY FOR YOUR NEXT IDEA</div>
+    <section class="home-hero"><img src="assets/sakura-companion.png" alt="筑梦喵与白猫在樱花晴空下陪伴你" /><div class="home-hero-shade"></div><div class="home-hero-copy"><span class="hero-eyebrow">CUPBOX · 樱晴工作台</span><h1>灵感尽管来，<br>琐事交给我。</h1><p>AI 对话、文件处理和本地工具，都在这里开始。</p><button type="button" class="mascot-pill" data-open-pet><span class="mascot-spark">✦</span><span><b>筑梦喵</b><small>你的桌面小搭子</small></span><i aria-hidden="true">↗</i></button></div><div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div></section>
+    <div class="home-dashboard"><section class="home-main-column"><div class="home-section-heading"><div><span class="section-eyebrow">QUICK START</span><h2>今天，想一起完成什么？</h2><p>从一个小任务开始，剩下的交给 Cupbox。</p></div><button class="tool-link" data-open-tools>全部工具 <span>↗</span></button></div>
+    <div class="quick-grid"><button class="quick-card" data-quick="organize"><span class="quick-icon">⌑</span><span><b>给文件安个家</b><small>分类整理，先预览再执行</small></span><i>↗</i></button><button class="quick-card" data-quick="codec"><span class="quick-icon">{ }</span><span><b>整理一段 JSON</b><small>格式化、编码与文本转换</small></span><i>↗</i></button><button class="quick-card" data-quick="ocr"><span class="quick-icon">▤</span><span><b>读出图片里的文字</b><small>提取文字，少一点手动输入</small></span><i>↗</i></button></div>
+    <button class="setup-link" id="setup-link"><span>✧ 配置 AI 模型，开始第一段对话</span><span>去设置 →</span></button>
+    <div class="home-note"><span>⌘</span><p><b>本机优先，安心开工</b><small>文件工具在本地运行；聊天记录保存在这台设备。</small></p><span class="note-status">LOCAL · READY</span></div></section>
+    <section class="snake-card" aria-labelledby="snake-title"><header class="snake-heading"><div><span class="section-eyebrow"><span class="live-dot"></span> LITTLE ARCADE</span><h2 id="snake-title">贪吃蛇</h2><p>吃掉星星，和筑梦喵一起冲分。</p></div><button type="button" class="snake-reset" data-snake-reset aria-label="重新开始">↻</button></header><div class="snake-score-row"><span><small>本局分数</small><b data-snake-score>00</b></span><span class="snake-status" data-snake-status><i></i> 正在玩</span></div><div class="snake-board-wrap"><canvas class="snake-board" width="324" height="324" tabindex="0" aria-label="贪吃蛇游戏区域，使用方向键或 WASD 操控"></canvas><div class="snake-overlay" data-snake-overlay hidden><b data-snake-overlay-title>暂停中</b><span data-snake-overlay-copy>准备好后继续</span></div></div><div class="snake-controls"><button type="button" class="snake-toggle" data-snake-toggle>暂停</button><div class="snake-pad" role="group" aria-label="贪吃蛇方向控制"><button type="button" data-snake-dir="up" aria-label="向上">↑</button><button type="button" data-snake-dir="left" aria-label="向左">←</button><button type="button" data-snake-dir="down" aria-label="向下">↓</button><button type="button" data-snake-dir="right" aria-label="向右">→</button></div></div><footer class="snake-footer"><span>自动巡游 · 方向键 / WASD 接管</span><span>吃到 ✦ +10</span></footer></section></div>`;
   scroll.appendChild(empty);
   empty.querySelectorAll("[data-quick]").forEach(b => {
     const art=CupboxVisuals.art(({organize:'files',codec:'data',ocr:'vision'})[b.dataset.quick]);b.prepend(art);b.querySelector('.quick-icon').remove();
@@ -1175,8 +1194,10 @@ function clearChatDom() {
     });
   });
   empty.querySelector("[data-open-tools]").addEventListener("click", ()=>{CupboxToolWorkspace.library();openDrawer();});
+  empty.querySelector("[data-open-pet]").addEventListener("click", ()=>openModal("pet"));
   empty.querySelector("#setup-link").addEventListener("click", () => openModal("api"));
   empty.querySelector("#setup-link").hidden = modelReady;
+  homeDashboardCleanup = mountHomeSnake(empty);
 }
 
 async function newChat() {
