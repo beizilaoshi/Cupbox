@@ -4,15 +4,15 @@
   <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data:; media-src 'self' file: data:; style-src 'self'; script-src 'self'" />
   <title>Cupbox 可视化</title>
-  <link rel="stylesheet" href="styles.css" /><link rel="stylesheet" href="themes.css" /><link rel="stylesheet" href="startup.css" /><link rel="stylesheet" href="workspace.css" /><link rel="stylesheet" href="model-workspace.css" /><link rel="icon" href="assets/cupbox-logo.svg" type="image/svg+xml" />
-</head>
+  <link rel="stylesheet" href="styles.css" /><link rel="stylesheet" href="themes.css" /><link rel="stylesheet" href="startup.css" /><link rel="stylesheet" href="workspace.css" /><link rel="stylesheet" href="model-workspace.css" /><link rel="stylesheet" href="response-view.css" /><link rel="stylesheet" href="workbench.css" /><link rel="stylesheet" href="interactions.css" /><link rel="stylesheet" href="startup-sakura.css" /><link rel="stylesheet" href="icon-motion.css" /><link rel="stylesheet" href="chat-picker.css" /><link rel="stylesheet" href="loopback-audit.css" /><link rel="icon" href="assets/cupbox-logo.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="app-prompts.css" /><link rel="stylesheet" href="computer-ui.css" /><link rel="stylesheet" href="march7th.css" /><link rel="stylesheet" href="agent-presets.css" /><link rel="stylesheet" href="plugin-settings.css" /><link rel="stylesheet" href="pet-settings.css" /><link rel="stylesheet" href="pet-art.css" /><link rel="stylesheet" href="about-room.css" /><link rel="stylesheet" href="settings-layout.css" /><link rel="stylesheet" href="music.css"><link rel="stylesheet" href="startup-scenes.css"><link rel="stylesheet" href="palettes.css"><link rel="stylesheet" href="branding.css"><link rel="stylesheet" href="ui-refinements.css"><link rel="stylesheet" href="experience.css"><link rel="stylesheet" href="transcript.css"><link rel="stylesheet" href="harness-workspace.css"></head>
 <body>
   <div class="desktop-wallpaper" aria-hidden="true"><img /><img /><div class="wallpaper-veil"></div></div>
   <div id="app" class="app revealed">
     <header class="topbar">
       <div class="brand-row drag"><img class="brand-logo" src="assets/cupbox-logo.svg" alt="Cupbox" /><span class="brand-name">Cupbox</span><span class="brand-sub">你的日常工作搭子</span></div>
       <div class="topbar-right no-drag">
-        <button class="chip" id="ver-chip" title="检查更新">v…</button>
+        <button id="notice-toggle" class="notice-toggle" aria-label="通知" aria-expanded="false" aria-controls="notice-panel"><span data-icon="bell"></span><span id="notice-count"></span></button><button class="chip" id="ver-chip" title="检查更新">v…</button>
         <button class="chip chip-update" id="update-chip" hidden><span id="update-chip-text">发现新版本</span></button>
         <span id="engine-chip" hidden></span>
         <div class="caption" role="group" aria-label="窗口控制">
@@ -25,8 +25,9 @@
     <div class="layout">
       <nav class="sidebar" id="sidebar" aria-label="主导航">
         <button class="new-chat" id="btn-new-chat"><span data-icon="plus"></span> 新建任务 <kbd>Ctrl N</kbd></button>
-        <button class="nav-tool" id="btn-drawer"><span data-icon="tools"></span> 本地工具 <span class="nav-count">14</span></button>
+        <button class="nav-tool" id="btn-drawer"><span data-icon="tools"></span> 工具箱 <span class="nav-count" aria-label="工具数量">…</span></button>
         <button class="nav-tool" id="btn-models-nav"><span data-icon="sparkle"></span> 模型管理 <span class="nav-models">多模型 · 能力多选</span></button>
+        <button class="nav-tool" id="btn-qq-nav"><span data-icon="qq-bot"></span> QQ 机器人 <span class="nav-models">扫码 · 自定义</span></button>
         <div class="side-label">最近任务</div>
         <input id="session-search" class="session-search" type="search" placeholder="搜索任务…" aria-label="搜索历史任务" />
         <div class="sess-list" id="sess-list"></div>
@@ -35,12 +36,13 @@
       </nav>
       <main class="stage chat-stage" id="stage">
         <div class="chat-head"><div class="breadcrumb">工作台 <span>/</span> <span class="chat-title" id="chat-title">新任务</span></div><div class="chat-head-actions"><button class="ghost-btn" id="btn-context" title="查看上下文占用、趋势与事件">上下文</button><button class="ghost-btn" id="export-chat" title="导出为 Markdown">导出</button><button class="ghost-btn" id="btn-clear" title="清空当前任务的消息">清空对话</button></div></div>
-        <section id="workflow-board" class="workflow-board" hidden aria-label="多模型子项目"><header class="workflow-board-header"><b>协作工作台</b><span id="workflow-count" role="status"></span><button id="workflow-collapse" class="ghost-btn">收起</button><button id="workflow-dismiss" class="ghost-btn" title="结果也会保存在对话中">隐藏</button></header><div id="workflow-live-grid" class="workflow-grid"></div></section><div class="chat-scroll" id="chat-scroll" role="log" aria-label="任务对话" aria-live="polite"><div id="chat-empty"></div></div>
+        <section id="workflow-board" class="workflow-board" hidden aria-label="多模型子项目"><header class="workflow-board-header"><b><span data-icon="workflow"></span>协作工作台</b><span id="workflow-count" role="status"></span><button id="workflow-collapse" class="ghost-btn">收起</button><button id="workflow-dismiss" class="ghost-btn" title="结果也会保存在对话中">隐藏</button></header><div id="workflow-live-grid" class="workflow-grid"></div></section><div class="chat-scroll" id="chat-scroll" role="log" aria-label="任务对话" aria-live="polite"><div id="chat-empty"></div></div>
+        <nav class="chat-rail" id="chat-rail" aria-label="消息定位" hidden></nav>
         <div class="composer-wrap">
           <div class="chat-input">
-            <details class="composer-capabilities"><summary>调用能力与工作流 <small id="multi-state">单模型工作</small></summary><div class="cap-routing-grid"><div class="cap-route"><label><input type="checkbox" data-chat-cap="text" checked />文本</label><select id="route-text" data-route="text" aria-label="文本使用的模型"></select></div><div class="cap-route"><label><input type="checkbox" data-chat-cap="vision"  />视觉</label><select id="route-vision" data-route="vision" aria-label="视觉使用的模型"></select></div><div class="cap-route"><label><input type="checkbox" data-chat-cap="image"  />绘图</label><select id="route-image" data-route="image" aria-label="绘图使用的模型"></select></div><div class="cap-route"><label><input type="checkbox" data-chat-cap="audio"  />语音</label><select id="route-audio" data-route="audio" aria-label="语音使用的模型"></select></div><div class="cap-route"><label><input type="checkbox" data-chat-cap="video"  />视频</label><select id="route-video" data-route="video" aria-label="视频使用的模型"></select></div></div><div class="workflow-selection"><label for="workflow-picker">工作流</label><select id="workflow-picker"><option value="direct">直接处理</option><option value="plan">规划 → 制作 → 整合</option><option value="project">并行大项目</option><option value="review">初稿 → 审阅</option></select><span id="workflow-note"></span></div><div id="reviewer-row" class="workflow-selection" hidden><label for="reviewer-model">审阅模型</label><select id="reviewer-model"></select></div></details><div id="chat-attachments"></div><textarea id="chat-text" rows="2" aria-label="任务或问题" placeholder="有什么想一起完成的？"></textarea>
-            <div class="composer-toolbar"><div class="composer-options"><span class="mode-toggle" id="mode-toggle" role="group" aria-label="工作模式"><button class="mode-btn active" data-mode="ask" title="与 AI 讨论和解答问题">问一问</button><button class="mode-btn" data-mode="agent" title="让 AI 调用本地工具完成任务">执行任务</button></span><button class="model-button" id="btn-model" title="配置 AI 模型">配置模型 <span>⌄</span></button></div><button class="send-btn" id="btn-send" aria-label="发送" title="发送 (Enter)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 15V5M5.5 9.5 10 5l4.5 4.5"/></svg></button></div>
-            <div class="composer-additions"><button id="add-chat-image" class="ghost-btn" title="参考图片将发送到所选模型服务">＋ 参考图片</button><button id="stop-chat" hidden>停止</button></div>
+            <details class="composer-capabilities"><summary>调用能力与工作流 <small id="multi-state">单模型工作</small></summary><div class="cap-routing-grid"><div class="cap-route"><label><input type="checkbox" data-chat-cap="text" checked /><span data-icon="text"></span>文本</label><select id="route-text" data-route="text" aria-label="文本使用的模型"></select></div><div class="cap-route"><label><input type="checkbox" data-chat-cap="vision"  /><span data-icon="vision"></span>视觉</label><select id="route-vision" data-route="vision" aria-label="视觉使用的模型"></select></div><div class="cap-route"><label><input type="checkbox" data-chat-cap="image"  /><span data-icon="image"></span>绘图</label><select id="route-image" data-route="image" aria-label="绘图使用的模型"></select></div><div class="cap-route"><label><input type="checkbox" data-chat-cap="audio"  /><span data-icon="audio"></span>语音</label><select id="route-audio" data-route="audio" aria-label="语音使用的模型"></select></div><div class="cap-route"><label><input type="checkbox" data-chat-cap="video"  /><span data-icon="video"></span>视频</label><select id="route-video" data-route="video" aria-label="视频使用的模型"></select></div></div><div class="workflow-selection"><label for="workflow-picker">工作流</label><select id="workflow-picker"><option value="direct">直接处理</option><option value="auto">智能选择流程</option><option value="plan">规划 → 制作 → 整合</option><option value="project">并行大项目</option><option value="review">初稿 → 审阅</option></select><span id="workflow-note"></span></div><div id="reviewer-row" class="workflow-selection" hidden><label for="reviewer-model">审阅模型</label><select id="reviewer-model"></select></div><div class="workflow-options-grid"><label for="workflow-scene">任务场景<select id="workflow-scene"><option value="auto">自动识别</option><option value="general">通用任务</option><option value="coding">开发与修复</option><option value="research">调研与分析</option><option value="writing">写作与文案</option><option value="data">数据与表格</option><option value="creative">多媒体创作</option></select></label><label for="workflow-quality">质量检查<select id="workflow-quality"><option value="fast">快速交付</option><option value="balanced">交付后检查</option><option value="thorough">检查并修正一次</option></select></label></div><div class="workflow-acceptance"><input id="workflow-criteria" maxlength="1000" aria-label="验收标准" placeholder="验收标准（可选），例如：保留现有布局，读取文件验证修改" /></div></details><div id="chat-attachments"></div><textarea id="chat-text" rows="2" aria-label="任务或问题" placeholder="有什么想一起完成的？"></textarea>
+            <div class="composer-toolbar"><div class="composer-options"><span class="mode-toggle" id="mode-toggle" role="group" aria-label="工作模式"><button class="mode-btn active" data-mode="ask" title="与 AI 讨论和解答问题">聊天</button><button class="mode-btn" data-mode="agent" title="选择工作文件夹，由 AI 调用工具完成任务">工作模式</button></span><button class="model-button" id="btn-model" aria-haspopup="dialog" aria-expanded="false" aria-controls="chat-model-picker" title="选择模型与思考深度">配置模型 <span>⌄</span></button></div><button class="send-btn" id="btn-send" aria-label="发送" title="发送 (Enter)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 15V5M5.5 9.5 10 5l4.5 4.5"/></svg></button></div>
+            <section id="chat-model-picker" class="chat-model-picker" hidden role="dialog" aria-label="选择模型与思考深度"><header><b>本次对话使用</b><button id="chat-model-close" class="ghost-btn" aria-label="关闭模型菜单">×</button></header><input id="chat-model-search" type="search" placeholder="搜索模型名称或 ID" aria-label="搜索对话模型" /><div id="chat-model-list" class="chat-model-list"></div><section id="reasoning-panel" class="reasoning-panel" data-effort="auto"><div class="reasoning-heading"><label for="reasoning-slider">思考深度</label><output id="reasoning-value" for="reasoning-slider">默认</output></div><input id="reasoning-slider" type="range" min="0" max="1" step="1" value="0" /><div id="reasoning-ticks" class="reasoning-ticks"></div><p id="reasoning-note"></p></section><footer><button id="model-picker-configure" class="ghost-btn">管理模型与连接</button><small>对下一次发送生效</small></footer></section><div class="composer-additions"><button id="add-chat-image" class="ghost-btn" title="参考图片将发送到所选模型服务">＋ 参考图片</button><button id="stop-chat" hidden>停止</button></div>
           </div>
           <div class="runtime-bar"><button class="runtime-settings runtime-approval">智能批准</button><button class="runtime-settings runtime-environment">沙箱运行</button><span class="execution-progress"></span></div><div class="composer-caption"><span id="mode-description">一起理清思路，找到答案</span><span>Enter 发送 · Shift + Enter 换行</span></div>
         </div>
@@ -51,11 +53,11 @@
     <div class="drawer-scrim" id="drawer-scrim" hidden></div>
     <aside class="drawer glass" id="drawer" hidden role="region" aria-label="本地工具">
       <div class="drawer-head">
-        <h2><span data-icon="tools"></span> 本地工具</h2>
+        <h2><span data-icon="tools"></span> 工具箱</h2>
         <span class="chip hide-narrow" id="drawer-chip">选一个工具，轻松处理</span><button id="tools-library" class="ghost-btn">工具库</button>
         <button type="button" class="ghost-btn" id="drawer-close" title="返回对话">返回对话</button>
       </div>
-      <div class="tools-topbar"><input id="library-search" type="search" placeholder="搜索工具、功能或关键词…" aria-label="搜索工具库" /><div class="runtime-bar"><button class="runtime-settings runtime-approval">智能批准</button><button class="runtime-settings runtime-environment">沙箱运行</button><span class="execution-progress"></span></div><span class="sandbox-actions"><button class="btn-ghost2 import-sandbox">导入文件</button><button class="ghost-btn open-sandbox">打开沙箱</button></span></div><div id="tool-library" class="tool-library"><div class="tools-intro"><h1>小工具，大帮手。</h1><p>从一个小任务开始。无需配置 AI，也可以直接使用。</p></div><div id="tool-categories" role="group" aria-label="工具分类"></div><div id="tool-cards" class="tool-cards"></div></div><div class="tool-navigation"><input id="tool-search" type="search" placeholder="搜索工具…" aria-label="搜索本地工具" /><div class="drawer-tools" id="drawer-tools" aria-label="工具选择"></div></div>
+      <div class="tools-topbar"><input id="library-search" type="search" placeholder="搜索工具、功能或关键词…" aria-label="搜索工具库" /><div class="runtime-bar"><button class="runtime-settings runtime-approval">智能批准</button><button class="runtime-settings runtime-environment">沙箱运行</button><span class="execution-progress"></span></div><span class="sandbox-actions"><button class="btn-ghost2 import-sandbox">导入文件</button><button class="ghost-btn open-sandbox">打开沙箱</button></span></div><div id="tool-library" class="tool-library"><div class="tools-intro tools-visual-intro"><div><h1>小工具，大帮手。</h1><p id="tools-category-description">选择文件、数据或图片工具，直接处理手边的小任务。</p></div><img id="tools-category-art" class="feature-illustration" src="assets/feature-files.png" alt="" width="112" height="112" /></div><div id="tool-categories" role="group" aria-label="工具分类"></div><div id="tool-cards" class="tool-cards"></div></div><div class="tool-navigation"><input id="tool-search" type="search" placeholder="搜索工具…" aria-label="搜索本地工具" /><div class="drawer-tools" id="drawer-tools" aria-label="工具选择"></div></div>
       <div class="drawer-body">
         <section class="panel glass form-panel" id="form-panel">
           <div class="panel-head">
@@ -64,7 +66,7 @@
           </div>
           <div class="hint" id="tool-hint" hidden></div>
           <div id="tool-environment-hint" class="tool-environment-hint" hidden><span>这个工具需要本机运行，切换后再执行。</span><button id="switch-tool-native" class="btn-ghost2">切换到本机</button></div><form id="tool-form" autocomplete="off"></form>
-          <div class="actions"><button type="button" id="tool-example" class="btn-ghost2">填入示例</button>
+          <div id="tool-risk-notice" class="ux-inline-warning" hidden><img src="assets/ui-warning.svg" alt="" /><div><b id="tool-risk-title"></b><p id="tool-risk-text"></p></div></div><div class="actions"><button type="button" id="tool-example" class="btn-ghost2">填入示例</button>
             <button type="button" class="btn-run" id="btn-run">
               <span class="btn-label">运行</span>
               <span class="btn-sheen" aria-hidden="true"></span>
@@ -89,20 +91,103 @@
     <div class="modal glass" id="settings-modal" hidden role="dialog" aria-modal="true" aria-label="设置">
       <div class="modal-head">
         <h2><span data-icon="settings"></span> 设置</h2>
-        <button type="button" class="ghost-btn" id="modal-close" title="关闭">✕ 关闭</button>
+        <div class="settings-header-actions" role="group" aria-label="支持与交流">
+          <button type="button" class="ghost-btn" id="settings-afdian">爱发电 ↗</button>
+          <button type="button" class="ghost-btn" id="settings-copy-group" title="打开 QQ 交流群邀请链接">QQ群 1005188752 ↗</button>
+          <button type="button" class="ghost-btn" id="settings-show-thanks">感谢名单</button>
+          <button type="button" class="ghost-btn" id="modal-close" title="关闭">✕ 关闭</button>
+        </div>
       </div>
-      <div class="modal-tabs" id="modal-tabs" role="tablist">
-        <button type="button" class="tab active" data-tab="api" role="tab">模型连接</button>
-        <button type="button" class="tab" data-tab="models" role="tab">模型库与协作</button>
-        <button type="button" class="tab" data-tab="theme" role="tab">主题</button>
-        <button type="button" class="tab" data-tab="execution" role="tab">权限与运行</button>
-        <button type="button" class="tab" data-tab="startup" role="tab">启动动画</button>
-        <button type="button" class="tab" data-tab="plugins" role="tab">工具管理</button>
-        <button type="button" class="tab" data-tab="about" role="tab">关于更新</button>
-      </div>
+      <div class="settings-shell">
+      <aside class="settings-sidebar" aria-label="设置导航">
+        <label class="settings-search"><span aria-hidden="true">⌕</span><input id="settings-search" type="search" placeholder="查找设置" aria-label="查找设置" autocomplete="off"></label>
+        <nav class="modal-tabs" id="modal-tabs" role="tablist" aria-label="设置分类" aria-orientation="vertical">
+          <button type="button" class="tab active" data-tab="general" role="tab">常用设置</button>
+          <section class="settings-nav-group"><h3>日常使用</h3>
+            <button type="button" class="tab" data-tab="api" role="tab">模型连接</button>
+            <button type="button" class="tab" data-tab="models" role="tab">模型库与协作</button>
+            <button type="button" class="tab" data-tab="theme" role="tab">外观主题</button><button type="button" class="tab" data-tab="branding" role="tab">Logo 样式</button>
+            <button type="button" class="tab" data-tab="music" role="tab">背景音乐</button>
+            <button type="button" class="tab" data-tab="pet" role="tab">筑梦喵桌宠</button>
+          </section>
+          <section class="settings-nav-group"><h3>任务与工具</h3>
+            <button type="button" class="tab" data-tab="agent-presets" role="tab">Agent 预设</button>
+            <button type="button" class="tab" data-tab="workbench" role="tab">办公与开发</button>
+            <button type="button" class="tab" data-tab="plugins" role="tab">插件中心</button>
+            <button type="button" class="tab" data-tab="execution" role="tab">权限与运行</button>
+          </section>
+          <details class="settings-nav-more" id="settings-nav-more"><summary>更多设置</summary>
+            <button type="button" class="tab" data-tab="startup" role="tab">启动动画</button>
+            <button type="button" class="tab" data-tab="freemodel" role="tab">免费模型</button>
+            <button type="button" class="tab" data-tab="march7th" role="tab">三月七工作流</button>
+            <button type="button" class="tab" data-tab="about" role="tab">关于与更新</button>
+          </details>
+        </nav>
+        <p id="settings-search-empty" role="status" hidden>没有找到相关设置</p>
+        <p class="settings-nav-foot">更改会按各页提示保存</p>
+      </aside>
+      <section class="settings-content" aria-label="设置内容">
+        <header class="settings-content-head"><div><span id="settings-page-group">设置</span><h3 id="settings-page-title">常用设置</h3></div><p id="settings-page-description">从常用功能开始，按需调整。</p></header>
       <div class="modal-body">
+        <div class="tab-page" id="tab-general">
+          <div class="settings-welcome"><span class="settings-eyebrow">YOUR WORKSPACE</span><h3>把工作台调成顺手的样子。</h3><p>先选模型与外观，其余功能在需要时再开启。</p></div>
+          <div class="settings-shortcuts">
+            <button type="button" data-settings-target="api"><span data-icon="model"></span><strong>连接模型</strong><small>服务商、密钥与默认模型</small><span class="settings-card-arrow" aria-hidden="true">↗</span></button>
+            <button type="button" data-settings-target="theme"><span data-icon="palette"></span><strong>外观主题</strong><small>深浅主题、背景与自定义图片</small><span class="settings-card-arrow" aria-hidden="true">↗</span></button>
+            <button type="button" data-settings-target="pet"><span data-icon="heart"></span><strong>桌面陪伴</strong><small>换装、140px 默认大小与轻柔动效</small><span class="settings-card-arrow" aria-hidden="true">↗</span></button>
+            <button type="button" data-settings-target="models"><span data-icon="workflow"></span><strong>管理模型</strong><small>能力分配与可选的多模型协作</small><span class="settings-card-arrow" aria-hidden="true">↗</span></button>
+            <button type="button" data-settings-target="execution"><span data-icon="shield"></span><strong>权限与运行</strong><small>批准方式、沙箱与工作目录</small><span class="settings-card-arrow" aria-hidden="true">↗</span></button>
+            <button type="button" data-settings-target="plugins"><span data-icon="tools"></span><strong>插件中心</strong><small>组合会话能力与本机扩展</small><span class="settings-card-arrow" aria-hidden="true">↗</span></button>
+          </div>
+          <div class="settings-overview-note"><span data-icon="info"></span><div><strong>慢慢调整就好</strong><p>桌宠、协作和专项工作流均可按需使用。先完成模型连接，就可以开始对话。</p></div></div>
+          <button type="button" class="settings-about-link" data-settings-target="about">查看版本与更新 →</button>
+        </div>
+        <div class="tab-page" id="tab-pet" hidden>
+          <div class="pet-settings-heading"><div><span class="pet-eyebrow">CUPBOX COMPANION</span><h3>让陪伴，住进桌面。</h3><p>银发、樱花与蓝色蝴蝶结。你的吉祥物，今天也在这里。</p></div><span id="pet-status" role="status">已收起</span></div>
+          <section class="pet-care-card" aria-labelledby="pet-care-title">
+            <div class="pet-care-heading"><div><span class="pet-eyebrow">LITTLE MOMENTS TOGETHER</span><h4 id="pet-care-title">筑梦喵的陪伴手账</h4></div><span id="pet-care-stage">初次相遇</span></div>
+            <div class="pet-care-affection"><span id="pet-care-heart" aria-hidden="true"></span><div><div><strong>好感度 <output id="pet-care-affection">0.00 / 1000</output></strong><small id="pet-care-next">慢慢认识，一点点亲近。</small></div><progress id="pet-care-progress" max="1" value="0" aria-label="当前关系阶段的好感进度"></progress></div></div>
+            <div class="pet-care-stats"><label>饱食 <output id="pet-care-satiety-value">75</output><progress id="pet-care-satiety" max="100" value="75"></progress></label><label>精力 <output id="pet-care-energy-value">80</output><progress id="pet-care-energy" max="100" value="80"></progress></label><label>心情 <output id="pet-care-mood-value">80</output><progress id="pet-care-mood" max="100" value="80"></progress></label></div>
+            <div id="pet-care-actions" class="pet-care-actions" role="group" aria-label="陪伴互动"></div>
+            <div id="pet-play-arena" class="pet-play-arena" hidden><div><strong id="pet-play-prompt">碰三下毛线球</strong><button id="pet-play-cancel" type="button">先收好</button></div><button id="pet-play-toy" class="pet-play-toy" type="button" aria-label="碰一下毛线球"></button></div>
+            <p id="pet-care-feedback" class="pet-care-feedback" role="status" aria-live="polite">从一顿小鱼饭、一场小游戏开始。</p>
+            <div class="pet-care-footer"><span id="pet-care-daily">今日好感奖励 0.00 / 0.20</span><span>只存本机 · 离线不扣好感度</span></div>
+            <details class="pet-care-history"><summary>最近互动</summary><ul id="pet-care-history"><li>还没有互动记录，来打个招呼吧。</li></ul></details>
+          </section>
+          <section class="pet-wardrobe" aria-label="服装选择"><div class="pet-studio-heading"><h4>吉祥物衣橱</h4><span>日常 9 套 · 节日 11 套</span></div><div id="pet-outfits" class="pet-outfit-grid"></div><label class="pet-option"><span><strong>节日自动换装</strong><small id="pet-holiday-status">按电脑本地日期切换；春节、元宵、中秋使用农历，节后恢复手选服装。</small></span><input id="pet-holiday-auto" type="checkbox" role="switch"></label><details id="pet-festival-wardrobe" class="pet-festival-wardrobe"><summary>节日衣橱 <span>11 套 · 展开试穿</span></summary><p>手动试穿会暂停自动换装；重新开启开关，即可继续跟随节日。</p><div id="pet-festival-outfits" class="pet-outfit-grid"></div></details></section><div class="pet-settings-layout"><section class="pet-preview-card" aria-label="桌宠预览"><span class="pet-preview-orbit" aria-hidden="true"></span><div id="pet-preview" class="pet-preview-sprite" data-pose="idle" role="img" aria-label="筑梦喵吉祥物预览"></div><strong>筑梦喵</strong><span>你的桌面小搭子</span><div class="pet-preview-controls"><span id="pet-action-name" role="status">安静陪伴</span><button type="button" id="pet-preview-replay">重播动作</button><button type="button" id="pet-preview-loop" aria-pressed="true">循环预览</button></div></section>
+          <section class="pet-preferences" aria-label="桌宠偏好"><label class="pet-option pet-enable"><span><strong>开启桌面陪伴</strong><small>透明悬浮窗口，关闭主窗口后仍可在托盘运行</small></span><input id="pet-enabled" type="checkbox" role="switch"></label>
+          <label class="pet-size-label" for="pet-size">桌宠大小 <output id="pet-size-value" for="pet-size">140 px</output></label><input id="pet-size" type="range" min="60" max="280" step="10" value="140">
+          <label class="pet-option"><span><strong>保持置顶</strong><small>在其他窗口上方陪伴你</small></span><input id="pet-top" type="checkbox" role="switch"></label>
+          <details class="settings-disclosure pet-advanced"><summary>更多陪伴设置<span>音效、漫游与动效</span></summary><div><label class="pet-option"><span><strong>点击音效</strong><small>支持导入按下／松开两段原音</small></span><input id="pet-sound" type="checkbox" role="switch"></label>
+          <section class="pet-audio-settings" aria-label="自定义音效"><p id="pet-audio-status" role="status">当前：标准录音 4 · 2× 按压音效</p><div><button type="button" id="pet-audio-import">导入其他音效对</button><button type="button" id="pet-audio-reset">恢复标准录音 4</button></div><p>内置录音以 2 倍速播放一次。自定义音效按文件名数字顺序播放：1 按下、2 松开，每个不超过 2 MB；自定义文件仅保存在本机。</p></section>
+          <label class="pet-option"><span><strong>随机散步</strong><small>左右随机走走停停，累计走累后歇脚；精力低时优先休息，悬停和工作时停步</small></span><input id="pet-roam" type="checkbox" role="switch"></label>
+          <label class="pet-option"><span><strong>工作休息提醒</strong><small>在心情气泡中提醒喝水、远眺；离开电脑5分钟重计，不打断任务和批准</small></span><input id="pet-break-reminder" type="checkbox" role="switch"></label>
+          <label class="pet-option" for="pet-break-minutes"><span><strong>连续使用多久后提醒</strong><small>只读取系统空闲时长，不读取屏幕或输入内容</small></span><select id="pet-break-minutes"><option value="30">30 分钟</option><option value="45">45 分钟</option><option value="60">60 分钟</option><option value="90">90 分钟</option></select></label>
+          <label class="pet-option"><span><strong>心情气泡</strong><small>显示问候和 AI 任务状态，不展示聊天正文</small></span><input id="pet-bubbles" type="checkbox" role="switch"></label>
+          <label class="pet-option"><span><strong>互动动画</strong><small>小幅呼吸、轻摆和摸头反馈；遵循系统减少动态效果偏好</small></span><input id="pet-motion" type="checkbox" role="switch"></label>
+          <label class="pet-option"><span><strong>待机小动作与小情绪</strong><small>偶尔动耳、歪头；连续戳弄会闹点小脾气，梳毛、喂食或玩耍可以安抚，不扣好感</small></span><input id="pet-idle-actions" type="checkbox" role="switch"></label><button type="button" class="ghost-btn" id="pet-reset">恢复到屏幕角落</button></div></details></section></div>
+          <details class="pet-action-studio settings-disclosure"><summary>动作与神态<span>32 种动作 · 最高60fps · 走路与重力交互预览</span></summary><div><div id="pet-action-filters" role="group" aria-label="动作分类"></div><div id="pet-action-grid" class="pet-action-grid"></div></div></details><p id="pet-feedback" role="status"></p><div class="pet-help"><strong>点击互动 · 长按提起 · 拖动挪窝 · 松手落地 · 双击对话</strong><p>好感度来自上方的喂食、玩耍等互动；动作预览不计好感奖励。长按或拖动时像轻拎后颈一样垂手悬空，只轻轻眨眼，松手后落向当前屏幕工作区底部，并缓冲站稳。关闭互动动画后停用重力动画。桌宠默认关闭，偏好和位置保存在本机；不读屏、不监听聊天、不控制其他应用。</p></div>
+        </div>
+        <div class="tab-page" id="tab-agent-presets" hidden>
+          <p class="agent-presets-intro">选择 Agent 的工具和工作方式。日常任务用「标准模式」，专项任务选择对应预设。</p>
+          <div class="agent-presets-section-row"><h4 class="agent-presets-section">内置</h4><p id="agent-preset-current" role="status"></p></div>
+          <div id="agent-preset-grid" class="agent-preset-grid"></div>
+          <p class="agent-presets-hint">点击卡片切换，下次发送时生效。预设不会授予额外权限；查看说明不会改变当前选择。</p>
+        </div>
+        <div class="tab-page" id="tab-march7th" hidden>
+          <h3>星穹铁道 · 三月七工作流</h3>
+          <p class="control-note">使用本机已安装的三月七小助手执行任务。请先在小助手 Launcher 完成游戏路径、任务和完成后动作等设置，再选择 March7th Assistant.exe。运行期间游戏可能占用鼠标和键盘；Cupbox 日志中的进程退出码不代表游戏任务已完成，请核对小助手日志。</p>
+          <label class="f-label" for="march-executable">小助手程序</label>
+          <input id="march-executable" readonly placeholder="尚未选择 March7th Assistant.exe" />
+          <button type="button" id="march-pick" class="btn-ghost2">选择程序</button>
+          <label class="f-label" for="march-task">选择工作流任务</label><select id="march-task"></select>
+          <div id="march-custom" hidden><label class="f-label" for="march-name">小助手中已创建的流程名称</label><input id="march-name" maxlength="200" placeholder="与小助手流程名称完全一致" /></div>
+          <div class="wb-actions"><button type="button" id="march-save" class="btn-ghost2">保存设置</button><button type="button" id="march-run" class="btn-run">保存并运行</button><button type="button" id="march-stop" class="btn-ghost2" disabled>停止任务</button><button type="button" id="march-source" class="btn-ghost2">项目与安装说明</button></div>
+          <div class="march-risk"><b>高风险 · 第三方游戏自动化</b><p>可能占用鼠标键盘、改变游戏进度或执行小助手配置的完成后动作。每次启动需确认，沙箱模式不可运行；启动后撤销桌面协作授权。紧急停止：Ctrl+Alt+F12。</p></div><p id="march-feedback" role="status"></p><button type="button" id="march-copy-log" class="btn-ghost2">复制日志</button><p id="march-status" role="status">待运行</p><pre id="march-log" class="wb-output" role="log" aria-label="三月七工作流日志"></pre>
+          <p class="control-note">Cupbox 已启用多开检测：一次仅运行一个 Cupbox，重复打开会显示已有窗口。三月七工作流同一时间仅可运行一项。</p>
+        </div>
         <!-- API -->
-        <div class="tab-page" id="tab-api">
+        <div class="tab-page" id="tab-api" hidden>
           <div class="provider-header"><h3>连接你的模型</h3><p>选好服务商，再填写密钥即可。</p></div><label class="f-label" for="api-preset">服务类型</label><select id="api-preset"></select><p id="preset-note" class="control-note provider-note"></p><div id="api-protocol-fields"><div class="f-label">接口协议</div>
           <select id="api-provider">
             <option value="openai-compatible">openai-compatible（官方 / DeepSeek / Kimi / Ollama / OpenRouter…）</option>
@@ -114,7 +199,7 @@
           <input id="api-key" type="password" placeholder="sk-…" autocomplete="off" />
           <div class="f-label">模型</div>
           <div class="model-picker-row"><input id="api-model" list="model-options" type="text" placeholder="输入模型 ID，或获取模型后选择" /><button id="fetch-models" class="btn-ghost2">获取模型 / 测试连接</button></div><datalist id="model-options"></datalist><p id="models-status" class="control-note" role="status"></p>
-          <details class="api-advanced"><summary>高级参数</summary>
+          <details class="api-advanced"><summary>高级参数</summary><label class="f-label" for="api-reasoning-mode">思考深度适配</label><select id="api-reasoning-mode"><option value="auto">自动识别</option><option value="disabled">不发送深度参数</option><option value="openai">OpenAI 努力值 · low / medium / high</option><option value="deepseek">DeepSeek 思考模式</option><option value="openrouter">OpenRouter reasoning 参数</option></select>
           <div class="grid-2">
             <div>
               <div class="f-label">温度（可选 0~2）</div>
@@ -145,21 +230,29 @@
           </div>
         </div>
 <div class="tab-page" id="tab-models" hidden>
-<div class="model-studio-top"><div><h3>让合适的模型，做擅长的事</h3><p>独立保存连接，在对话中勾选需要的能力。</p></div><span class="chip" id="model-library-count">0 个模型</span></div>
-<div class="collaboration-setting"><div><b>多模型工作</b><p>默认关闭。开启后可同时调用多种能力，并使用项目拆分与审阅工作流。</p></div><label class="switch"><input id="multi-model-enabled" type="checkbox" aria-label="开启多模型工作" /><span class="track"><span class="thumb"></span></span></label></div>
-<div class="fit-row"><label for="parallel-tasks">同时执行的子项目</label><select id="parallel-tasks"><option value="1">1 个 · 节省调用</option><option value="2">2 个 · 均衡</option><option value="3">3 个 · 更快</option></select></div><p class="control-note">每个子项目、规划、整合及审阅都会产生独立的 API 调用费用。并行制作阶段独立产出，执行模式下最后统一操作文件。</p>
-<div class="f-label">参与项目制作的文本模型（可多选）</div><div id="project-workers" class="capability-checks"></div><p class="control-note">子项目在勾选模型间轮流分配。留空时使用对话中选择的文本模型；规划与整合始终由该模型负责。</p><div class="model-library-layout"><div><div class="actions"><button id="ml-new" class="btn-ghost2">＋ 添加模型</button></div><div id="model-library-list" class="model-library-list"></div></div>
-<div class="model-editor"><h4 id="ml-editor-title">添加模型</h4><button id="ml-from-default" class="ghost-btn">从默认连接填入</button>
+<div class="model-studio-top"><div><h3>让合适的模型，做擅长的事</h3><p>独立保存连接，在对话中勾选需要的能力。</p></div><span class="chip" id="model-library-count">0 个模型</span><img class="feature-illustration" src="assets/feature-workflow.svg" alt="" width="95" height="95" /></div>
+<div class="feature-flow-guide" aria-label="协作流程"><span><i data-icon="tools"></i>拆分任务</span><i data-icon="arrow" aria-hidden="true"></i><span><i data-icon="workflow"></i>分工制作</span><i data-icon="arrow" aria-hidden="true"></i><span><i data-icon="check"></i>整合交付</span></div><div class="collaboration-setting"><div><b>多模型工作</b><p>默认关闭。开启后可同时调用多种能力，并使用项目拆分与审阅工作流。</p></div><label class="switch"><input id="multi-model-enabled" type="checkbox" aria-label="开启多模型工作" /><span class="track"><span class="thumb"></span></span></label></div>
+<div id="model-collaboration-options" role="group" aria-label="多模型协作配置" hidden><div class="fit-row"><label for="parallel-tasks">同时执行的子项目</label><select id="parallel-tasks"><option value="1">1 个 · 节省调用</option><option value="2">2 个 · 均衡</option><option value="3">3 个 · 更快</option></select></div><p class="control-note">每个子项目、规划、整合及审阅都会产生独立的 API 调用费用。并行制作阶段独立产出，执行模式下最后统一操作文件。</p>
+<div class="f-label">参与项目制作的文本模型（可多选）</div><div id="project-workers" class="capability-checks"></div><p class="control-note">子项目在勾选模型间轮流分配。留空时使用对话中选择的文本模型；规划与整合始终由该模型负责。</p></div><div class="model-library-layout"><div><div class="actions"><button id="ml-new" class="btn-ghost2">＋ 添加模型</button></div><div id="model-library-list" class="model-library-list"></div></div>
+<div class="model-editor"><div class="model-editor-heading"><h4 id="ml-editor-title">添加模型</h4><button id="ml-from-default" class="ghost-btn">从默认连接填入</button></div>
 <div class="grid-2"><div><label class="f-label" for="ml-name">显示名称</label><input id="ml-name" placeholder="例如：绘图助手" maxlength="70" /></div><div><label class="f-label" for="ml-preset">服务类型</label><select id="ml-preset"></select></div></div>
 <label class="f-label" for="ml-base">服务地址</label><input id="ml-base" placeholder="https://api.siliconflow.cn/v1" />
 <label class="f-label" for="ml-model">模型 ID</label><input id="ml-model" placeholder="服务商提供的完整模型 ID" />
 <label class="f-label" for="ml-key">API Key</label><input id="ml-key" type="password" autocomplete="off" placeholder="填写这个服务的 API Key" />
 <div class="f-label">模型能力</div><div class="capability-checks"><label><input type="checkbox" data-model-cap="text" checked />文本</label><label><input type="checkbox" data-model-cap="vision"  />视觉</label><label><input type="checkbox" data-model-cap="image"  />绘图</label><label><input type="checkbox" data-model-cap="audio"  />语音</label><label><input type="checkbox" data-model-cap="video"  />视频</label></div><p class="control-note">按服务商实际支持能力勾选。语音用于文本转语音，视觉用于参考图片分析。</p>
-<details class="ml-advanced"><summary>协议与生成参数</summary><label class="f-label" for="ml-provider">文本 / 视觉协议</label><select id="ml-provider"><option value="openai-compatible">OpenAI 兼容</option><option value="anthropic">Anthropic</option></select><label class="f-label" for="ml-video">视频协议</label><select id="ml-video"><option value="unsupported">未启用视频适配</option><option value="siliconflow">硅基流动 / 兼容网关（提交 + 轮询）</option></select><label class="f-label" for="ml-voice">语音音色 ID（可选）</label><input id="ml-voice" placeholder="由服务商提供，例如 alloy 或 模型ID:alex" /><label class="f-label" for="ml-size">绘图尺寸</label><select id="ml-size"><option>1024x1024</option><option>1536x1024</option><option>1024x1536</option></select><p class="control-note">绘图使用 images/generations；语音使用 audio/speech。视频目前适配硅基流动协议，尺寸 1280×720。实际支持的参数以服务商为准。</p></details>
+<details class="ml-advanced"><summary>协议与生成参数</summary><label class="f-label" for="ml-provider">文本 / 视觉协议</label><select id="ml-provider"><option value="openai-compatible">OpenAI 兼容</option><option value="anthropic">Anthropic</option></select><label class="f-label" for="ml-reasoning-mode">思考深度适配</label><select id="ml-reasoning-mode"><option value="auto">自动识别</option><option value="disabled">不发送深度参数</option><option value="openai">OpenAI 努力值 · low / medium / high</option><option value="deepseek">DeepSeek 思考模式</option><option value="openrouter">OpenRouter reasoning 参数</option></select><p class="control-note">自动识别不支持时，可按提供方文档选择参数格式；不确定时保留默认。</p><label class="f-label" for="ml-video">视频协议</label><select id="ml-video"><option value="unsupported">未启用视频适配</option><option value="siliconflow">硅基流动 / 兼容网关（提交 + 轮询）</option></select><label class="f-label" for="ml-voice">语音音色 ID（可选）</label><input id="ml-voice" placeholder="由服务商提供，例如 alloy 或 模型ID:alex" /><label class="f-label" for="ml-size">绘图尺寸</label><select id="ml-size"><option>1024x1024</option><option>1536x1024</option><option>1024x1536</option></select><p class="control-note">绘图使用 images/generations；语音使用 audio/speech。视频目前适配硅基流动协议，尺寸 1280×720。实际支持的参数以服务商为准。</p></details>
 <label class="capability-checks"><span><input id="ml-enabled" type="checkbox" checked />启用此模型</span></label><div class="actions"><button id="ml-save" class="btn-run">保存模型</button><button id="ml-delete" class="ghost-btn model-delete" hidden>删除模型</button></div><p id="ml-status" role="status"></p>
 </div></div></div>
+<div class="tab-page" id="tab-workbench" hidden><h3>办公与开发工具</h3><p class="control-note">文件操作默认只预览；确认执行需要预览令牌。Shell、终端输入、敏感文件与策略变更始终需要人工批准。HTTP 禁止访问私网。</p><div class="wb-header"><select id="wb-tool" aria-label="办公与开发工具"></select><span id="wb-state" class="wb-state" role="status">待运行</span></div><p id="wb-description" class="wb-description"></p><div class="wb-layout"><div><div id="wb-fields" class="wb-fields"></div><div class="wb-actions"><button id="wb-run" class="btn-run">运行 / 预览</button><button id="wb-commit" hidden>执行这次预览</button></div></div><div id="wb-output" class="wb-output" role="log">结果会显示在这里。</div></div><details class="wb-policy-section"><summary>项目策略、网络白名单与审计</summary><p class="control-note">授权保存在本机。仓库内 .cupbox/policy.json 仅作为提案，不会自动放宽权限。修改后必须明确批准。</p><div class="wb-actions"><button id="wb-load-policy" class="btn-ghost2">读取当前策略</button><button id="wb-proposal" class="btn-ghost2" hidden>填入项目提案</button></div><textarea id="wb-policy" class="wb-policy-editor" aria-label="项目策略 JSON" spellcheck="false"></textarea><button id="wb-save-policy" class="btn-run">保存并请求批准</button><p id="wb-audit" class="control-note"></p></details></div>
+        <div class="tab-page" id="tab-branding" hidden>
+          <div class="logo-hero"><div class="logo-main-preview"><img data-logo-preview alt="当前 Logo" /></div><div><span class="logo-eyebrow">MAKE IT YOURS</span><h3 id="logo-selected-name">你的 Cupbox，你的标识</h3><p>30 款内置样式 · 7 款日常抱抱、11 款节日服装与几何标识。</p><div class="logo-mini-preview"><img data-logo-preview alt="标题栏预览" /><span>Cupbox</span><small>标题栏预览</small></div></div></div>
+          <div class="logo-toolbar"><button class="ghost-btn" id="logo-import">导入自己的 Logo</button><button class="ghost-btn" id="logo-reset">恢复经典原标</button><span>PNG / JPG / WebP · 最大 10 MB</span></div>
+          <section class="logo-mascot-settings" aria-labelledby="logo-hug-heading"><div class="logo-controls-heading"><h4 id="logo-hug-heading">筑梦喵 · 开场互动</h4><span>白色底衬 · 轻柔微动</span></div><div class="logo-hug-controls"><label class="logo-motion-field" for="logo-motion">开场动作<select id="logo-motion"><option value="auto">跟随款式（推荐）</option><option value="hug">抱紧蹭蹭</option><option value="peek">探头看看</option><option value="greeting">轻摇招呼</option><option value="heart">爱心回应</option><option value="nod">乖巧点头</option><option value="none">静态展示</option></select><small>仅用于抱抱款开场和此页预览；任务栏与标题栏保持静态。</small></label><label class="logo-auto-field"><span><b>节日自动换装</b><small id="logo-holiday-status">先选择任意筑梦喵抱抱款，再开启自动换装。</small></span><input id="logo-holiday-auto" type="checkbox" role="switch"></label></div><button type="button" class="ghost-btn" id="logo-preview-startup">预览当前开场</button></section>
+          <p class="logo-status" id="logo-status" role="status" aria-live="polite">正在加载 Logo 样式…</p><div id="logo-gallery"></div>
+          <p class="logo-help">选择后自动保存，同步到标题栏、任务栏、托盘、启动动画与关于页面；新打开的窗口也会沿用。自定义图片保存在本机文档 Cupbox/branding 内，更换样式不会删除原图。</p>
+        </div>
         <!-- 主题 -->
-        <div class="tab-page" id="tab-theme" hidden>
+        <div class="tab-page" id="tab-theme" hidden><button class="ghost-btn" data-settings-target="branding">自定义 Logo · 日常抱抱与节日衣橱 →</button>
           <div class="theme-section-head"><div><h3>让工作台，有你的样子</h3><p>选一处喜欢的风景，留一份舒服的专注。</p></div><button class="ghost-btn" id="reset-appearance">恢复默认</button></div>
           <div class="theme-preview"><img id="theme-preview-image" src="assets/sakura-companion.png" alt="当前主题预览" /><div><b id="theme-preview-name">樱晴 · Sakura companion</b><p id="theme-preview-caption">陪你把小事，变成美好的一天。</p></div><span class="preview-badge">实时预览</span></div>
           <div class="f-label">外观模式</div>
@@ -175,7 +268,7 @@
             <button class="background-card" data-background="none" aria-pressed="false"><span class="background-thumb plain-thumb"><span class="mini-window"><i></i><i></i><i></i></span><i data-icon="check"></i></span><b>纯色专注</b><small>安静，也是一种风格</small></button>
             <button class="background-card" data-background="custom" aria-pressed="false"><span class="background-thumb custom-thumb"><span data-icon="image"></span><img id="custom-thumbnail" alt="" hidden /><i data-icon="check"></i></span><b>自定义图片</b><small>用你喜欢的风景</small></button>
           </div>
-          <div class="custom-background-row"><div><b>本地图片</b><p id="custom-background-name">PNG、JPG、WebP、BMP · 最大 20 MB</p></div><button id="choose-wallpaper" class="btn-ghost2"><span data-icon="upload"></span>选择图片</button></div>
+          <div class="custom-background-row"><div><b>本地图片</b><p id="custom-background-name">PNG、JPG、WebP · 最大 20 MB</p></div><button id="choose-wallpaper" class="btn-ghost2"><span data-icon="upload"></span>选择图片</button></div>
           <div id="wallpaper-controls" class="wallpaper-controls">
             <div class="range-heading"><label for="wallpaper-veil">背景遮罩</label><output id="veil-output" for="wallpaper-veil">72%</output></div><input type="range" id="wallpaper-veil" min="35" max="95" value="72" /><p class="control-note">数值越高，文字越清晰、背景越柔和。</p>
             <div class="range-heading"><label for="wallpaper-blur">背景模糊</label><output id="blur-output" for="wallpaper-blur">0 px</output></div><input type="range" id="wallpaper-blur" min="0" max="20" value="0" />
@@ -190,33 +283,41 @@
           </div>
           <div class="hint">选择立即生效并保存到本机；「跟随系统」会在系统切到浅色模式时自动使用浅色主题。</div>
         </div>
+        <div class="tab-page" id="tab-music" hidden>
+          <div class="theme-section-head"><div><h3>让喜欢的音乐，陪你工作</h3><p>本地、系统与网络音乐，都收在你的歌单里。</p></div></div>
+          <div class="music-studio"><div class="music-studio-record" aria-hidden="true"><span class="music-vinyl"><span class="music-label"></span></span><span class="music-notes"><i>♪</i><i>♫</i><i>♬</i></span></div><div class="music-now"><small>正在聆听</small><strong id="music-now-title">准备歌单…</strong><span id="music-now-status">只在本机播放</span><div class="music-transport"><button type="button" id="music-previous" aria-label="上一首">上一首</button><button type="button" id="music-play" class="btn-run">播放</button><button type="button" id="music-next" aria-label="下一首">下一首</button></div></div></div>
+          <div class="music-preferences"><div><label class="f-label" for="music-mode">播放方式</label><select id="music-mode"><option value="single">单曲循环</option><option value="sequence">顺序播放</option><option value="random">随机播放</option></select><p id="music-mode-note" class="control-note"></p></div><div><div class="range-heading"><label for="music-volume">音乐音量</label><output id="music-volume-output" for="music-volume">30%</output></div><input type="range" id="music-volume" min="0" max="100" step="1" value="30" /><p class="control-note">音乐音量与桌宠按压音效分别控制。</p></div></div>
+          <p id="music-feedback" class="wallpaper-status" role="status" aria-live="polite"></p>
+          <div class="music-library-heading"><div class="music-library-title"><h4>我的歌单</h4><span id="music-library-count"></span></div><button type="button" class="btn-ghost2" id="music-import">导入本地歌曲</button></div><div id="music-track-list" class="music-track-list"></div>
+          <p class="control-note music-library-help">关闭歌曲右侧开关即可禁用，所有播放模式都会跳过它。系统歌曲只能禁用，不能删除。自定义歌曲可删除，仅删除 Cupbox 的导入副本，原文件不受影响。支持 MP3、WAV、OGG、M4A、FLAC、AAC、WebM，每首最大 80 MB，一次最多 20 首；本地导入不上传网络。网络歌曲播放时联网获取并缓存到本机；移除仅影响本机，不取消酷狗收藏。</p>
+        </div>
         <div class="tab-page" id="tab-execution" hidden>
           <div class="theme-section-head"><div><h3>由你决定，怎样执行</h3><p>同时作用于本地工具和 AI 的工具调用。</p></div></div>
           <div class="f-label">权限控制</div><div class="policy-options" role="group" aria-label="权限控制">
             <button data-approval-mode="ask"><span data-icon="clip"></span><b>请求批准</b><small>每次工具操作都先由你确认。</small></button>
             <button data-approval-mode="smart"><span data-icon="sparkle"></span><b>智能批准</b><small>工作区内读取和转换自动执行；写入、区外访问及系统操作需批准。</small></button>
-            <button data-approval-mode="full"><span data-icon="check"></span><b>完全控制</b><small>所有已启用工具免确认，保留工具自身校验。</small></button>
+            <button data-approval-mode="full"><span data-icon="shield"></span><b>完全控制</b><small>普通文件修改可自动批准；Shell、长期记忆修改、敏感访问与策略变更仍需人工确认。</small></button>
           </div><div class="f-label">本地执行环境</div><div class="environment-options" role="group" aria-label="执行环境"><button data-execution-environment="sandbox"><span data-icon="folder"></span><b>在沙箱运行</b><small>文件与原件隔离，只处理导入到沙箱的文件。</small></button><button data-execution-environment="native"><span data-icon="monitor"></span><b>本机运行</b><small>直接操作本机文件，可使用系统工具。</small></button></div>
-          <p id="execution-environment-note" class="hint"></p><div class="execution-root"><span>当前目录</span><code id="execution-directory"></code></div><div class="sandbox-actions"><button class="btn-run import-sandbox">导入文件到沙箱</button><button class="btn-ghost2 open-sandbox">打开沙箱</button></div>
+          <div id="execution-risk-banner" class="ux-inline-warning" role="status" hidden><img src="assets/ui-warning.svg" alt="" /><div><b>完全控制已开启</b><p>普通修改可自动执行。请核对工作目录；Shell、长期记忆修改与敏感访问仍会单独询问。</p></div></div><p id="execution-environment-note" class="hint"></p><div class="execution-root"><span>当前目录</span><code id="execution-directory"></code></div><div class="sandbox-actions"><button class="btn-run import-sandbox">导入文件到沙箱</button><button class="btn-ghost2 open-sandbox">打开沙箱</button></div>
         </div>
         <div class="tab-page" id="tab-startup" hidden>
           <div class="theme-section-head"><div><h3>给每次开始，一点仪式感</h3><p>选择开场效果，也可以放入自己的动画。</p></div><button class="ghost-btn" id="reset-startup">恢复默认</button></div>
-          <div class="startup-settings-hero"><div class="startup-mini-rings"></div><img src="assets/cupbox-logo.svg" alt="Cupbox 新 Logo" /><b>Cupbox <span id="startup-hero-version">1.0.2</span></b><p id="startup-settings-caption">让灵感，轻轻启程。</p><button class="btn-run" id="preview-startup">预览启动动画</button></div>
+          <div class="startup-settings-hero"><div class="startup-mini-rings"></div><img src="assets/cupbox-logo.svg" alt="Cupbox 新 Logo" /><b>Cupbox <span id="startup-hero-version">1.2.0</span></b><p id="startup-settings-caption">让灵感，轻轻启程。</p><button class="btn-run" id="preview-startup">预览启动动画</button></div>
           <div class="startup-enable-row"><div><b>启动时播放动画</b><p>可随时点击跳过，或按 Esc 进入工作台。</p></div><label class="switch"><input id="startup-enabled" type="checkbox" checked aria-label="启动时播放动画" /><span class="track"><span class="thumb"></span></span></label></div>
           <div class="f-label">开场风格</div><div class="startup-grid" role="group" aria-label="启动动画风格">
-            <button class="startup-card active" data-startup-style="orbit" aria-pressed="true"><span class="startup-card-art orbit-art"><i></i><img src="assets/cupbox-logo.svg" alt="" /></span><b>光轨启程</b><small>光环环绕，标识浮现</small></button>
+            <button class="startup-card active" data-startup-style="orbit" aria-pressed="true"><span class="startup-card-art sakura-art"><img src="assets/cupbox-logo.svg" alt="樱花轻落" /></span><b>樱花序章 <em class="startup-default-badge">默认</em></b><small>银蓝樱雨，磨砂柔光</small></button>
             <button class="startup-card" data-startup-style="cinema" aria-pressed="false"><span class="startup-card-art cinema-art"><img src="assets/bloom-light.png" alt="" /></span><b>风景开场</b><small>当前主题缓缓拉近</small></button>
             <button class="startup-card" data-startup-style="pulse" aria-pressed="false"><span class="startup-card-art pulse-art"><img src="assets/cupbox-logo.svg" alt="" /></span><b>极简呼吸</b><small>轻轻亮起，安静入场</small></button>
             <button class="startup-card" data-startup-style="custom" aria-pressed="false"><span class="startup-card-art custom-art" data-icon="upload"></span><b>自定义素材</b><small>GIF、视频或静态图片</small></button>
           </div>
           <div class="custom-background-row"><div><b>你的开场素材</b><p id="startup-media-name">GIF、MP4、WebM 或图片 · 最大 40 MB</p></div><button class="btn-ghost2" id="choose-startup-media"><span data-icon="upload"></span>导入素材</button></div>
-          <div class="wallpaper-controls"><div class="range-heading"><label for="startup-duration">播放时长</label><output id="startup-duration-output">1.6 秒</output></div><input type="range" id="startup-duration" min="0.8" max="5" step="0.2" value="1.6" /></div>
+          <div class="wallpaper-controls"><div class="range-heading"><label for="startup-duration">播放时长 · 最高 20 秒</label><output id="startup-duration-output">5.0 秒</output></div><input type="range" id="startup-duration" min="0.8" max="20" step="0.2" value="5" /></div>
           <label class="f-label" for="startup-caption">开场文案</label><input id="startup-caption" type="text" maxlength="60" placeholder="让灵感，轻轻启程。" /><p class="control-note startup-note">自动保存到本机；视频静音播放；开启系统“减少动态效果”时会自动跳过。</p><p id="startup-status" role="status" class="wallpaper-status"></p>
         </div>
         <!-- 插件 -->
         <div class="tab-page" id="tab-plugins" hidden>
           <div class="hint">选择你需要的本地工具。关闭后，工具列表和 AI 执行任务都将停用这项能力；随时可以重新开启。</div>
-          <div class="plugin-list" id="plugin-list"></div>
+          <label class="filesystem-enable"><input id="filesystem-enabled" type="checkbox" checked />启用开发文件工具</label><p class="control-note">提供预览令牌、原子读写、精确编辑、补丁、复制移动、可恢复删除与回滚。执行任务模式下可用，限制在工作目录；写操作遵循批准设置。子项目只写各自的交付目录。</p><div class="plugin-list" id="plugin-list"></div>
         </div>
         <!-- 关于更新 -->
         <div class="tab-page" id="tab-about" hidden>
@@ -235,6 +336,14 @@
             <span class="elapsed" id="check-status"></span>
           </div>
           <div class="about-result" id="about-result" hidden></div>
+          <section class="about-community" aria-label="支持与交流">
+            <div><h3>支持 Cupbox</h3><p>喜欢这个小工具，可以请作者喝杯咖啡。</p><div class="about-community-actions"><button type="button" class="btn-run" id="about-afdian" data-url="https://afdian.com/a/beilaishi">爱发电 · 支持作者 ↗</button><button type="button" class="btn-ghost2" id="about-show-thanks">查看感谢名单 ↓</button></div></div>
+            <div><h3>QQ 交流群</h3><p class="about-group-number">1005188752</p><div class="about-community-actions"><button type="button" class="btn-run" id="about-join-group" data-url="https://qm.qq.com/q/V2pNRPkW0G">加入 QQ 群 ↗</button><button type="button" class="btn-ghost2" id="about-copy-group">复制群号</button></div><span class="hint" id="about-group-status" role="status"></span></div>
+          </section>
+          <section class="about-thanks" aria-labelledby="about-thanks-title">
+            <header><div><h3 id="about-thanks-title">感谢名单</h3><p class="hint">名单以 GitHub 为准，每次打开均联网检查。</p></div><button type="button" class="btn-ghost2" id="about-thanks-refresh">检查 GitHub 更新</button></header>
+            <div id="about-thanks-list"></div><p class="hint" id="about-thanks-status" role="status">打开此页时直接读取 GitHub 在线名单。</p>
+          </section>
           <div class="about-links">
             <button type="button" class="btn-ghost2" data-url="https://github.com/beizilaoshi/cupbox">GitHub 仓库</button>
             <button type="button" class="btn-ghost2" data-url="https://github.com/beizilaoshi/cupbox/releases/latest">Releases 下载</button>
@@ -242,6 +351,19 @@
           </div>
           <div class="hint">发现新版本时会在顶栏提示，你可以选择合适的时间下载更新。</div>
         </div>
+        <!-- 免费模型 -->
+        <div class="tab-page" id="tab-freemodel" hidden>
+          <div class="hint">免 API Key 的第三方免费模型通道。启用并刷新目录后，可在对话输入框的模型菜单中选择；支持文本问答及实验性兼容工作流。免费服务可能限流或停用；任务、历史和批准读取的文件会发送到第三方通道。工作流开始前会确认，本地操作逐次批准，不自动切换付费服务。</div>
+          <label class="filesystem-enable"><input id="freemodel-enabled" type="checkbox" />启用免费模型通道</label>
+          <div class="free-model-toolbar"><button id="freemodel-refresh" class="btn-ghost2">刷新目录</button><p id="freemodel-status" role="status"></p></div><div id="freemodel-list-wrap">
+            <div class="f-label">可用模型</div>
+            <div id="freemodel-list"></div>
+          </div>
+          <div class="hint freemodel-credit-note">
+            <strong>当前接入：</strong>Kilo 公开免费池（动态获取服务端标记免费的模型）与 <a href="https://vireonix.ai/docs" target="_blank" rel="noopener">Vireonix Auto</a>。参考 dsh 社区接入方案，直接连接公开接口，无需登录或 API Key。<br><br><strong>使用说明：</strong>先开启总开关，点击刷新列表后选择模型。调用前重新检查免费标记，变为收费即拒绝提交；不会自动切换供应商。用“检测连接”测试当前网络。第三方服务会限流、下线，Kilo 上游可能留存输入并用于改进服务，请勿提交敏感资料。免费池的图像输入不等于绘图能力，QQ 生图需另外配置生图模型。旧 OpenCode 请求路径保持停用。</div>
+        </div>
+      </div>
+      </section>
       </div>
     </div>
 
@@ -274,6 +396,33 @@
       <div class="upd-foot">数据源：GitHub Releases → npm registry · 本机静默后仍可点顶栏徽标查看 · <code>CUPBOX_UPDATE_DISABLE=1</code> 可关闭检查</div>
     </div>
 
+    <!-- 开屏公告弹窗（仓库 announcement.json → 每次启动检测更新） -->
+    <div class="modal-scrim" id="ann-scrim" hidden></div>
+    <div class="modal ann-modal glass" id="ann-modal" hidden role="dialog" aria-modal="true" aria-labelledby="ann-title">
+      <div class="upd-hero">
+        <span class="upd-spark" aria-hidden="true">✉</span>
+        <div class="upd-hero-txt">
+          <div class="upd-kicker">NOTICE · 公告</div>
+          <div class="upd-title" id="ann-title">公告</div>
+        </div>
+        <button type="button" class="ghost-btn" id="ann-close" title="关闭">✕</button>
+      </div>
+      <div class="ann-meta">
+        <span class="chip" id="ann-date" hidden></span>
+        <span class="chip" id="ann-source" hidden>GitHub</span>
+      </div>
+      <div class="ann-body" id="ann-body"></div>
+      <label class="ann-opt"><input type="checkbox" id="ann-mute" />不再提示当前公告（有新公告时仍会显示）</label>
+      <div class="upd-actions">
+        <button type="button" class="btn-run" id="btn-ann-ok">
+          <span class="btn-label">知道了</span>
+          <span class="btn-sheen" aria-hidden="true"></span>
+        </button>
+        <button type="button" class="btn-ghost2" id="btn-ann-github" hidden>在 GitHub 查看</button>
+      </div>
+      <div class="upd-foot">公告来自仓库 <code>announcement.json</code> · 检查失败时不会打扰你 · <code>CUPBOX_ANNOUNCEMENT_DISABLE=1</code> 可关闭</div>
+    </div>
+
     <!-- 上下文洞察弹窗（成分分解 / 占用趋势 / 事件） -->
     <div class="modal-scrim" id="ctx-scrim" hidden></div>
     <div class="modal ctx-modal glass" id="ctx-modal" hidden role="dialog" aria-modal="true" aria-label="上下文洞察">
@@ -304,10 +453,23 @@
   </div>
 
   <!-- 轻提示 -->
-  <div class="toast" id="toast" hidden></div>
+  <div class="toast" id="toast" hidden aria-label="操作提示"></div>
+  <div id="ux-status" class="sr-only" role="status" aria-live="polite"></div><div id="ux-alert" class="sr-only" role="alert" aria-live="assertive"></div>
+  <aside id="notice-panel" class="notice-panel" hidden aria-label="通知记录"><header><div><b>通知</b><p>本次启动的操作反馈 · 最近 30 条</p></div><button id="notice-close" class="ghost-btn" aria-label="关闭通知">×</button></header><div id="notice-list"></div><div id="notice-empty"><img src="assets/ui-success.svg" alt="" /><b>暂时没有新通知</b><p>复制、保存和运行结果都可以在这里回看。</p></div><footer><button id="notice-clear" class="ghost-btn">清除通知记录</button></footer></aside>
+  <div id="ux-confirm" class="ux-confirm-screen" hidden><section class="confirm-bar ux-confirm-card" role="alertdialog" aria-modal="true" aria-labelledby="ux-confirm-title" aria-describedby="ux-confirm-message ux-confirm-consequence"><img src="assets/ui-warning.svg" class="ux-risk-art" alt="" /><span class="ux-eyebrow">操作确认</span><h2 id="ux-confirm-title"></h2><p id="ux-confirm-message"></p><div class="ux-consequence" id="ux-confirm-consequence"></div><label id="ux-confirm-ack" class="ux-ack"><input id="ux-confirm-check" type="checkbox" />我已了解后果，确认继续</label><div class="ux-confirm-actions"><button id="ux-confirm-yes" class="btn-danger">确认</button><button id="ux-confirm-no" class="btn-ghost2">取消</button></div></section></div>
 
-  <div id="approval-screen" hidden><section class="approval-dialog" role="dialog" aria-modal="true" aria-labelledby="approval-title"><span class="approval-kicker">等待你的批准</span><h2 id="approval-title"></h2><h3 id="approval-tool"></h3><p id="approval-context"></p><pre id="approval-args"></pre><p id="approval-directory"></p><div><button id="approval-deny" class="btn-ghost2">拒绝</button><button id="approval-allow" class="btn-run">批准本次操作</button></div></section></div>
-  <section id="startup-screen" class="startup-screen" hidden aria-label="启动动画"><img id="startup-backdrop" class="startup-backdrop" alt="" /><div id="startup-media" class="startup-media"></div><div class="startup-shade"></div><div class="startup-orbits" aria-hidden="true"><i></i><i></i><i></i></div><div class="startup-content"><img class="startup-logo" src="assets/cupbox-logo.svg" alt="Cupbox" /><h1>Cupbox</h1><p id="startup-display-caption"></p><span id="startup-display-version"></span><p id="startup-media-error" role="status"></p></div><button id="skip-startup">跳过动画 <kbd>Esc</kbd></button></section>
-  <script src="icons.js"></script><script src="themes.js"></script><script src="startup.js"></script><script src="providers.js"></script><script src="execution.js"></script><script src="tool-workspace.js"></script><script src="model-workspace.js"></script><script src="app.js"></script>
-</body>
+  <div id="approval-screen" hidden><section class="approval-dialog" role="alertdialog" aria-modal="true" aria-labelledby="approval-title" aria-describedby="approval-consequence"><header class="approval-heading"><img class="ux-risk-art" id="approval-art" src="assets/ui-warning.svg" alt="" /><div><span class="approval-kicker" id="approval-level">等待你的批准</span><h2 id="approval-title"></h2></div></header><p id="approval-consequence" class="ux-consequence"></p><div class="approval-operation"><h3 id="approval-tool"></h3><p id="approval-context"></p></div><dl id="approval-targets" class="approval-targets"></dl><div class="approval-directory"><span>工作目录</span><code id="approval-directory"></code></div><section class="approval-change" id="approval-change" hidden><h4>变更预览</h4><pre id="approval-diff"></pre></section><details class="approval-details"><summary>查看技术参数</summary><pre id="approval-args"></pre></details><label id="approval-ack" class="ux-ack" hidden><input id="approval-check" type="checkbox" />我已核对目标并了解操作后果</label><p class="approval-queue" id="approval-queue"></p><div class="approval-actions"><button id="approval-deny" class="btn-ghost2">拒绝</button><button id="approval-allow" class="btn-run">批准本次操作</button></div><p class="approval-footnote">仅对本次请求有效 · Esc 拒绝</p></section></div>
+  <section id="startup-screen" class="startup-screen" hidden aria-label="启动动画"><img id="startup-backdrop" class="startup-backdrop" alt="" /><div id="startup-media" class="startup-media"></div><div class="startup-shade"></div><div class="startup-orbits" aria-hidden="true"><i></i><i></i><i></i></div><div class="startup-frame" aria-hidden="true"></div><div class="startup-content"><div class="startup-logo-holder"><img class="startup-logo" src="assets/cupbox-logo.svg" alt="Cupbox" /><svg class="logo-hug-heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21C9 18 2 13 2 7a5 5 0 0 1 10-1 5 5 0 0 1 10 1c0 6-7 11-10 14Z"/></svg><svg class="logo-hug-heart second" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21C9 18 2 13 2 7a5 5 0 0 1 10-1 5 5 0 0 1 10 1c0 6-7 11-10 14Z"/></svg></div><div class="startup-eyebrow">YOUR EVERYDAY WORKSPACE</div><h1><span class="startup-wordmark">Cupbox</span><span class="startup-tagline">灵感，从这里开始。</span></h1><p id="startup-display-caption"></p><div class="startup-arrival"><i aria-hidden="true"></i><span>进入工作台</span><span id="startup-display-version"></span></div><p id="startup-media-error" role="status"></p></div><button id="skip-startup">跳过动画 <kbd>Esc</kbd></button></section>
+  <script src="vendor/marked.umd.js"></script><script src="vendor/purify.min.js"></script><script src="response-view.js"></script><script src="music.js"></script><script src="icons.js"></script><script src="feature-visuals.js"></script><script src="palettes.js"></script><script src="themes.js"></script><script src="startup-sakura.js"></script><script src="startup-scenes.js"></script><script src="startup.js"></script><script src="providers.js"></script><script src="risk-model.js"></script><script src="interactions.js"></script><script src="execution.js"></script><script src="tool-workspace.js"></script><script src="chat-picker.js"></script><script src="model-workspace.js"></script><script src="workbench.js"></script><script src="computer-tools.js"></script><script src="march7th.js"></script><script src="agent-presets.js"></script><script src="plugin-settings.js"></script><script src="smtp-settings.js"></script><script src="settings-layout.js"></script><script src="pet-academy-eyes.js"></script><script src="pet-blink.js"></script><script src="pet-animation.js"></script><script src="pet-art.js"></script><script src="pet-care-view.js"></script><script src="pet-diary.js"></script><script src="pet-settings.js"></script><script src="branding.js"></script><script src="office-workflows.js"></script><script src="office-extra-local.js"></script><script src="office-local.js"></script><script src="about-room-motion.js"></script><script src="about-room-art-v3.js"></script><script src="about-room-lighting.js"></script><script src="about-room-art-v4.js"></script><script src="about-room.js"></script><script src="transcript.js"></script><script src="app.js"></script><script src="loopback-audit.js"></script>
+<script src="app-prompts.js"></script><script src="computer-ui.js"></script><script src="qq-music-login.js"></script><script src="background-music-online.js"></script><script src="experience.js"></script><script src="harness-workspace.js"></script></body>
 </html>
+
+
+
+
+
+
+
+
+
+

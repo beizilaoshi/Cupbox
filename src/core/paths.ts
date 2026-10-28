@@ -1,4 +1,4 @@
-// Cupbox 数据目录（v1.0.2）：默认存在系统「文档」目录（~/Documents/Cupbox），
+// Cupbox 数据目录（v1.0.3）：默认存在系统「文档」目录（~/Documents/Cupbox），
 // 便于用户找到与备份；CUPBOX_HOME 仍可整体覆盖（测试与便携场景）。
 // 旧版 ~/.cupbox 首次启动自动迁移（只复制不删除，失败静默、不影响启动）。
 import { spawnSync } from 'node:child_process';

@@ -1,0 +1,4 @@
+import {prepareMusicVoice} from '../desktop/qq/music-voice-converter.js';
+export const fixtureSilk=Buffer.concat([Buffer.from([2]),Buffer.from('#!SILK_V3'),Buffer.from([1,0,0])]);
+export function fixtureWav(){const samples=2400,bytes=Buffer.alloc(44+samples*2);bytes.write('RIFF');bytes.writeUInt32LE(bytes.length-8,4);bytes.write('WAVEfmt ',8);bytes.writeUInt32LE(16,16);bytes.writeUInt16LE(1,20);bytes.writeUInt16LE(1,22);bytes.writeUInt32LE(24000,24);bytes.writeUInt32LE(48000,28);bytes.writeUInt16LE(2,32);bytes.writeUInt16LE(16,34);bytes.write('data',36);bytes.writeUInt32LE(samples*2,40);for(let i=0;i<samples;i++)bytes.writeInt16LE(Math.round(Math.sin(i*Math.PI*880/24000)*6000),44+i*2);return bytes;}
+export const fixtureConverter=(song,options)=>prepareMusicVoice({...song,source:undefined},{...options,download:async()=>({status:200,bytes:fixtureWav(),truncated:false}),decode:async()=>Buffer.alloc(4800),encode:async()=>({bytes:fixtureSilk,duration:100})});

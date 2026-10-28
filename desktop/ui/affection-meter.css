@@ -1,0 +1,10 @@
+.affection-meter{width:100%;height:4px;margin:12px 0 0}
+.affection-meter svg{display:block;width:100%;height:4px;overflow:hidden;fill:none;stroke:none}
+.affection-meter-track{fill:var(--stroke)}
+.affection-meter-fill{fill:#3b82f6}
+.affection-meter[data-direction=negative] .affection-meter-fill{fill:#ef4444}
+.affection-meter-zero{stroke:var(--surface);stroke-width:1;opacity:.7;vector-effect:non-scaling-stroke}
+.relationship-stats progress{display:block;height:4px;appearance:none;-webkit-appearance:none;border:0;border-radius:999px;background:var(--stroke);overflow:hidden}
+.relationship-stats progress::-webkit-progress-bar{background:var(--stroke);border-radius:999px}
+.relationship-stats progress::-webkit-progress-value{background:var(--accent);border-radius:999px}
+#route-progress.affection-meter{height:4px;margin:8px 0 15px}

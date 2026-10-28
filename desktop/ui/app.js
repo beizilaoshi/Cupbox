@@ -84,7 +84,7 @@ const TOOLS = [
   { id: "run", name: "受保护命令执行", group: "系统", warn: "安全默认：白名单必填 · 元字符拦截",
     fields: [
       { k: "command", label: "命令", type: "text", ph: "npm test" },
-      { k: "allowPrefixes", label: "允许的前缀白名单 *必填（逗号分隔）", type: "text", ph: "npm,git status" },
+      { k: "mode", label: "执行方式", type: "select", options: ["whitelist", "shell"], value: "whitelist" },
       { k: "cwd", label: "工作目录（可选）", type: "text" },
       { k: "timeoutMs", label: "超时毫秒（≤ 600000）", type: "text", value: "60000" },
     ] },
@@ -97,8 +97,66 @@ const TOOLS = [
     ] },
 ];
 
-const GROUP_ORDER = ["数据", "文件", "图片", "系统"];
-const OPTION_LABELS = { b64e: "Base64 编码", b64d: "Base64 解码", urle: "URL 编码", urlde: "URL 解码", "html-esc": "HTML 转义", "html-unesc": "HTML 还原", json: "JSON 格式化", "json-min": "JSON 压缩", category: "按文件类型", date: "按日期", regex: "按正则规则", create: "创建压缩包", extract: "解压文件", list: "查看列表", read: "读取剪贴板", write: "写入剪贴板", kill: "结束进程", auto: "自动选择", windows: "Windows 原生识别" };
+const USEIT_CARDS = [
+  { id: "useit_status", name: "Use-It 引擎", group: "系统", hint: "检查 Use-It 本地引擎与 Office / AutoCAD 的连接状态；未启动时给出安装命令。",
+    fields: [{ k: "engineUrl", label: "引擎地址（留空 = 127.0.0.1:8324）", type: "text", ph: "http://127.0.0.1:8324" }] },
+  { id: "useit_catalog", name: "Use-It 动作清单", group: "系统", hint: "列出引擎当前支持的控制器与动作名，编写 actions 或脚本前先看这里。",
+    fields: [{ k: "engineUrl", label: "引擎地址（留空 = 127.0.0.1:8324）", type: "text", ph: "http://127.0.0.1:8324" }] },
+  { id: "useit_ppt", name: "PowerPoint 实时操作", group: "办公", hint: "通过 Use-It 引擎用 COM 操作已打开的 PPT：读取结构、执行动作数组或脚本。会实时改动文档。",
+    warn: "需要本机引擎与已安装的 PowerPoint；写入前请求批准",
+    fields: [
+      { k: "action", label: "动作", type: "select", options: ["status", "snapshot", "open", "close", "actions", "code"], value: "snapshot" },
+      { k: "filePath", label: "打开文件（action=open）", type: "text", ph: "C:/path/deck.pptx" },
+      { k: "readOnly", label: "只读打开", type: "checkbox" },
+      { k: "save", label: "关闭时保存", type: "checkbox" },
+      { k: "actions", label: "动作数组 JSON（action=actions）", type: "textarea", ph: '[{"action":"add_slide","layout_index":1}]' },
+      { k: "code", label: "脚本（action=code）", type: "textarea", ph: "PowerShell 或 Python 脚本" },
+      { k: "language", label: "脚本语言", type: "select", options: ["PowerShell", "Python"], value: "PowerShell" },
+      { k: "returnScreenshot", label: "返回截图信息", type: "checkbox" },
+    ] },
+  { id: "useit_word", name: "Word 实时操作", group: "办公", hint: "通过 Use-It 引擎操作已打开的 Word：读取结构或执行脚本（引擎暂不支持结构化动作）。",
+    warn: "需要本机引擎与已安装的 Word；写入前请求批准",
+    fields: [
+      { k: "action", label: "动作", type: "select", options: ["status", "snapshot", "open", "close", "code"], value: "snapshot" },
+      { k: "filePath", label: "打开文件（action=open）", type: "text", ph: "C:/path/doc.docx" },
+      { k: "readOnly", label: "只读打开", type: "checkbox" },
+      { k: "save", label: "关闭时保存", type: "checkbox" },
+      { k: "code", label: "脚本（action=code）", type: "textarea", ph: "PowerShell 或 Python 脚本" },
+      { k: "language", label: "脚本语言", type: "select", options: ["PowerShell", "Python"], value: "PowerShell" },
+    ] },
+  { id: "useit_excel", name: "Excel 实时操作", group: "办公", hint: "通过 Use-It 引擎操作已打开的 Excel：读取结构或执行脚本（引擎只接受脚本模式）。",
+    warn: "需要本机引擎与已安装的 Excel；写入前请求批准",
+    fields: [
+      { k: "action", label: "动作", type: "select", options: ["status", "snapshot", "open", "close", "code"], value: "snapshot" },
+      { k: "filePath", label: "打开文件（action=open）", type: "text", ph: "C:/path/book.xlsx" },
+      { k: "readOnly", label: "只读打开", type: "checkbox" },
+      { k: "save", label: "关闭时保存", type: "checkbox" },
+      { k: "code", label: "脚本（action=code）", type: "textarea", ph: "PowerShell 或 Python 脚本" },
+      { k: "language", label: "脚本语言", type: "select", options: ["PowerShell", "Python"], value: "PowerShell" },
+    ] },
+  { id: "useit_autocad", name: "AutoCAD 实时操作", group: "系统", hint: "通过 Use-It 引擎连接 AutoCAD：查看状态、打开/激活图纸、读取实体、按 JSON 或 Python 绘图。",
+    warn: "需要本机引擎与已安装的 AutoCAD；写入前请求批准",
+    fields: [
+      { k: "action", label: "动作", type: "select", options: ["status", "snapshot", "launch", "open", "close", "activate", "step"], value: "status" },
+      { k: "filePath", label: "图纸路径（open）", type: "text", ph: "C:/path/drawing.dwg" },
+      { k: "drawingName", label: "激活图纸名（activate）", type: "text" },
+      { k: "index", label: "或：图纸序号（activate）", type: "text", ph: "0" },
+      { k: "stepAction", label: "step 方式", type: "select", options: ["draw_from_json", "execute_python_com"], value: "draw_from_json" },
+      { k: "data", label: "绘图 JSON（draw_from_json）", type: "textarea", ph: '{"entities":[]}' },
+      { k: "code", label: "Python 脚本（execute_python_com）", type: "textarea" },
+    ] },
+  { id: "useit_computer", name: "桌面 GUI 自动化", group: "系统", hint: "通过 Use-It 引擎截屏，或执行鼠标/键盘动作数组；会影响当前桌面。",
+    warn: "操作真实桌面，执行前请求批准",
+    fields: [
+      { k: "action", label: "动作", type: "select", options: ["screenshot", "actions"], value: "screenshot" },
+      { k: "actions", label: "动作数组 JSON（action=actions）", type: "textarea", ph: '[{"type":"click","x":100,"y":200}]' },
+      { k: "resize", label: "截图缩放到 1920x1080", type: "checkbox", value: true },
+    ] },
+];
+TOOLS.push(...(window.CupboxComputerTools||[]),...(window.CupboxOfficeLocal?.tools||[]),...USEIT_CARDS);
+const GROUP_ORDER = ["办公", "数据", "文件", "图片", "系统"];
+const OPTION_LABELS = {sakura:"樱花蓝紫",ink:"墨染青绿",minimal:"极简灰蓝", whitelist:"已批准的项目白名单", shell:"Shell · 每次请求批准", b64e: "Base64 编码", b64d: "Base64 解码", urle: "URL 编码", urlde: "URL 解码", "html-esc": "HTML 转义", "html-unesc": "HTML 还原", json: "JSON 格式化", "json-min": "JSON 压缩", category: "按文件类型", date: "按日期", regex: "按正则规则", create: "创建压缩包", extract: "解压文件", list: "查看列表", read: "读取剪贴板", write: "写入剪贴板", kill: "结束进程", auto: "自动选择", windows: "Windows 原生识别" };
+TOOLS.find(t=>t.id==="run").hint="白名单在设置 → 开发与授权 → 项目策略中维护；未授权命令可选择 Shell 逐次请求批准。";
 for (const t of TOOLS) {
   if (["organize", "rename"].includes(t.id)) {
     t.warn = "文件变更默认先预览";
@@ -109,7 +167,7 @@ const $ = (id) => document.getElementById(id);
 const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const api = window.cupbox || {};
-let prefs = { theme: "light", accent: "aurora", mode: "ask", workspace: "", disabledTools: [], dismissedVersion: "", background: "sakura", backgroundVeil: 72, backgroundBlur: 0, backgroundFit: "cover", startupEnabled:true, startupStyle:'orbit', startupDuration:1.6, startupCaption:'让灵感，轻轻启程。' };
+let prefs = { theme: "light", accent: "aurora", mode: "ask", workspace: "", disabledTools: [], dismissedVersion: "", background: "sakura", backgroundVeil: 72, backgroundBlur: 0, backgroundFit: "cover", startupEnabled:true, startupStyle:'orbit', startupDuration:5, startupCaption:'让灵感，轻轻启程。', announcementSeenVersion:"", announcementMuted:false };
 const toolDrafts = new Map();
 const toolResults = new Map();
 let toolRunning = false;
@@ -125,6 +183,8 @@ let sending = false;
 let drawerOpen = false;
 let modalOpen = false;
 let updOpen = false;    // 更新公告弹窗
+let annOpen = false;    // 开屏公告弹窗
+let announcement = null; // 当前展示的公告
 let ctxOpen = false;    // 上下文洞察弹窗
 let updateInfo = null;  // 最近一次检测结果（UpdateInfo）
 
@@ -153,11 +213,13 @@ function applyTheme(themePref, accent) {
 }
 
 async function savePrefs(patch) {
+  const previous=prefs;
   prefs = { ...prefs, ...patch };
   try {
     const r = await api.prefsSet?.(patch);
-    if (r && !r.ok) toast("外观暂时无法保存，请稍后重试");
-  } catch { /* 偏好写失败不阻塞界面 */ }
+    if (r && !r.ok) throw new Error(r.error || '请稍后重试');
+    return true;
+  } catch(e) { const restored={...prefs}; for(const key of Object.keys(patch))if(restored[key]===patch[key])restored[key]=previous[key];prefs=restored;toast('设置保存失败：'+e.message);return false; }
 }
 
 window.matchMedia("(prefers-color-scheme: light)").addEventListener?.("change", () => {
@@ -166,12 +228,14 @@ window.matchMedia("(prefers-color-scheme: light)").addEventListener?.("change", 
 
 function setMode(mode, persist) {
   if (sending) return;
+  if(mode==="agent"&&persist!==false&&window.CupboxHarness){void window.CupboxHarness.selectWork();return;}
+  window.CupboxHarness?.setMode?.(mode==="agent"?"native-work":"normal");
   prefs.mode = mode === "agent" ? "agent" : "ask";
   document.querySelectorAll("#mode-toggle .mode-btn").forEach((b) => {
     b.classList.toggle("active", b.dataset.mode === prefs.mode);
   });
   if (persist !== false) void savePrefs({ mode: prefs.mode });
-  $("mode-description").textContent = prefs.mode === "agent" ? "调用本地工具完成任务 · 文件变更默认先预览" : "一起理清思路，找到答案";
+  $("mode-description").textContent = prefs.mode === "agent" ? "AI 自动选择工具 · 重要操作由你批准" : "一起理清思路，找到答案";
 }
 
 /* ---------------- 工具抽屉 ---------------- */
@@ -212,7 +276,7 @@ function renderDrawerTools() {
       if (t.warn) {
         const badge = document.createElement("span");
         badge.className = "t-badge";
-        badge.textContent = "安全";
+        badge.textContent = "需留意";
         b.appendChild(badge);
       }
       b.addEventListener("click", () => selectTool(t.id));
@@ -398,7 +462,7 @@ function collect() {
   for (const el of $("tool-form").querySelectorAll("[data-key]")) {
     const k = el.dataset.key;
     if (el.type === "checkbox") args[k] = el.checked;
-    else args[k] = el.value;
+    else args[k] = current.id.startsWith('desktop_')&&['x','y','steps'].includes(k)?Number(el.value):el.value;
   }
   return args;
 }
@@ -453,7 +517,7 @@ function renderResult(res, ms) {
   meta.appendChild(copy);
   const pre = document.createElement("div");
   pre.className = "ok-block";
-  if (CupboxToolWorkspace.result(r,body)) {
+  if (window.CupboxOfficeLocal?.result(r,body)||CupboxToolWorkspace.result(r,body)) {
     // Tables and file lists include an expandable raw JSON view.
   } else if (typeof r === "string") {
     pre.textContent = r;
@@ -478,7 +542,7 @@ function renderResult(res, ms) {
 
 /* ---------------- 工具运行 ---------------- */
 
-async function run() {
+async function run(options={}) {
   if (toolRunning || !visibleTools().some(t => t.id === current.id)) return;
   toolRunning = true;
   const btn = $("btn-run");
@@ -490,11 +554,13 @@ async function run() {
   const t0 = performance.now();
   const runningId=current.id;
   try {
-    const res = await api.run(runningId, collect());
+    const raw=collect(),office=window.CupboxOfficeLocal?.handles(runningId);const args=office?CupboxOfficeLocal.request(runningId,raw,options.officeCommit===true):raw;
+    const res = await api.run(runningId,args);if(office)CupboxOfficeLocal.remember(runningId,raw,res.ok?res.result:null);
     const ms=Math.round(performance.now()-t0);toolResults.set(runningId,{res,ms});
     if(current.id===runningId)renderResult(res,ms);
+    toast(res.ok?(res.result?.dryRun?"预览已准备好，文件尚未写入":"工具处理完成，可在结果区查看"):"工具执行失败："+(res.error||"请检查参数"));
   } catch (e) {
-    const res={ ok: false, error: String((e && e.message) || e) };const ms=Math.round(performance.now()-t0);toolResults.set(runningId,{res,ms});if(current.id===runningId)renderResult(res,ms);
+    const res={ ok: false, error: String((e && e.message) || e) };const ms=Math.round(performance.now()-t0);toolResults.set(runningId,{res,ms});if(current.id===runningId)renderResult(res,ms);toast("工具执行失败："+res.error);
   } finally {
     toolRunning = false;
     btn.disabled = false;
@@ -510,25 +576,321 @@ function chatTime() {
   return new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
 }
 
-function scrollChat() {
+/* 只有用户本来就在底部时才跟随输出；一旦上翻阅读，流式内容不再把视角拽回去。
+   .chat-scroll 带 scroll-behavior:smooth，每帧赋 scrollTop 会被平滑动画拖成“追着跑”，
+   所以程序化跟随用 instant 直接落底。 */
+let followChat = true;
+const CHAT_FOLLOW_SLACK = 48;
+function chatNearBottom(el) {
+  return el.scrollHeight - el.scrollTop - el.clientHeight < CHAT_FOLLOW_SLACK;
+}
+function scrollChat(force = false) {
   const el = $("chat-scroll");
-  if (el) el.scrollTop = el.scrollHeight;
+  if (!el || (!force && !followChat)) return;
+  try { el.scrollTo({ top: el.scrollHeight, behavior: "instant" }); }
+  catch { el.scrollTop = el.scrollHeight; }
+}
+$("chat-scroll")?.addEventListener("scroll", () => {
+  const el = $("chat-scroll");
+  if (el) followChat = chatNearBottom(el);
+  syncChatRail();
+}, { passive: true });
+
+/* ---- 右侧消息定位条 + 历史折叠：长对话只渲染最近一部分，其余按需展开 ---- */
+const CHAT_FOLD_KEEP = 40;
+const CHAT_FOLD_CHUNK = 30;
+const CHAT_LIVE_FOLD_AT = 80;
+const CHAT_LIVE_FOLD_COUNT = 20;
+let chatFold = { messages: [], nodes: [] };
+let chatBatch = false;
+let chatRailFrame = 0;
+
+function chatFoldCount() {
+  return chatFold.messages.length + chatFold.nodes.length;
 }
 
-function pushMsg(kind, payload) {
+function ensureChatFoldBar() {
+  let bar = $("chat-fold");
+  if (bar) return bar;
+  bar = document.createElement("div");
+  bar.id = "chat-fold";
+  bar.className = "chat-fold";
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "chat-fold-btn";
+  button.innerHTML = `<span class="chat-fold-count"></span><small>展开</small>`;
+  button.addEventListener("click", expandChatFold);
+  bar.append(button);
+  return bar;
+}
+
+function updateChatFold() {
   const scroll = $("chat-scroll");
-  $("chat-empty")?.remove();
-  const div = document.createElement("div");
+  if (!scroll) return;
+  const total = chatFoldCount();
+  if (!total) { $("chat-fold")?.remove(); return; }
+  const bar = ensureChatFoldBar();
+  bar.querySelector(".chat-fold-count").textContent = `更早的 ${total} 条消息`;
+  const anchor = [...scroll.children].find((el) => el.classList.contains("msg") && !el.classList.contains("streaming-response"));
+  scroll.insertBefore(bar, anchor || null);
+}
+
+function expandChatFold() {
+  const scroll = $("chat-scroll");
+  if (!scroll) return;
+  const before = scroll.scrollHeight;
+  const anchor = [...scroll.children].find((el) => el.classList.contains("msg") && !el.classList.contains("streaming-response")) || null;
+  let made = 0;
+  if (chatFold.messages.length) {
+    const take = chatFold.messages.splice(-CHAT_FOLD_CHUNK);
+    const fragment = document.createDocumentFragment();
+    chatBatch = true;
+    for (const m of take) {
+      const kind = m.role === "user" ? "user" : "assistant";
+      fragment.append(buildMessage(kind, { text: m.text, trace: m.trace, tasks: m.tasks, media: m.media, messageId: m.id, feedback: m.feedback, memoryId: m.memoryId, memoryText: m.memoryText, time: "" }));
+    }
+    chatBatch = false;
+    scroll.insertBefore(fragment, anchor);
+    made = take.length;
+  } else if (chatFold.nodes.length) {
+    const take = chatFold.nodes.splice(-CHAT_FOLD_CHUNK);
+    for (const entry of take) { scroll.insertBefore(entry.node, anchor); made += 1; }
+  }
+  if (made) scroll.scrollTo({ top: scroll.scrollTop + (scroll.scrollHeight - before), behavior: "instant" });
+  updateChatFold();
+  renderChatRail();
+}
+
+function flashChatFold() {
+  updateChatFold();
+  const bar = $("chat-fold");
+  if (!bar) return;
+  bar.classList.remove("flash");
+  void bar.offsetWidth;
+  bar.classList.add("flash");
+  bar.scrollIntoView({ block: "center", behavior: "smooth" });
+  setTimeout(() => bar.classList.remove("flash"), 1600);
+}
+
+function autoFoldChat() {
+  if (chatBatch || !followChat) return;
+  const scroll = $("chat-scroll");
+  if (!scroll) return;
+  const messages = [...scroll.querySelectorAll(".msg:not(.streaming-response)")];
+  if (messages.length <= CHAT_LIVE_FOLD_AT) return;
+  for (const node of messages.slice(0, CHAT_LIVE_FOLD_COUNT)) {
+    chatFold.nodes.push({
+      kind: node.classList.contains("user") ? "user" : "assistant",
+      text: node.dataset.preview || "",
+      node,
+    });
+    node.remove();
+  }
+}
+
+function chatRailTurns() {
+  const turns = [];
+  const clean = (text, max) => String(text || "").replace(/\s+/g, " ").trim().slice(0, max);
+  const messages = chatFold.messages;
+  for (let i = 0; i < messages.length; i += 1) {
+    if (messages[i].role !== "user") continue;
+    let response = "";
+    for (let j = i + 1; j < messages.length && messages[j].role !== "user"; j += 1) {
+      if (messages[j].role === "assistant") response = messages[j].text || "";
+    }
+    turns.push({ prompt: clean(messages[i].text, 60), response: clean(response, 120), node: null });
+  }
+  const nodes = chatFold.nodes;
+  for (let i = 0; i < nodes.length; i += 1) {
+    if (nodes[i].kind !== "user") continue;
+    let response = "";
+    for (let j = i + 1; j < nodes.length && nodes[j].kind !== "user"; j += 1) {
+      if (nodes[j].kind === "assistant") response = nodes[j].node?.textContent || "";
+    }
+    turns.push({ prompt: clean(nodes[i].text, 60), response: clean(response, 120), node: nodes[i].node });
+  }
+  const scroll = $("chat-scroll");
+  for (const el of scroll?.querySelectorAll(":scope > .msg.user") || []) {
+    let response = "";
+    let next = el.nextElementSibling;
+    while (next) {
+      if (next.classList.contains("msg.user")) break;
+      if (next.classList.contains("msg.assistant")) { response = next.textContent || ""; break; }
+      next = next.nextElementSibling;
+    }
+    turns.push({ prompt: clean(el.dataset.preview || "", 60), response: clean(response, 120), node: el });
+  }
+  return turns;
+}
+
+function positionChatRail() {
+  const rail = $("chat-rail"), scroll = $("chat-scroll"), stage = $("stage");
+  if (!rail || rail.hidden || !scroll || !stage) return;
+  const chat = scroll.getBoundingClientRect(), host = stage.getBoundingClientRect();
+  rail.style.top = `${chat.top - host.top + chat.height / 2}px`;
+  rail.style.maxHeight = `${Math.max(80, Math.min(420, chat.height - 80))}px`;
+}
+
+function showRailPreview(tick, turn) {
+  const rail = $("chat-rail");
+  const preview = rail?.querySelector(".chat-rail-preview");
+  const scroller = rail?.querySelector(".chat-rail-scroller");
+  if (!preview || !scroller || !turn) return;
+  preview.replaceChildren();
+  const head = document.createElement("div");
+  head.className = "chat-rail-preview-prompt";
+  head.textContent = turn.prompt || "消息";
+  preview.append(head);
+  if (turn.response) {
+    const body = document.createElement("div");
+    body.className = "chat-rail-preview-response";
+    body.textContent = turn.response;
+    preview.append(body);
+  }
+  const height = scroller.clientHeight || 1;
+  const center = tick.offsetTop + tick.offsetHeight / 2 - scroller.scrollTop;
+  const top = Math.max(6, Math.min(height - 108, center - 50));
+  preview.style.top = `${top}px`;
+  preview.hidden = false;
+}
+
+function hideRailPreview() {
+  const preview = $("chat-rail")?.querySelector(".chat-rail-preview");
+  if (preview) preview.hidden = true;
+}
+
+function centerChatRail(behavior = "smooth") {
+  const rail = $("chat-rail");
+  const scroller = rail?.querySelector(".chat-rail-scroller");
+  const active = scroller?.querySelector(".chat-rail-mark.active");
+  if (!scroller || !active) return;
+  const height = scroller.clientHeight || 1;
+  const center = active.offsetTop + active.offsetHeight / 2 - scroller.scrollTop;
+  if (center >= 28 && center <= height - 28) return;
+  scroller.scrollTo({ top: Math.max(0, active.offsetTop + active.offsetHeight / 2 - height / 2), behavior });
+}
+
+function renderChatRail() {
+  const rail = $("chat-rail"), scroll = $("chat-scroll");
+  if (!rail || !scroll) return;
+  if (window.CupboxHarness?.mode?.() === "harness") { rail.hidden = true; rail.replaceChildren(); return; }
+  const turns = chatRailTurns();
+  if (turns.length < 2) { rail.hidden = true; rail.replaceChildren(); return; }
+  const previous = rail.querySelector(".chat-rail-mark.active")?.dataset.index;
+  rail.hidden = false;
+  rail.replaceChildren();
+  rail._turns = turns;
+
+  const preview = document.createElement("div");
+  preview.className = "chat-rail-preview";
+  preview.hidden = true;
+  preview.setAttribute("role", "tooltip");
+
+  const scroller = document.createElement("div");
+  scroller.className = "chat-rail-scroller";
+  const marks = document.createElement("div");
+  marks.className = "chat-rail-marks";
+  const pitch = 10;
+  marks.style.height = `${turns.length * pitch + 12}px`;
+  turns.forEach((turn, index) => {
+    const tick = document.createElement("button");
+    tick.type = "button";
+    tick.className = "chat-rail-mark";
+    tick.dataset.index = String(index);
+    tick.style.top = `${6 + index * pitch}px`;
+    tick.setAttribute("aria-label", `${turn.node ? "跳到" : "展开并跳到"}第 ${index + 1} 轮：${turn.prompt || "消息"}`);
+    if (!turn.node) tick.classList.add("folded");
+    tick._turn = turn;
+    tick.addEventListener("pointerenter", () => showRailPreview(tick, turn));
+    tick.addEventListener("pointermove", () => showRailPreview(tick, turn));
+    tick.addEventListener("focus", () => showRailPreview(tick, turn));
+    tick.addEventListener("blur", hideRailPreview);
+    tick.addEventListener("click", () => {
+      if (turn.node) { jumpToMessage(turn.node); return; }
+      revealRailTurn(index);
+    });
+    marks.append(tick);
+  });
+  scroller.append(marks);
+  scroller.addEventListener("scroll", () => {
+    scroller.classList.toggle("fade-top", scroller.scrollTop > 1);
+    scroller.classList.toggle("fade-bottom", scroller.scrollTop < scroller.scrollHeight - scroller.clientHeight - 1);
+    hideRailPreview();
+  }, { passive: true });
+  rail.onpointerleave = hideRailPreview;
+  rail.append(scroller, preview);
+  if (previous !== undefined) {
+    const tick = marks.querySelector(`.chat-rail-mark[data-index="${previous}"]`);
+    if (tick) tick.classList.add("active");
+  }
+  positionChatRail();
+  scroller.classList.toggle("fade-bottom", scroller.scrollHeight > scroller.clientHeight + 1);
+  syncChatRail();
+}
+
+function revealRailTurn(index) {
+  let turns = chatRailTurns();
+  while (index < turns.length && !turns[index]?.node && chatFoldCount()) {
+    expandChatFold();
+    turns = chatRailTurns();
+  }
+  const node = turns[index]?.node;
+  if (node) jumpToMessage(node);
+  else flashChatFold();
+}
+
+function syncChatRail() {
+  if (chatRailFrame) return;
+  chatRailFrame = requestAnimationFrame(() => {
+    chatRailFrame = 0;
+    const rail = $("chat-rail"), scroll = $("chat-scroll");
+    if (!rail || rail.hidden || !scroll) return;
+    const threshold = scroll.getBoundingClientRect().top + 84;
+    let active = null;
+    rail.querySelectorAll(".chat-rail-mark").forEach((tick) => {
+      const node = tick._turn?.node;
+      if (!node || !node.isConnected) return;
+      if (node.getBoundingClientRect().top <= threshold) active = tick;
+    });
+    rail.querySelectorAll(".chat-rail-mark.active").forEach((tick) => tick.classList.remove("active"));
+    if (active) {
+      active.classList.add("active");
+      const changed = rail._activeIndex !== active.dataset.index;
+      rail._activeIndex = active.dataset.index;
+      if (changed) centerChatRail();
+    }
+  });
+}
+
+function jumpToMessage(node) {
+  const scroll = $("chat-scroll");
+  if (!scroll || !node) return;
+  const top = scroll.scrollTop + node.getBoundingClientRect().top - scroll.getBoundingClientRect().top - 12;
+  scroll.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+  node.classList.remove("msg-jump");
+  void node.offsetWidth;
+  node.classList.add("msg-jump");
+  setTimeout(() => node.classList.remove("msg-jump"), 1600);
+}
+
+window.addEventListener("resize", () => { positionChatRail(); });
+
+function buildMessage(kind, payload) {
+  const div = payload.flow?.el || document.createElement("div");
   div.className = `msg ${kind}${payload.err ? " err" : ""}`;
+  if (payload.messageId) div.dataset.messageId = payload.messageId;
+  if (kind === "user") div.dataset.preview = String(payload.text || "").replace(/\s+/g, " ").slice(0, 90);
 
   if (payload.err) {
     div.textContent = payload.text;
-    scroll.appendChild(div);
-    scrollChat();
     return div;
   }
 
-  if (payload.text) div.textContent = payload.text;
+  if (payload.flow) payload.flow.finish(payload.text);
+  else if (payload.text) {
+    if (kind === "assistant") div.append(CupboxResponse.render(payload.text));
+    else div.textContent = payload.text;
+  }
 
   if (payload.compaction && payload.compaction.turns > 0) {
     const c = document.createElement("div");
@@ -538,28 +900,32 @@ function pushMsg(kind, payload) {
   }
 
   if (Array.isArray(payload.trace) && payload.trace.length) {
-    const head = document.createElement("div");
-    head.className = "msg-trace-head";
-    head.textContent = `工具轨迹 · ${payload.trace.length} 次`;
-    div.appendChild(head);
-    payload.trace.forEach((t, i) => {
-      const line = document.createElement("div");
-      line.className = t.ok ? "trace-line" : "trace-line trace-bad";
-      const argsPreview = t.args && Object.keys(t.args).length ? JSON.stringify(t.args).slice(0, 90) : "";
-      line.textContent = `${i + 1}. ${t.name} ${t.ok ? "完成" : "失败"} ${t.durationMs}ms${argsPreview ? ` — ${argsPreview}` : ""}`;
-      div.appendChild(line);
-    });
+    div.append(CupboxTranscript.history(payload.trace));
   }
 
-  CupboxModels.drawMedia(div,payload.media);
-  CupboxModels.renderTasks(div,payload.tasks);
+  if (kind === "assistant") CupboxResponse.attach(div, payload);
+  CupboxModels.drawMedia(div, payload.media);
+  CupboxModels.renderTasks(div, payload.tasks);
   const meta = document.createElement("div");
   meta.className = "msg-meta";
   meta.textContent = payload.time || chatTime();
   div.appendChild(meta);
+  return div;
+}
 
+function pushMsg(kind, payload) {
+  const scroll = $("chat-scroll");
+  if (!scroll) return null;
+  $("chat-empty")?.remove();
+  const div = buildMessage(kind, payload);
   scroll.appendChild(div);
-  scrollChat();
+  if (!chatBatch) {
+    // 自己发出去的消息一定落到视野内；助手回复则只在用户停在底部时跟随
+    scrollChat(kind === "user");
+    autoFoldChat();
+    updateChatFold();
+    renderChatRail();
+  }
   return div;
 }
 
@@ -591,32 +957,12 @@ function liveToolEvent(ev) {
   const rows = liveTrace.el.querySelector(".lt-rows");
   if (!rows) return;
   if (ev.phase === "start" && ev.call) {
-    const row = document.createElement("div");
-    row.className = "lt-row running";
-    const args = ev.call.args && Object.keys(ev.call.args).length ? JSON.stringify(ev.call.args).slice(0, 90) : "";
-    const label = document.createElement("span"); label.className = "lt-name"; label.textContent = ev.call.name;
-    const detail = document.createElement("span"); detail.className = "lt-args"; detail.textContent = args;
-    const status = document.createElement("span"); status.className = "lt-status"; status.textContent = "执行中…";
-    row.append(label, detail, status);
-    rows.appendChild(row);
-    const list = liveTrace.pending.get(ev.call.name) || [];
-    list.push(row); liveTrace.pending.set(ev.call.name, list);
-    rows.parentElement.classList.add("active");
+    const item=CupboxTranscript.row(ev.call);rows.append(item.el);
+    const key=ev.call.id||ev.call.name,list=liveTrace.pending.get(key)||[];list.push(item);liveTrace.pending.set(key,list);
     scrollChat();
-  } else if (ev.phase === "done" && ev.item) {
-    const list = liveTrace.pending.get(ev.item.name);
-    const row = list && list.shift();
-    if (row) {
-      row.classList.remove("running");
-      row.classList.add(ev.item.ok ? "ok" : "bad");
-      const st = row.querySelector(".lt-status");
-      if (st) st.textContent = ev.item.ok ? `完成 · ${ev.item.durationMs}ms` : `失败 · ${ev.item.durationMs}ms`;
-      if (!ev.item.ok) {
-        const err = document.createElement("div"); err.className = "lt-error"; err.textContent = String(ev.item.result || "").slice(0, 300);
-        row.appendChild(err);
-      }
-    }
-    scrollChat();
+  } else if(ev.phase==='done'&&ev.item){
+    const list=liveTrace.pending.get(ev.item.id||ev.item.name),row=list?.shift();
+    if(row)row.finish(ev.item);scrollChat();
   }
 }
 function stopLiveTrace(finalized) {
@@ -628,6 +974,7 @@ function stopLiveTrace(finalized) {
 }
 
 async function sendChat(options = {}) {
+
   if (sending) return;
   const ta = $("chat-text");
   const text = options.retry?.prompt || ta.value.trim();
@@ -651,6 +998,8 @@ async function sendChat(options = {}) {
   const typing = showTyping();
   const t0 = performance.now();
   // agent 模式：开一条工具调用直播轨道（chat:tool 事件实时逐条渲染）
+  const flow=new CupboxTranscript.TextFlow({parent:$("chat-scroll"),onPaint:()=>scrollChat()});
+  const offText=api.onChatText?.(ev=>{if(ev?.runId!==selection.runId)return;typing.remove();flow.append(ev.delta);});
   let offTool = null;
   if (prefs.mode === "agent" && selection.runId && api.onChatTool) {
     startLiveTrace(selection.runId);
@@ -662,16 +1011,17 @@ async function sendChat(options = {}) {
       text,
       sessionId,
       mode: prefs.mode,
-      ...selection,
+      ...selection,...CupboxChatPicker.payload(),
     });
     typing.remove();
     stopLiveTrace(true);
     if (r && r.ok) {
       sessionId = r.sessionId;
       pushMsg("assistant", {
-        text: r.result && typeof r.result.text === "string" ? r.result.text : "（空回复）",
+        text: r.result && typeof r.result.text === "string" ? r.result.text : "（空回复）",flow,
         trace: r.result ? r.result.trace : null,
         tasks:r.result?.tasks,media:r.result?.media,
+        messageId:r.result?.messageId,sessionId,
         compaction: r.result?.compaction,
         time: `${chatTime()} · ${Math.round(performance.now() - t0)} ms`,
       });
@@ -679,20 +1029,20 @@ async function sendChat(options = {}) {
       CupboxModels.finished(true);
       await refreshSessions(sessionId);
     } else {
-      CupboxModels.failed(r?.error||"请求失败");
+      flow.cancel();CupboxModels.failed(r?.error||"请求失败");
       userMessage.remove();
       ta.value = text;
       pushMsg("assistant", { text: (r && r.error) || "请求失败", err: true });
     }
   } catch (e) {
-    CupboxModels.failed(e.message||String(e));
+    flow.cancel();CupboxModels.failed(e.message||String(e));
     userMessage.remove();
     ta.value = text;
     typing.remove();
     pushMsg("assistant", { text: String((e && e.message) || e), err: true });
   } finally {
     sending = false;
-    offTool?.();
+    offTool?.();offText?.();
     stopLiveTrace();
     CupboxModels.finished(false);
     ta.disabled = false;
@@ -719,25 +1069,31 @@ function relTime(iso) {
 }
 
 async function refreshSessions(activeId) {
-  let list = [];
+  let list = [], harness = [];
   try { list = (await api.sessionsList?.()) || []; } catch { list = []; }
+  try { harness = (await api.harnessSessions?.()) || []; } catch { harness = []; }
   const box = $("sess-list");
   box.innerHTML = "";
-  if (!list.length) {
+  const query = sessionFilter.toLowerCase();
+  list = list.filter(s => String(s.title || '').toLowerCase().includes(query));
+  const linked=new Set(list.map(s=>s.harnessSessionId).filter(Boolean));
+  harness = harness.filter(s => !linked.has(s.id)&&String(s.title || '').toLowerCase().includes(query));
+  const merged = [...list.map(s => ({ ...s, engine: 'normal' })), ...harness];
+  merged.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  if (!merged.length) {
     const div = document.createElement("div");
     div.className = "sess-empty";
-    div.textContent = "从一个小任务开始。\n你的对话会自动出现在这里。";
+    div.textContent = query ? "没有找到匹配的任务" : "从一个小任务开始。\n你的对话会自动出现在这里。";
     div.style.whiteSpace = "pre-line";
     box.appendChild(div);
     return;
   }
-  list = list.filter(s => s.title.toLowerCase().includes(sessionFilter.toLowerCase()));
-  if (!list.length) box.innerHTML = '<div class="sess-empty">没有找到匹配的任务</div>';
-  list.forEach((s, i) => {
+  merged.forEach((s, i) => {
+    const advanced = s.engine === 'harness';
     const item = document.createElement("div");
-    item.className = "sess-item" + (s.id === activeId ? " active" : "");
+    item.className = "sess-item" + (s.id === activeId ? " active" : "") + (advanced ? " harness-task" : "");
     item.style.setProperty("--i", String(i));
-    item.title = s.title;
+    item.title = advanced ? s.title : s.title;
 
     const title = document.createElement("div");
     title.className = "s-title";
@@ -746,44 +1102,59 @@ async function refreshSessions(activeId) {
     const meta = document.createElement("div");
     meta.className = "s-meta";
     const mode = document.createElement("span");
-    mode.className = "s-mode";
-    mode.textContent = s.mode === "agent" ? "agent" : "ask";
+    mode.className = "s-mode" + (advanced ? " harness" : "");
+    mode.textContent = advanced ? "任务" : "历史";
     const when = document.createElement("span");
-    when.textContent = `${relTime(s.updatedAt)} · ${Math.max(0, Math.round((s.count || 0) / 2))} 轮`;
+    const rounds = advanced ? (s.turns || 0) : Math.max(0, Math.round((s.count || 0) / 2));
+    when.textContent = `${relTime(s.updatedAt)} · ${rounds} 轮`;
     meta.appendChild(mode);
     meta.appendChild(when);
 
-    const del = document.createElement("button");
-    del.type = "button";
-    del.className = "s-del";
-    del.title = "删除会话";
-    del.setAttribute("aria-label", `删除任务：${s.title}`);
-    del.textContent = "✕";
-    del.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      if (sending) { toast("任务进行中，请完成后再删除"); return; }
-      const confirmed = await confirmAction(`删除「${s.title}」？此操作无法撤销。`);
-      if (!confirmed || sending) return;
-      try {
-        await api.sessionsDelete?.(s.id);
-        if (s.id === sessionId) newChat();
-        await refreshSessions(sessionId);
-      } catch { /* 忽略 */ }
-    });
+    const open = () => {
+      if (!advanced) { void openSession(s.id); return; }
+      void window.CupboxHarness?.resume?.(s.id);
+    };
+
+    if (!advanced) {
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "s-del";
+      del.title = "删除会话";
+      del.setAttribute("aria-label", `删除任务：${s.title}`);
+      del.textContent = "✕";
+      del.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (sending) { toast("任务进行中，请完成后再删除"); return; }
+        const confirmed = await confirmAction(`删除「${s.title}」？此操作无法撤销。`);
+        if (!confirmed || sending) return;
+        try {
+          await api.sessionsDelete?.(s.id);
+          if (s.id === sessionId) newChat();
+          await refreshSessions(sessionId);
+          toast("任务记录已删除");
+        } catch (e) { toast("删除失败：" + e.message); }
+      });
+      item.appendChild(del);
+    }
 
     item.appendChild(title);
     item.appendChild(meta);
-    item.appendChild(del);
-    item.addEventListener("click", () => openSession(s.id));
+    item.addEventListener("click", open);
     item.tabIndex = 0;
     item.setAttribute("role", "button");
-    item.addEventListener("keydown", e => { if (e.target === item && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); void openSession(s.id); } });
+    item.addEventListener("keydown", e => { if (e.target === item && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); open(); } });
     box.appendChild(item);
   });
 }
 
 function clearChatDom() {
   const scroll = $("chat-scroll");
+  chatFold = { messages: [], nodes: [] };
+  chatBatch = false;
+  followChat = true;
+  $("chat-fold")?.remove();
+  const rail = $("chat-rail");
+  if (rail) { rail.hidden = true; rail.replaceChildren(); }
   scroll.innerHTML = "";
   const empty = document.createElement("div");
   empty.className = "chat-empty";
@@ -796,7 +1167,7 @@ function clearChatDom() {
     <button class="setup-link" id="setup-link"><span>✧ 配置你的 AI 搭子，开始第一段对话</span><span>去设置 →</span></button>`;
   scroll.appendChild(empty);
   empty.querySelectorAll("[data-quick]").forEach(b => {
-    b.querySelector('.quick-icon').innerHTML = CupboxIcons.html(b.dataset.quick);
+    const art=CupboxVisuals.art(({organize:'files',codec:'data',ocr:'vision'})[b.dataset.quick]);b.prepend(art);b.querySelector('.quick-icon').remove();
     b.addEventListener("click", () => {
     const tool = visibleTools().find(t => t.id === b.dataset.quick);
     if (!tool) { toast("这项工具已关闭，可在设置中启用"); return; }
@@ -809,7 +1180,9 @@ function clearChatDom() {
 }
 
 async function newChat() {
-  if (sending) { toast("任务进行中，请等待回复后再新建"); return; }
+  if(sending){toast("任务进行中，请等待回复后再新建");return;}
+  window.CupboxHarness?.setMode?.("normal");
+  setMode("ask",false);
   if(drawerOpen)closeDrawer();
   sessionId = null;
   CupboxModels.clearImages();$("workflow-board").hidden=true;localStorage.removeItem("cupbox.chatDraft");
@@ -823,43 +1196,54 @@ async function newChat() {
 
 async function openSession(id) {
   if (sending) { toast("当前任务进行中，请等待回复后再切换"); return; }
+  window.CupboxHarness?.setMode?.("normal");
   if(drawerOpen)closeDrawer();
   try {
     const s = await api.sessionsRead?.(id);
     if (!s) return;
     sessionId = s.id;
     $("chat-title").textContent = s.title || "会话";
-    setMode(s.mode, false);
-    CupboxModels.clearImages();$("workflow-board").hidden=true;
+    setMode(s.harnessSessionId?"agent":"ask", false);
+    CupboxModels.clearImages();CupboxChatPicker.restore(s.chatSelection);$("workflow-board").hidden=true;
     clearChatDom();
     const scroll = $("chat-scroll");
     $("chat-empty")?.remove();
-    (s.messages || []).forEach((m) => {
+    const messages = s.messages || [];
+    const foldAt = Math.max(0, messages.length - CHAT_FOLD_KEEP);
+    chatFold = { messages: messages.slice(0, foldAt), nodes: [] };
+    chatBatch = true;
+    messages.slice(foldAt).forEach((m) => {
       if (m.role === "user") pushMsg("user", { text: m.text, time: "" });
-      else if (m.role === "assistant") pushMsg("assistant", { text: m.text, trace: m.trace, tasks:m.tasks,media:m.media,time: "" });
+      else if (m.role === "assistant") pushMsg("assistant", { text:m.text,trace:m.trace,tasks:m.tasks,media:m.media,messageId:m.id,sessionId:s.id,feedback:m.feedback,memoryId:m.memoryId,memoryText:m.memoryText,time:"" });
     });
+    chatBatch = false;
+    updateChatFold();
+    renderChatRail();
     // pushMsg 里 time 为空则不显示 meta —— 统一补一次时间即可（此处省略）
     await refreshSessions(s.id);
-    scrollChat();
+    scrollChat(true);
   } catch { /* 损坏文件忽略 */ }
 }
 
 /* ---------------- 设置弹窗 ---------------- */
 
 function openModal(tab) {
+  const opening = !modalOpen;
   if (!modalOpen) restoreFocus = document.activeElement;
   const scrim = $("modal-scrim");
   const m = $("settings-modal");
+  const focusBefore = document.activeElement;
   scrim.hidden = false;
   m.hidden = false;
   requestAnimationFrame(() => {
+    if (!modalOpen) return;
     scrim.classList.add("open");
     m.classList.add("open");
-    m.querySelector("button")?.focus();
+    if (opening && document.activeElement === focusBefore) m.querySelector("button")?.focus();
   });
   modalOpen = true;
-  if (tab) switchTab(tab);
-  if (tab === "api" || !tab) void fillApiForm();
+  switchTab(tab || 'general');
+  if (opening) void fillApiForm();
 }
 
 function closeModal() {
@@ -875,16 +1259,31 @@ function closeModal() {
   }, 300);
 }
 
+let aboutThanksLoading=false;
+async function loadAboutThanks(force=false){
+  if(aboutThanksLoading)return;aboutThanksLoading=true;
+  const button=$('about-thanks-refresh'),status=$('about-thanks-status'),list=$('about-thanks-list');button.disabled=true;list.replaceChildren();status.textContent='正在读取 GitHub 在线感谢名单…';
+  try{const value=await api.aboutThanks(force);list.replaceChildren();for(const entry of value.entries){const card=document.createElement('article'),text=document.createElement('p'),links=document.createElement('div');card.className='about-thanks-entry';text.textContent=entry.text;links.className='about-thanks-links';for(const link of entry.links||[]){const b=document.createElement('button');b.type='button';b.textContent=link.label+' ↗';b.className='btn-ghost2';b.onclick=()=>void api.openExternal(link.url);links.append(b);}card.append(text,links);list.append(card);}status.textContent=value.ok?(value.unchanged?'已检查 GitHub · 名单无变化':'已读取 GitHub 在线名单')+' · '+new Date(value.updatedAt).toLocaleString('zh-CN')+' · '+value.entries.length+' 条致谢':value.error;
+  }catch{status.textContent='名单暂时无法加载，请稍后重试；更新软件后请完整退出再打开。';}finally{aboutThanksLoading=false;button.disabled=false;}
+}
 function switchTab(name) {
+  const settingsScroller=document.querySelector("#settings-modal .modal-body"),restoredScroll=window.CupboxUX?.beforePage("settings",name,settingsScroller)??0;
   document.querySelectorAll("#modal-tabs .tab").forEach((b) => {
     b.classList.toggle("active", b.dataset.tab === name);
     b.setAttribute("aria-selected", String(b.dataset.tab === name));
   });
-  ["api", "models", "theme", "execution", "startup", "plugins", "about"].forEach((n) => {
+  ["general", "api", "models", "agent-presets", "pet", "march7th", "theme", "branding", "music", "execution", "notifications", "workbench", "startup", "plugins", "about", "freemodel"].forEach((n) => {
     const page = $(`tab-${n}`);
     if (page) page.hidden = n !== name;
   });
+  CupboxSettingsLayout.sync(name);
+  settingsScroller.scrollTo({top:restoredScroll,behavior:'instant'});
+  if (name === "notifications") void window.CupboxSMTP?.load();
+  if (name === "freemodel") loadFreemodelTab();
+    if (name === "about") void loadAboutThanks();
 }
+
+async function loadFreemodelTab() { return CupboxChatPicker.refreshFree(); }
 
 async function fillApiForm() {
   const sequence=++apiFillSequence,revision=CupboxProviders.revision();
@@ -900,11 +1299,12 @@ async function fillApiForm() {
     if (c.provider) set("api-provider", c.provider);
     set("api-base", c.baseUrl);
     set("api-model", c.model);
+    set("api-reasoning-mode",c.reasoningMode||"auto");
     set("api-key", ""); // 永不回填明文 Key，留空 = 保持不变
     set("api-temp", c.temperature);
     set("api-turns", c.maxTurns);
   } catch { /* 读取失败保持占位 */ }
-  // 储存管理：显示数据目录（v1.0.2 起默认 文档/Cupbox）
+  // 储存管理：显示数据目录（v1.0.3 起默认 文档/Cupbox）
   try {
     const s = await api.storageInfo?.();
     if (s && sequence === apiFillSequence) {
@@ -930,6 +1330,7 @@ async function saveApi() {
       model: raw("api-model"),
       ...(raw("api-key") ? { apiKey: raw("api-key") } : {}),
       temperature: raw("api-temp") === "" ? null : Number(raw("api-temp")),
+      reasoningMode:raw("api-reasoning-mode")||"auto",
       maxTurns: raw("api-turns") === "" ? null : Number(raw("api-turns")),
     };
     const r = await api.aiConfigSet?.(patch);
@@ -1013,31 +1414,20 @@ function renderPlugins() {
 
 /* ---------------- 工作区 ---------------- */
 
-async function pickWorkspace() {
-  if(prefs.executionEnvironment!=='native'){openModal('execution');return;}
+async function pickWorkspace(forWork=false) {
+  if(!forWork&&prefs.executionEnvironment!=='native'){openModal('execution');return;}
   try {
     const p = await api.pickWorkspace?.();
     const el = $("ws-path");
-    if (el) el.textContent = p || prefs.workspace || "未选择";
-    if (p) prefs.workspace = p;
-  } catch { /* 用户取消忽略 */ }
+    if (el) el.textContent = p || prefs.workspace || "默认工作目录";
+    if (p) { prefs.workspace = p; toast("工作文件夹已切换：" + p); }
+    return p;
+  } catch (e) { toast("选择工作目录失败：" + e.message); }
 }
 
 /* ---------------- 版本检测与更新公告 ---------------- */
 
-function toast(msg, ms) {
-  const t = $("toast");
-  if (!t) return;
-  t.textContent = msg;
-  t.hidden = false;
-  void t.offsetWidth;
-  t.classList.add("show");
-  clearTimeout(toast._timer);
-  toast._timer = setTimeout(() => {
-    t.classList.remove("show");
-    setTimeout(() => { t.hidden = true; }, 320);
-  }, ms || 2600);
-}
+function toast(msg, ms) { return CupboxUX.notify(String(msg), ms || {}); }
 
 function sourceName(s) {
   return s === "github" ? "GitHub Releases" : s === "npm" ? "npm registry" : s === "custom" ? "自定义清单" : "";
@@ -1122,6 +1512,67 @@ function closeUpdateAnnounce() {
   setTimeout(() => {
     if (!updOpen) { scrim.hidden = true; m.hidden = true; }
   }, 300);
+}
+
+/* ---------------- 开屏公告（GitHub announcement.json） ---------------- */
+
+/** 展示公告。正文只用 textContent，杜绝公告文件里的 HTML/脚本注入。 */
+function openAnnouncement(item, source) {
+  if (!item) return;
+  announcement = item;
+  $("ann-title").textContent = item.title;
+  $("ann-body").textContent = item.body;
+  const date = $("ann-date");
+  date.hidden = !item.publishedAt;
+  if (item.publishedAt) date.textContent = item.publishedAt;
+  const src = $("ann-source");
+  src.hidden = !source;
+  if (source) src.textContent = source === "raw.githubusercontent.com" ? "GitHub" : source;
+  const github = $("btn-ann-github");
+  github.hidden = !item.url;
+  $("ann-mute").checked = false;
+  const scrim = $("ann-scrim");
+  const m = $("ann-modal");
+  scrim.hidden = false;
+  m.hidden = false;
+  annOpen = true;
+  requestAnimationFrame(() => {
+    scrim.classList.add("open");
+    m.classList.add("open");
+  });
+  setTimeout(() => $("btn-ann-ok")?.focus(), 240);
+}
+
+function closeAnnouncement() {
+  if (!annOpen) return;
+  annOpen = false;
+  const scrim = $("ann-scrim");
+  const m = $("ann-modal");
+  scrim.classList.remove("open");
+  m.classList.remove("open");
+  setTimeout(() => {
+    if (!annOpen) { scrim.hidden = true; m.hidden = true; }
+  }, 300);
+  if (announcement) {
+    const muted = $("ann-mute")?.checked === true;
+    void savePrefs({ announcementSeenVersion: announcement.version, announcementMuted: muted });
+  }
+  setTimeout(() => $("chat-text")?.focus(), 320);
+}
+
+/**
+ * 启动时检测公告：已读同一版本且勾过「不再提示」→ 跳过；有新内容 → 无论是否静音都显示。
+ * force=true 时忽略已读状态（验证脚本用）。检查失败完全静默。
+ */
+async function maybeShowAnnouncement(force) {
+  if (!force && SMOKE) return null; // 冒烟截图不联网
+  let result = null;
+  try { result = await api.announcementCheck?.(); } catch { result = null; }
+  if (!result || !result.ok || !result.announcement) return null;
+  const item = result.announcement;
+  if (!force && String(prefs.announcementSeenVersion || "") === item.version && prefs.announcementMuted === true) return null;
+  openAnnouncement(item, result.source);
+  return item;
 }
 
 /* —— 上下文洞察弹窗（成分 / 趋势 / 事件） —— */
@@ -1347,8 +1798,11 @@ function bindWindowControls() {
 
 async function boot() {
   CupboxIcons.mount();
+  CupboxUX.init();
+  CupboxResponse.init({toast,updated:()=>{if(typeof refreshContextStats==="function")void refreshContextStats();}});
   CupboxProviders.init();
-  CupboxToolWorkspace.init({tools:visibleTools,select:selectTool,current:()=>current.id,busy:()=>toolRunning,toast,native:()=>{void savePrefs({executionEnvironment:'native'});CupboxExecution.sync(prefs);}});
+  CupboxOfficeLocal.init({current:()=>current.id,run});
+  CupboxToolWorkspace.init({tools:visibleTools,select:selectTool,current:()=>current.id,busy:()=>toolRunning,toast,native:()=>void CupboxExecution.setEnvironment('native')});
   bindWindowControls();
 
   // 偏好（主题 / 强调色 / 模式 / 工作区 / 插件开关）
@@ -1358,23 +1812,30 @@ async function boot() {
   } catch { /* 用默认 */ }
   applyTheme(prefs.theme || "light", prefs.accent || "aurora");
   CupboxTheme.init({ getPrefs: () => prefs, save: savePrefs, theme: applyTheme, pick: () => api.pickWallpaper() });
+  $("filesystem-enabled").checked=prefs.filesystemTools!==false;$("filesystem-enabled").addEventListener("change",()=>void savePrefs({filesystemTools:$("filesystem-enabled").checked}));
   CupboxStartup.init({getPrefs:()=>prefs,save:savePrefs,pick:()=>api.pickStartupMedia()});
-  await CupboxExecution.init({getPrefs:()=>prefs,save:savePrefs,settings:openModal,toolName:id=>TOOLS.find(t=>t.id===id)?.name||id,toast,onChange:(environment,root)=>{
-    $("ws-path").textContent=environment==='sandbox'?'沙箱工作目录':prefs.workspace||'未选择';
+  await CupboxMarch7th.init({getPrefs:()=>prefs,toast,settings:openModal}).catch(e=>toast('三月七面板加载失败：'+e.message));
+  await CupboxPetSettings.init({settings:openModal,closeSettings:closeModal,toast}).catch(e=>toast('桌宠面板加载失败：'+e.message));
+  await CupboxAgentPresets.init({getPrefs:()=>prefs,save:savePrefs,mode:setMode,settings:openModal,toast,isBusy:()=>sending||toolRunning}).catch(e=>toast('预设面板加载失败：'+e.message));
+  await CupboxExecution.init({getPrefs:()=>prefs,save:savePrefs,settings:openModal,toolName:id=>TOOLS.find(t=>t.id===id)?.name||CupboxResponse.toolName(id),toast,onChange:(environment,root)=>{
+    $("ws-path").textContent=environment==='sandbox'?'沙箱工作目录':prefs.workspace||'默认工作目录';
     CupboxToolWorkspace.availability(current.id);
     for(const id of ['dir','root','cwd']){const field=$("tool-form").querySelector(`[data-key="${id}"]`);if(field)field.value=environment==='sandbox'?root:(prefs.workspace||'');}
   }});
   const startup = CupboxStartup.play(prefs);
-  setMode(prefs.mode || "ask", false);
+  setMode("ask", false);
   const wsEl = $("ws-path");
-  if (wsEl) wsEl.textContent = prefs.executionEnvironment==='native'?(prefs.workspace||"未选择"):'沙箱工作目录';
+  if (wsEl) wsEl.textContent = prefs.workspace||"聊天无需选择";
 
   renderDrawerTools();
+  await CupboxPluginSettings.init({getPrefs:()=>prefs,toast,isBusy:()=>sending||toolRunning}).catch(e=>toast(e.message));
   renderPlugins();
   if (visibleTools()[0]) selectTool(visibleTools()[0].id, true);
   $("btn-run").disabled = !visibleTools().length;
   clearChatDom();
-  await CupboxModels.init({prefs,save:savePrefs,refresh:refreshModel,toast,confirm:confirmAction,session:()=>sessionId,retry:task=>sendChat({retry:task})});
+  await CupboxWorkbench.init({session:()=>sessionId,toast});
+  await CupboxModels.init({prefs,mode:setMode,save:savePrefs,refresh:refreshModel,toast,confirm:confirmAction,session:()=>sessionId,retry:task=>sendChat({retry:task})});
+  await CupboxChatPicker.init({getPrefs:()=>prefs,save:savePrefs,refresh:refreshModel,settings:openModal,closeSettings:closeModal,mode:setMode,toast});
   await refreshModel();
   $("btn-send").disabled = true;
   await refreshSessions(null);
@@ -1385,7 +1846,7 @@ async function boot() {
     $("ver-chip").textContent = `v${info.version}`;
     $("startup-display-version").textContent = `v${info.version}`;
     $("engine-chip").textContent = `${info.tools ?? 18} 工具 · Electron ${info.electron} · Node ${info.node}`;
-    document.querySelectorAll('.nav-count').forEach((el) => { el.textContent = String(info.tools ?? 18); });
+    CupboxToolWorkspace.updateCount();
     const av = $("about-ver");
     if (av) av.textContent = `v${info.version}`;
     const hv = $("startup-hero-version");
@@ -1399,9 +1860,10 @@ async function boot() {
   $("btn-run")?.addEventListener("click", run);
   $("tool-search").addEventListener("input", renderDrawerTools);
   $("session-search").addEventListener("input", () => { sessionFilter = $("session-search").value.trim(); void refreshSessions(sessionId); });
-  $("btn-model").addEventListener("click", () => openModal("api"));
+  
   // 模型管理：侧栏直达模型库（多模型增删、能力多选 文本/视觉/绘图…）
   $("btn-models-nav")?.addEventListener("click", () => openModal("models"));
+  $("btn-qq-nav")?.addEventListener("click", () => api.qqOpen().catch(e => toast(e.message)));
   // 储存管理：打开 / 定位数据目录
   $("storage-open")?.addEventListener("click", () => void api.storageOpen?.());
   $("storage-reveal")?.addEventListener("click", () => void api.storageReveal?.());
@@ -1412,6 +1874,7 @@ async function boot() {
   $("drawer-scrim")?.addEventListener("click", closeDrawer);
 
   $("btn-settings")?.addEventListener("click", () => openModal());
+  CupboxSettingsLayout.init({open:openModal,switchPage:switchTab});
   $("modal-close")?.addEventListener("click", closeModal);
   $("modal-scrim")?.addEventListener("click", closeModal);
   document.querySelectorAll("#modal-tabs .tab").forEach((b) => {
@@ -1444,9 +1907,10 @@ async function boot() {
     if (!await confirmAction("清空当前任务的对话记录？此操作无法撤销。")) return;
     if (sending) return;
     if (sessionId) {
-      try { await api.sessionsClear?.(sessionId); } catch { /* 忽略 */ }
+      try { await api.sessionsClear?.(sessionId); } catch (e) { toast("清空失败：" + e.message); return; }
     }
     clearChatDom();
+    toast("当前对话已清空");
     await refreshSessions(sessionId);
   });
   $("btn-workspace")?.addEventListener("click", pickWorkspace);
@@ -1481,6 +1945,12 @@ async function boot() {
   });
   $("update-chip")?.addEventListener("click", showUpdateAnnounce);
   $("btn-check-upd")?.addEventListener("click", checkUpdateInSettings);
+  $('about-thanks-refresh')?.addEventListener('click',()=>void loadAboutThanks(true));
+  $('settings-afdian')?.addEventListener('click',()=>void api.openExternal?.('https://afdian.com/a/beilaishi'));
+  $('settings-copy-group')?.addEventListener('click',()=>void api.openExternal?.('https://qm.qq.com/q/V2pNRPkW0G'));
+  $('settings-show-thanks')?.addEventListener('click',()=>{switchTab('about');requestAnimationFrame(()=>$('about-thanks-title').scrollIntoView({block:'start',behavior:'smooth'}));});
+  $('about-show-thanks')?.addEventListener('click',()=>$('about-thanks-title').scrollIntoView({block:'start',behavior:'smooth'}));
+  $('about-copy-group')?.addEventListener('click',async()=>{try{await api.aboutCopyGroup();$('about-group-status').textContent='群号已复制';}catch{$('about-group-status').textContent='复制失败，请手动复制上方群号';}});
   document.querySelectorAll("#tab-about [data-url]").forEach((b) => {
     b.addEventListener("click", () => { void api.openExternal?.(b.dataset.url); });
   });
@@ -1498,9 +1968,15 @@ async function boot() {
     }
   });
 
+  // —— 开屏公告 ——
+  $("ann-close")?.addEventListener("click", closeAnnouncement);
+  $("ann-scrim")?.addEventListener("click", closeAnnouncement);
+  $("btn-ann-ok")?.addEventListener("click", closeAnnouncement);
+  $("btn-ann-github")?.addEventListener("click", () => { void api.openExternal?.(announcement?.url || RELEASES_URL); });
+
   window.addEventListener("keydown", (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "n") { e.preventDefault(); if (!modalOpen && !drawerOpen && !updOpen && !ctxOpen) void newChat(); }
-    const overlay = modalOpen ? $("settings-modal") : updOpen ? $("upd-modal") : ctxOpen ? $("ctx-modal") : null;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "n") { e.preventDefault(); if (!modalOpen && !drawerOpen && !updOpen && !annOpen && !ctxOpen) void newChat(); }
+    const overlay = annOpen ? $("ann-modal") : modalOpen ? $("settings-modal") : updOpen ? $("upd-modal") : ctxOpen ? $("ctx-modal") : null;
     if (overlay && e.key === "Tab") {
       const focusable = [...overlay.querySelectorAll('button:not(:disabled),input:not(:disabled),textarea:not(:disabled),select:not(:disabled),[tabindex="0"]')].filter(el => el.getClientRects().length);
       const first = focusable[0], last = focusable.at(-1);
@@ -1508,7 +1984,8 @@ async function boot() {
       else if (!e.shiftKey && (document.activeElement === last || !overlay.contains(document.activeElement))) { e.preventDefault(); first?.focus(); }
     }
     if (e.key === "Escape") {
-      if (modalOpen) closeModal();
+      if (annOpen) closeAnnouncement();
+      else if (modalOpen) closeModal();
       else if (updOpen) closeUpdateAnnounce();
       else if (ctxOpen) closeContextModal();
       else if (drawerOpen) closeDrawer();
@@ -1607,6 +2084,7 @@ async function boot() {
   // 首次进入聚焦输入框
   await startup;
   $("chat-text")?.focus();
+  void maybeShowAnnouncement(); // 开屏公告：每次启动检测 GitHub 上的 announcement.json
   window.cupboxReady = true;
 }
 
@@ -1615,29 +2093,13 @@ async function refreshModel() {
     await CupboxModels.refresh();
     const r = await api.aiConfigGet?.();
     const c = r?.ok ? r.config : {};
-    modelReady = Boolean(c?.model) || (await api.modelsList()).some(m=>m.enabled);
-    $("btn-model").textContent = c?.model || (modelReady?"模型库已就绪 ⌄":"配置模型 ⌄");
+    modelReady = (await api.chatModels()).models.some(m=>m.enabled);
+    CupboxChatPicker.sync();
     if ($("setup-link")) $("setup-link").hidden = modelReady;
   } catch { modelReady = false; }
 }
 
-function confirmAction(message) {
-  confirmAction.cancel?.();
-  return new Promise(resolve => {
-    const bar = document.createElement("div");
-    bar.className = "confirm-bar";
-    bar.setAttribute("role", "alert");
-    const text = document.createElement("span"); text.textContent = message;
-    const yes = document.createElement("button"); yes.textContent = "确认";
-    const no = document.createElement("button"); no.textContent = "取消";
-    const finish = value => { bar.remove(); confirmAction.cancel = null; resolve(value); };
-    confirmAction.cancel = () => finish(false);
-    yes.addEventListener("click", () => finish(true));
-    no.addEventListener("click", () => finish(false));
-    bar.append(text, yes, no);
-    $("stage").insertBefore(bar, $("chat-scroll"));
-    no.focus();
-  });
-}
+function confirmAction(message, options) { return CupboxUX.confirm(message, options); }
 
 boot();
+

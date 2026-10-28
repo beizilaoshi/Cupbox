@@ -1,0 +1,4 @@
+import {searchPublicMusic,resolvePublicMusic} from './qq/public-music.js';
+import {prepareMusicVoice} from './qq/music-voice-converter.js';
+const rows=await searchPublicMusic(process.argv[2]||'晴天 周杰伦');console.log(JSON.stringify({candidates:rows.map(r=>({source:r.provider,title:r.title,artist:r.artist,playable:r.playable}))}));
+let ok=false;for(const song of rows.slice(0,2)){try{const file=await resolvePublicMusic(song);console.log(JSON.stringify({provider:song.provider,hasAudio:true,host:new URL(file.data.file).hostname}));const result=await prepareMusicVoice(song,{root:'output/public-music-live',onStage:stage=>console.log(stage)});console.log(JSON.stringify({converted:true,durationMs:result.durationMs,silkBytes:Buffer.from(result.segment.data.file.slice(9),'base64').length}));ok=true;break;}catch(e){console.log(JSON.stringify({provider:song.provider,error:e.message}));}}if(!ok)process.exitCode=1;

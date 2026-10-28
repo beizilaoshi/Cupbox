@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "text": "特别感谢：杯艺宣（龚震宇）",
+      "links": []
+    },
+    {
+      "text": "图片像素混淆的六种模式算法移植自开源项目「番茄图片混淆 桌面版」（MIT License, Copyright (c) 2026 3450892121）。移植实现与原版引擎做过逐字节对拍，并在测试中保留了兼容性金标，以确保与该项目及手机端生态的长期互通。感谢原作者的开源贡献。",
+      "links": [{ "label": "原作者 GitHub", "url": "https://github.com/3450892121" }]
+    },
+    {
+      "text": "三层记忆与上下文压缩的架构设计参考了开源项目 dsh-mnemon（omdsh-dev）的运行时记忆、长期事实与回合压缩模型。Cupbox 的实现是面向本机 CLI/桌面场景的独立重写（Node 内置模块，无额外运行时依赖），致谢原作者的架构启发。",
+      "links": [{ "label": "dsh-mnemon", "url": "https://github.com/omdsh-dev/dsh-mnemon" }]
+    }
+  ]
+}

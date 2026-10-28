@@ -2,6 +2,20 @@
 "use strict";
 window.CupboxIcons = (() => {
   const paths = {
+    model: '<rect x="4" y="4" width="16" height="16" rx="5"/><path d="M8 9h8M8 15h5"/><circle cx="16" cy="15" r="1"/>',
+    palette: '<path d="M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 1-3.7c-.8-.5-.5-1.8.5-1.8H17A4 4 0 0 0 21 11c0-4.4-4-8-9-8Z"/><circle cx="7" cy="11" r=".8"/><circle cx="10" cy="7" r=".8"/><circle cx="15" cy="7" r=".8"/>',
+    heart: '<path d="M20 5a5 5 0 0 0-8 1 5 5 0 0 0-8-1c-4 4 1 10 8 15 7-5 12-11 8-15Z"/>',
+    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>',
+    'qq-bot': '<rect x="4" y="5" width="16" height="14" rx="5"/><path d="M12 2v3M8 19v3m8-3v3M1 10v5m22-5v5M8 14h8"/><circle cx="8.5" cy="10" r=".8"/><circle cx="15.5" cy="10" r=".8"/>',
+    loader: '<circle cx="12" cy="12" r="9" opacity=".2"/><path d="M12 3a9 9 0 0 1 9 9"/>',
+    copy: '<rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
+    text: '<path d="M4 5h16M12 5v15M8 20h8"/>',
+    vision: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+    audio: '<rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8"/>',
+    video: '<rect x="3" y="5" width="13" height="14" rx="3"/><path d="m16 10 5-3v10l-5-3"/>',
+    workflow: '<rect x="3" y="3" width="6" height="6" rx="2"/><rect x="15" y="3" width="6" height="6" rx="2"/><rect x="9" y="16" width="6" height="6" rx="2"/><path d="M6 9v3h12V9m-6 3v4"/>',
+    bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
+    shield: '<path d="m12 2 8 3v6c0 5-5 9-8 11-3-2-8-6-8-11V5Z"/><path d="M12 7v6m0 4h.01"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
     tools: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><path d="M14 17.5h7M17.5 14v7"/>',
     folder: '<path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M3 10h18"/>',
@@ -22,7 +36,7 @@ window.CupboxIcons = (() => {
     proc: '<path d="M4 5h16M4 12h16M4 19h16"/><circle cx="8" cy="5" r="2" fill="var(--surface)"/><circle cx="16" cy="12" r="2" fill="var(--surface)"/><circle cx="10" cy="19" r="2" fill="var(--surface)"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>',
     moon: '<path d="M21 13.3A9 9 0 0 1 10.7 3 9 9 0 1 0 21 13.3Z"/>',
-    monitor: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M12 17v4M8 21h8"/>',
+    desktop_observe:'<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/>',desktop_capture:'<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/><rect x="7" y="7" width="10" height="10" rx="2"/>',desktop_mouse:'<rect x="7" y="2" width="10" height="20" rx="5"/><path d="M12 3v6M7 10h10"/>',desktop_type:'<path d="M4 4h16M12 4v16M8 20h8"/>',desktop_key:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h1m3 0h1m3 0h1m3 0h1M6 13h1m3 0h1m3 0h1M8 16h8"/>',desktop_ocr:'<path d="M4 8V4h4m8 0h4v4M4 16v4h4m8 0h4v-4M9 8v8m6-8v8M9 12h6"/>',desktop_vision:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',monitor: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M12 17v4M8 21h8"/>',
     image: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 4-6 5 7"/>',
     upload: '<path d="M12 16V3m-4 4 4-4 4 4M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>',
     check: '<path d="m5 12 4 4L19 6"/>',
@@ -30,7 +44,18 @@ window.CupboxIcons = (() => {
     arrow: '<path d="M4 12h16m-6-6 6 6-6 6"/>',
     sparkle: '<path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z"/>',
   };
-  const html = (name, cls = "") => `<svg class="ui-icon ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.tools}</svg>`;
+  const documentIcon='<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 12h8M8 16h6"/>';
+  for(const id of ['word_read','word_create','word_replace','word_template','word_mailmerge','office_export','office_import_csv'])paths[id]=documentIcon;
+  for(const id of ['ppt_read','ppt_create','ppt_replace','ppt_reorder'])paths[id]='<rect x="3" y="3" width="18" height="13" rx="2"/><path d="M12 16v5M7 21h10M7 8h10M7 12h6"/>';
+  for(const id of ['excel_read','excel_create','excel_update','excel_analyze','excel_transform','excel_format','excel_merge'])paths[id]='<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 9v12"/>';
+  for(const id of ['pdf_read','pdf_create','pdf_merge','pdf_extract','pdf_stamp'])paths[id]=documentIcon+'<path d="M8 19h8"/>';
+  paths.useit_ppt='<rect x="3" y="3" width="18" height="13" rx="2"/><path d="M12 16v5M7 21h10M7 8h10M7 12h6"/>';
+  paths.useit_word=documentIcon;
+  paths.useit_excel='<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 9v12"/>';
+  paths.useit_autocad='<path d="M3 19 9 5l6 14M6 13h8"/><rect x="16" y="4" width="5" height="16" rx="1"/><path d="M18 8h1M18 12h1M18 16h1"/>';
+  paths.useit_status='<circle cx="12" cy="12" r="9"/><path d="M12 8v5l3 2"/>';
+  paths.useit_computer='<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>';
+  const html = (name, cls = "") => `<svg data-glyph="${Object.hasOwn(paths,name)?name:'tools'}" class="ui-icon ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.tools}</svg>`;
   const mount = (root = document) => root.querySelectorAll("[data-icon]").forEach(el => { el.innerHTML = html(el.dataset.icon); });
   return { html, mount, names: Object.keys(paths) };
 })();

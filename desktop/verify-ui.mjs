@@ -5,6 +5,7 @@ import path from 'node:path';
 import http from 'node:http';
 import { pathToFileURL } from 'node:url';
 const out = path.resolve('output/ui-review');
+const expectedVersion=JSON.parse(await readFile('package.json','utf8')).version;
 app.setPath('userData', path.join(process.env.CUPBOX_HOME, 'electron-profile'));
 app.disableHardwareAcceleration();
 await mkdir(out, { recursive: true });
@@ -26,7 +27,7 @@ const baseUrl = `http://127.0.0.1:${server.address().port}/v1`;
 app.on('browser-window-created', (_event, win) => {
   win.hide();
   win.webContents.setBackgroundThrottling(false);
-  win.webContents.on('console-message', (_event, details) => {
+  win.webContents.on('console-message', details => {
     if (details.level === 'error') errors.push(details.message);
   });
   win.webContents.once('did-finish-load', async () => {
@@ -78,7 +79,7 @@ app.on('browser-window-created', (_event, win) => {
       await evaluate(`sendChat()`);
       await check('successful request saves session and renders reply', `sessionId && document.querySelector('#chat-scroll').textContent.includes('已收到你的任务。') && document.querySelectorAll('.sess-item').length===1`);
       await evaluate(`document.querySelector('#btn-clear').click()`);
-      await check('clearing history requires inline confirmation', `Boolean(document.querySelector('.confirm-bar'))`);
+      await check('clearing history requires visible risk confirmation', `!document.querySelector('#ux-confirm').hidden&&document.querySelector('#ux-confirm-yes').disabled`);
       await evaluate(`document.querySelector('.confirm-bar button:last-child').click();newChat()`);
       await evaluate(`closeModal();document.querySelector('#chat-text').value='';prefs.disabledTools=TOOLS.map(t=>t.id);renderPlugins();renderDrawerTools()`);
       await check('all tools disabled state', `document.querySelectorAll('.tool-item').length===0`);
@@ -129,9 +130,9 @@ app.on('browser-window-created', (_event, win) => {
       await new Promise(resolve=>{win.webContents.once('did-finish-load',resolve);win.webContents.reload()});
       await evaluate(`new Promise((resolve,reject)=>{let n=0;const t=setInterval(()=>{if(window.cupboxReady){clearInterval(t);resolve(true)}else if(++n>100){clearInterval(t);reject(Error('Reload timeout'))}},50)})`);
       await check('appearance restored after reload', `prefs.background==='bloom' && document.documentElement.dataset.theme==='dark' && document.documentElement.dataset.accent==='rose'`);
-      await check('all tool icons use SVG', `[...document.querySelectorAll('.tool-item .t-icon')].every(el=>el.querySelector('svg')) && document.querySelectorAll('.tool-item .t-icon svg').length===14`);
+      await check('all tool icons use SVG', `[...document.querySelectorAll('.tool-item .t-icon')].every(el=>el.querySelector('svg')) && document.querySelectorAll('.tool-item .t-icon svg').length===21`);
       await check('SVG logo loads', `document.querySelector('.brand-logo').complete && document.querySelector('.brand-logo').naturalWidth>0`);
-      await check('version is 1.0.2', `(async()=>{const i=await cupbox.info();return i.version==='1.0.2'&&document.querySelector('#ver-chip').textContent==='v1.0.2'})()`);
+      await check('version matches package', `(async()=>{const i=await cupbox.info();return i.version===${JSON.stringify(expectedVersion)}&&document.querySelector('#ver-chip').textContent===${JSON.stringify('v'+expectedVersion)}})()`);
       await check('eight builtin themes plus custom', `Object.keys(CupboxTheme.catalog).length===9 && document.querySelectorAll('.background-card').length===9`);
       await check('all builtin artwork decodes', `Promise.all(Object.keys(CupboxTheme.catalog).filter(id=>!['none','custom'].includes(id)).map(id=>new Promise(resolve=>{const i=new Image();i.onload=()=>resolve(i.naturalWidth>0);i.onerror=()=>resolve(false);i.src=CupboxTheme.sourceFor({background:id},'light')}))).then(results=>results.every(Boolean))`);
       await evaluate(`openModal('theme');document.querySelector('[data-theme-filter="illustration"]').click()`);
@@ -143,7 +144,7 @@ app.on('browser-window-created', (_event, win) => {
       await evaluate(`closeModal()`);
       await capture('10-moonlake.png');
       await evaluate(`openModal('startup')`);
-      await check('startup settings tab', `!document.querySelector('#tab-startup').hidden && document.querySelectorAll('.startup-card').length===4`);
+      await check('startup settings tab', `!document.querySelector('#tab-startup').hidden && document.querySelectorAll('.startup-card').length===15`);
       await capture('11-startup-settings.png');
       for(const style of ['orbit','cinema','pulse']) {
         await evaluate(`void CupboxStartup.play({...prefs,startupStyle:${JSON.stringify(style)},startupDuration:3},{preview:true})`);
@@ -204,7 +205,7 @@ app.on('browser-window-created', (_event, win) => {
       await evaluate(`document.querySelector('#reset-startup').click()`);
       await check('startup reset', `prefs.startupEnabled && prefs.startupStyle==='orbit' && prefs.startupDuration===1.6`);
       await evaluate(`closeModal();document.querySelector('#btn-drawer').click()`);
-      await check('tool library opens as a full workspace', `drawerOpen&&document.querySelector('#drawer').dataset.view==='library'&&document.querySelector('#stage').hidden&&document.querySelectorAll('.tool-card').length===14&&document.querySelector('#drawer-scrim').hidden`);
+      await check('tool library opens as a full workspace', `drawerOpen&&document.querySelector('#drawer').dataset.view==='library'&&document.querySelector('#stage').hidden&&document.querySelectorAll('.tool-card').length===21&&document.querySelector('#drawer-scrim').hidden`);
       await capture('13-tool-library.png');
       await evaluate(`document.querySelector('#library-search').value='JSON';document.querySelector('#library-search').dispatchEvent(new Event('input'))`);
       await check('tool library searches descriptions', `document.querySelectorAll('.tool-card').length===2`);
@@ -214,7 +215,7 @@ app.on('browser-window-created', (_event, win) => {
       await check('path picker and cached structured results', `document.querySelectorAll('.path-picker').length===1&&Boolean(document.querySelector('.visual-result-table'))`);
       await evaluate(`selectTool('codec',true);document.querySelector('#tool-example').click()`);
       await check('JSON example populates the form', `document.querySelector('[data-key="op"]').value==='json'&&document.querySelector('[data-key="text"]').value.includes('Cupbox')`);
-      await evaluate(`selectTool('shot',true)`);
+      await evaluate(`savePrefs({executionEnvironment:'sandbox'}).then(()=>{CupboxExecution.sync(prefs);selectTool('shot',true);})`);
       await check('system tools blocked in sandbox UI', `document.querySelector('#btn-run').disabled&&!document.querySelector('#tool-environment-hint').hidden`);
       await evaluate(`openModal('api');fillApiForm()`);
       await check('eight provider presets', `document.querySelectorAll('#api-preset option').length===8`);
@@ -249,15 +250,19 @@ app.on('browser-window-created', (_event, win) => {
       if((await readFile(path.join(ctx.sandbox,'policy.txt'),'utf8'))!=='policy test')throw Error('Write happened before approval');
       await evaluate(`document.querySelector('#approval-deny').click()`);await evaluate(`window.writeTest`);
       await check('smart write refusal preserves original file', `window.writeTest.then(r=>!r.ok)`);
-      await evaluate(`savePrefs({approvalMode:'full',executionEnvironment:'native'})`);
-      await check('native full mode executes an allowed command without approval', `cupbox.run('run',{command:'echo cupbox-native',allowPrefixes:'echo'}).then(r=>r.ok&&r.result.stdout.includes('cupbox-native')&&document.querySelector('#approval-screen').hidden)`);
+      await evaluate(`savePrefs({approvalMode:'full',executionEnvironment:'native',workspace:${JSON.stringify(ctx.sandbox)}})`);
+      await check('caller supplied command whitelist cannot override trusted project policy', `cupbox.run('run',{command:'echo cupbox-native',allowPrefixes:'echo'}).then(r=>!r.ok&&r.error.includes('E_POLICY'))`);
       await evaluate(`savePrefs({approvalMode:'smart',executionEnvironment:'sandbox'})`);
-      agentTool={name:'rename',args:{dir:ctx.sandbox,template:'agent-{name}',dryRun:false}};
-      await evaluate(`void(window.agentTest=cupbox.chatSend({text:'整理测试文件',mode:'agent'}))`);await waitApproval();
-      await check('Agent tool calls use the same approval dialog', `document.querySelector('#approval-title').textContent.includes('AI')`);
+      agentTool={name:'fs_write',args:{path:'policy.txt',content:'policy edited'}};
+      await evaluate(`window.agentPreview=cupbox.chatSend({text:'预览编辑测试文件',mode:'agent'});true`);
+      const agentPreview=await evaluate('window.agentPreview');
+      const token=JSON.parse(agentPreview.result.trace[0].result).confirmToken;if(!token)throw Error('Agent preview token missing');
+      agentTool={name:'fs_write',args:{path:'policy.txt',content:'policy edited',dryRun:false,confirmToken:token}};
+      await evaluate(`void(window.agentTest=cupbox.chatSend({text:'确认执行已预览修改',sessionId:${JSON.stringify(agentPreview.sessionId)},mode:'agent'}))`);await waitApproval();
+      await check('Agent tool calls use the same approval dialog', `document.querySelector('#approval-context').textContent.includes('AI 请求')`);
       await evaluate(`document.querySelector('#approval-allow').click()`);
-      await check('approved Agent write runs instead of being forced to preview', `window.agentTest.then(r=>r.ok&&r.result.trace[0].ok&&r.result.trace[0].args.dryRun===false)`);
-      if((await readFile(path.join(ctx.sandbox,'agent-policy.txt'),'utf8'))!=='policy test')throw Error('Approved Agent write did not apply');
+      await check('approved Agent preview token commits the file transaction', `window.agentTest.then(r=>r.ok&&r.result.trace[0].ok&&r.result.trace[0].args.dryRun===false)`);
+      if((await readFile(path.join(ctx.sandbox,'policy.txt'),'utf8'))!=='policy edited')throw Error('Approved Agent write did not apply');
       agentTool=null;
       if (errors.length) throw new Error(errors.join('\n'));
       console.log('PASS no renderer errors');

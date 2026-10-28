@@ -1,0 +1,38 @@
+import {app,BrowserWindow} from 'electron';
+import {mkdir,writeFile} from 'node:fs/promises';
+import path from 'node:path';import {pathToFileURL} from 'node:url';
+const out=path.resolve('output/qq-health-review',String(Date.now())),home=path.join(out,'home');
+await mkdir(path.join(home,'.cupbox'),{recursive:true});
+await writeFile(path.join(home,'.cupbox/desktop.json'),JSON.stringify({startupEnabled:false,petEnabled:false}));
+process.env.CUPBOX_HOME=home;process.env.CUPBOX_UPDATE_DISABLE='1';process.env.CUPBOX_ANNOUNCEMENT_DISABLE='1';
+app.setPath('userData',path.join(out,'profile'));app.disableHardwareAcceleration();
+const errors=[];
+app.on('browser-window-created',(_,w)=>{w.show=()=>{};w.showInactive=()=>{};w.webContents.setBackgroundThrottling(false);w.webContents.on('console-message',e=>{if(e.level==='error')errors.push(e.message);});});
+const pause=ms=>new Promise(r=>setTimeout(r,ms));
+async function wait(fn,label){for(let i=0;i<240;i++){if(await fn())return;await pause(50);}throw Error(label);}
+const check=(value,label)=>{if(!value)throw Error(label);console.log('PASS '+label);};
+void(async()=>{try{
+ const root=path.resolve('release/Cupbox可视化/resources/app');
+ await import(pathToFileURL(path.join(root,'desktop/main.js')).href);
+ await wait(()=>BrowserWindow.getAllWindows().length,'main window');const main=BrowserWindow.getAllWindows()[0];
+ await wait(()=>main.webContents.executeJavaScript('Boolean(window.cupboxReady)').catch(()=>false),'main ready');
+ await main.webContents.executeJavaScript('cupbox.qqOpen()');let bot;
+ await wait(()=>{bot=BrowserWindow.getAllWindows().find(w=>w!==main&&w.webContents.getURL().includes('qq-bot.html'));return bot&&!bot.webContents.isLoading();},'bot window');
+ const js=s=>bot.webContents.executeJavaScript(s);
+ await wait(()=>js('Boolean(window.qqBotReady)').catch(()=>false),'bot ready');
+ await js("document.querySelector('[data-tab=health]').click();true");
+ await wait(()=>js("document.querySelectorAll('#health-checks .health-row').length===10"),'health loaded');
+ check(await js("document.querySelector('[data-setting=loopGuardEnabled]').checked&&!document.querySelector('[data-panel=health]').hidden"),'体检页可见，互刷保护默认开启');
+ check(await js("qqBot.health().then(r=>r.checks.length===10&&r.issues.length===0&&r.guard.pauses.length===0)"),'十项真实本机检查，停用可选功能不误报故障');
+ await writeFile(path.join(out,'health-main.png'),(await bot.webContents.capturePage()).toPNG());
+ bot.setSize(960,680);check(await js("document.querySelector('.bot-main').scrollWidth<=document.querySelector('.bot-main').clientWidth+1"),'最小窗口无横向溢出');
+ await writeFile(path.join(out,'health-small.png'),(await bot.webContents.capturePage()).toPNG());
+ await js("document.querySelector('[data-setting=loopGuardPeers]').value='777777,888888';document.querySelector('[data-setting=loopGuardPeers]').dispatchEvent(new Event('input',{bubbles:true}));document.querySelector('#bot-form').requestSubmit();true");
+ await wait(()=>js("!document.querySelector('#save-settings').disabled&&document.querySelector('#save-hint').textContent.includes('设置已保存')"),'save guard peers');
+ check(await js("qqBot.get().then(s=>s.settings.loopGuardEnabled&&s.settings.loopGuardPeers.length===2&&!s.running)"),'机器人名单真实保存，没有连接或发消息');
+ const baseline=await js('qqBot.get()');bot.webContents.send('qq:state',{...baseline,health:{generatedAt:Date.now(),issues:[{id:'model',title:'模型连续失败（界面测试）',detail:'请检查模型额度与连接。',page:'models'}],history:[],guard:{blocked:3,pauses:[]}}});
+ await wait(()=>js("!document.querySelector('.health-alert').hidden&&document.querySelector('#health-heading').textContent.includes('1 项')"),'alert UI');
+ check(await js("document.querySelector('#health-issues').textContent.includes('去处理')"),'运行告警显示处理入口');
+ bot.webContents.send('qq:state',baseline);await wait(()=>js("document.querySelector('.health-alert').hidden"),'recovery UI');
+ check(!errors.length,'无界面错误');console.log('QQ_HEALTH_UI_OK '+out);app.exit(0);
+}catch(error){console.error(error);app.exit(1);}})();

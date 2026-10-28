@@ -14,3 +14,6 @@ output/
 .DS_Store
 .tmp-*/
 .tmp-smoke/
+
+# 根目录临时测试副本（工具产出，非项目文件）
+/*.test.ts

@@ -1,0 +1,9 @@
+import path from 'node:path';import {mkdir,readFile,writeFile,rename,lstat,unlink} from 'node:fs/promises';import {randomUUID} from 'node:crypto';
+export class OfficialCredentials{
+ constructor(home,{encrypt,decrypt}){this.root=path.join(home,'qq-bot');this.file=path.join(this.root,'official-credentials.json');this.encrypt=encrypt;this.decrypt=decrypt;this.pending=Promise.resolve();}
+ async check(){for(const file of [this.root,this.file])try{if((await lstat(file)).isSymbolicLink())throw Error('官方凭证路径不能使用符号链接');}catch(e){if(e.code!=='ENOENT')throw e;}}
+ async read(){await this.check();try{const text=await readFile(this.file,'utf8');if(text.length>16000)throw Error('凭证文件异常');const data=JSON.parse(text);if(data.version!==1||!/^\d{5,16}$/.test(data.appId)||typeof data.encrypted!=='string')throw Error('官方凭证格式无效');return data;}catch(e){if(e.code==='ENOENT')return null;throw Error('官方凭证无法读取，请在本机重新保存');}}
+ async status(){await this.pending.catch(()=>{});const data=await this.read();return{configured:!!data,appId:data?.appId||''};}
+ async load(){await this.pending.catch(()=>{});const data=await this.read();if(!data)throw Error('请先保存官方机器人的AppID和AppSecret');try{return{appId:data.appId,appSecret:this.decrypt(Buffer.from(data.encrypted,'base64'))};}catch{throw Error('本机无法解密官方凭证，请重新填写AppSecret');}}
+ save({appId,appSecret}){const run=this.pending.catch(()=>{}).then(async()=>{if(typeof appId!=='string'||!/^\d{5,16}$/.test(appId)||typeof appSecret!=='string'||!appSecret||appSecret.length>512||/[\s\x00-\x1f]/.test(appSecret))throw Error('请填写有效的AppID与AppSecret');const encrypted=this.encrypt(appSecret);await mkdir(this.root,{recursive:true});await this.check();const temp=this.file+'.'+randomUUID()+'.tmp';try{await writeFile(temp,JSON.stringify({version:1,appId,encrypted:encrypted.toString('base64')}),{flag:'wx',mode:0o600});await rename(temp,this.file);}finally{await unlink(temp).catch(()=>{});}return{configured:true,appId};});this.pending=run;return run;}
+}

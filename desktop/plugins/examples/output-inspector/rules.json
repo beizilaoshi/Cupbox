@@ -1,0 +1,6 @@
+{
+  "blockWords": ["[禁止发送]"],
+  "maskWords": [],
+  "replacement": "[已隐藏]",
+  "maxChars": 0
+}

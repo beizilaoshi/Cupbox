@@ -8,15 +8,17 @@ import { classifyTool, needsApproval, sandboxArgs } from './execution-policy.js'
 const desktop=path.dirname(fileURLToPath(import.meta.url));
 const root=path.dirname(desktop);
 
-export function createToolExecution({getPrefs,home}) {
+export function createToolExecution({getPrefs,home,audit,onApproval}) {
   const pending=new Map();
   const sandboxRoot=()=>path.join(home(),'sandbox');
   function requestApproval(sender,payload) {
+    if(sender.isDestroyed())return Promise.resolve(false);
     return new Promise(resolve=>{
       const id=randomUUID();
+      let endApproval;try{endApproval=onApproval?.();}catch{}
       const timeout=setTimeout(()=>done(false),300000);
       const destroyed=()=>done(false);
-      const done=allow=>{clearTimeout(timeout);sender.removeListener('destroyed',destroyed);pending.delete(id);resolve(allow);};
+      const done=allow=>{if(!pending.delete(id))return;clearTimeout(timeout);sender.removeListener('destroyed',destroyed);try{endApproval?.();}catch{}if(!sender.isDestroyed())sender.send('execution:approval-canceled',id);resolve(allow);};
       pending.set(id,{sender:sender.id,done});
       sender.once('destroyed',destroyed);
       sender.send('execution:approval',{id,...payload});
@@ -27,7 +29,7 @@ export function createToolExecution({getPrefs,home}) {
     if(!request || request.sender!==sender.id)return false;
     request.done(allow===true);return true;
   }
-  async function execute(sender,tool,input={},actor='manual',signal) {
+  async function executeInternal(sender,tool,input={},actor='manual',signal) {
     signal?.throwIfAborted();
     if(!TOOL_DEFS.some(t=>t.name===tool))throw new Error('未知的本地工具');
     const p=await getPrefs();
@@ -50,7 +52,7 @@ export function createToolExecution({getPrefs,home}) {
       if(target){try{const base=directory?await realpath(directory):null;const resolved=await realpath(target);const relative=base?path.relative(base,resolved):'..';outsideRead=!base||relative==='..'||relative.startsWith(`..${path.sep}`)||path.isAbsolute(relative);}catch{outsideRead=true;}}
     }
     signal?.throwIfAborted();
-    if((needsApproval(approval,tool,args)||(approval==='smart'&&outsideRead)) && !await requestApproval(sender,payload))throw new Error('用户未批准此操作，已取消执行');
+    if(((actor!=='manual'&&['run','memory_remember','memory_manage','memory_profile'].includes(tool)&&!(tool==='memory_profile'&&!Object.hasOwn(args,'content'))&&!(tool==='memory_manage'&&!args.forget))||needsApproval(approval,tool,args)||(approval==='smart'&&outsideRead)) && !await requestApproval(sender,payload))throw new Error('用户未批准此操作，已取消执行');
     if(sender.isDestroyed())throw new Error('窗口已关闭');
     signal?.throwIfAborted();
     if(environment==='sandbox') args=(await sandboxArgs(tool,args,sandboxRoot())).args;
@@ -61,8 +63,19 @@ export function createToolExecution({getPrefs,home}) {
       return result;
     } catch(e){if(!sender.isDestroyed())sender.send('execution:progress',{tool,state:'failed',environment,error:e.message});throw e;}
   }
-  function cancel(sender){for(const [id,r] of pending)if(r.sender===sender.id){r.done(false);if(!sender.isDestroyed())sender.send('execution:approval-canceled',id);}}
-  return {execute,respond,sandboxRoot,cancel};
+  async function execute(sender,tool,input={},actor='manual',signal){const started=Date.now();let failure;try{return await executeInternal(sender,tool,input,actor,signal);}catch(e){failure=e;throw e;}finally{await audit?.(tool,input,{ok:!failure,code:failure?.code},Date.now()-started).catch(()=>{});}}
+  function cancel(sender){for(const r of pending.values())if(r.sender===sender.id)r.done(false);}
+  async function executeFilesystem(sender,definition,args,invoke,signal,directory){
+    signal?.throwIfAborted();const p=await getPrefs();if((p.disabledTools||[]).includes(definition.name)||p.filesystemTools===false)throw Error('文件工具已在设置中关闭');
+    const risk=definition.readOnly||definition.name==='fs_edit_file'&&args.dryRun===true?'read':'write';
+    const payload={tool:definition.name,args,actor:'agent',environment:p.executionEnvironment==='native'?'native':'sandbox',directory,risk};
+    signal?.throwIfAborted();
+    if((p.approvalMode==='ask'||(p.approvalMode!=='full'&&risk==='write'))&&!await requestApproval(sender,payload))throw Error('用户未批准此文件操作');
+    signal?.throwIfAborted();if(sender.isDestroyed())throw Error('窗口已关闭');sender.send('execution:progress',{...payload,state:'running'});
+    try{const result=await invoke();sender.send('execution:progress',{...payload,state:'completed'});return result;}catch(e){if(!sender.isDestroyed())sender.send('execution:progress',{...payload,state:'failed',error:e.message});throw e;}
+  }
+  async function authorizeAdvanced(sender,payload){const p=await getPrefs();return requestApproval(sender,{actor:'agent',environment:p.executionEnvironment==='native'?'native':'sandbox',...payload});}
+  return {execute,executeFilesystem,authorizeAdvanced,respond,sandboxRoot,cancel};
 }
 
 export async function restrictedRun(tool,args,directory) {

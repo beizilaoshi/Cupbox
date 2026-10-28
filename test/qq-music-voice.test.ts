@@ -1,0 +1,10 @@
+import {describe,it,expect,vi} from 'vitest';
+import {echoMusicVoice} from '../desktop/qq/echo-music.js';
+import {OneBot} from '../desktop/qq/onebot.js';
+const song={provider:'kugou',songId:'a'.repeat(32),title:'晴天',albumId:'123',mixId:'456'};
+describe('point song delivery as QQ voice',()=>{
+ it('obtains a fresh authorized stream and sends a record without requiring cover art',async()=>{const request=vi.fn(async()=>({status:1,url:['https://fs.open.kugou.com/song.mp3']}));expect(await echoMusicVoice(song,{request})).toEqual({type:'record',data:{file:'https://fs.open.kugou.com/song.mp3'}});expect(request.mock.calls[0][1]).toEqual({hash:song.songId,quality:128,album_id:'123',album_audio_id:'456'});});
+ it('fails without playable audio and never substitutes a card or arbitrary URL',async()=>{for(const body of [{status:1,url:[]},{status:0,error_code:20010},{status:1,url:'http://127.0.0.1/private.mp3'},{status:1,url:'https://attacker.example/audio.mp3'}])await expect(echoMusicVoice(song,{request:async()=>body})).rejects.toThrow('暂无可用音频');await expect(echoMusicVoice({...song,provider:'qq'},{request:vi.fn()})).rejects.toThrow('酷狗曲目');});
+ it('does not swallow upstream errors or account cancellation',async()=>{await expect(echoMusicVoice(song,{request:async()=>{throw Error('upstream unavailable');}})).rejects.toThrow('upstream');const c=new AbortController();await expect(echoMusicVoice(song,{signal:c.signal,request:async()=>{c.abort();return{status:1,url:'https://fs.open.kugou.com/song.mp3'};}})).rejects.toThrow();});
+ it('allows extra time for protocol download and transcode while ordinary messages keep default timing',async()=>{const bot=new OneBot({url:'ws://127.0.0.1',token:'fixture',onEvent:()=>{},onState:()=>{}}),call=vi.spyOn(bot,'call').mockResolvedValue({message_id:1}),e={message_type:'group',group_id:'123456'};await bot.send(e,[{type:'record',data:{file:'https://fs.open.kugou.com/song.mp3'}}]);expect(call.mock.calls[0][2]).toEqual({timeoutMs:60000});await bot.send(e,[{type:'text',data:{text:'你好'}}]);expect(call.mock.calls[1][2]).toBeUndefined();});
+});

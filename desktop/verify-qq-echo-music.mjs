@@ -1,0 +1,37 @@
+import {app,BrowserWindow} from 'electron';
+import {mkdir,writeFile} from 'node:fs/promises';
+import path from 'node:path';import {pathToFileURL} from 'node:url';
+const out=path.resolve('output/qq-echo-review',String(Date.now())),home=path.join(out,'home');
+await mkdir(path.join(home,'.cupbox'),{recursive:true});
+await writeFile(path.join(home,'.cupbox/desktop.json'),JSON.stringify({startupEnabled:false,petEnabled:false}));
+process.env.CUPBOX_HOME=home;process.env.CUPBOX_UPDATE_DISABLE='1';process.env.CUPBOX_ANNOUNCEMENT_DISABLE='1';
+app.setPath('userData',path.join(out,'profile'));app.disableHardwareAcceleration();
+const errors=[];
+app.on('browser-window-created',(_,w)=>{w.show=()=>{};w.showInactive=()=>{};w.webContents.setBackgroundThrottling(false);w.webContents.on('console-message',e=>{if(e.level==='error')errors.push(e.message);});});
+const pause=ms=>new Promise(r=>setTimeout(r,ms));
+async function wait(fn,label){for(let i=0;i<240;i++){if(await fn())return;await pause(50);}throw Error(label);}
+const check=(value,label)=>{if(!value)throw Error(label);console.log('PASS '+label);};
+void(async()=>{try{
+ const root=path.resolve('release/Cupbox可视化/resources/app');
+ const echo=await import(pathToFileURL(path.join(root,'desktop/qq/echo-music.js')).href);
+ const songs=await echo.searchEchoMusic('晴天 周杰伦');
+ check(songs.length>0&&songs[0].provider==='kugou'&&!!songs[0].image,'测试版独立worker实际搜索EchoMusic曲库');
+ const card=await echo.echoMusicCard(songs[0]);
+ check(card.type==='music'&&card.data.type==='custom'&&!!card.data.title&&!!card.data.image&&card.data.url.startsWith('https://www.kugou.com/'),'真实曲目信息生成音乐卡片');
+ await writeFile(path.join(out,'search-result.json'),JSON.stringify({song:songs[0],card:{...card,data:{...card.data,audio:card.data.audio?'[available]':''}}},null,2));
+ await import(pathToFileURL(path.join(root,'desktop/main.js')).href);
+ await wait(()=>BrowserWindow.getAllWindows().length,'main window');const main=BrowserWindow.getAllWindows()[0];
+ await wait(()=>main.webContents.executeJavaScript('Boolean(window.cupboxReady)').catch(()=>false),'main ready');
+ await main.webContents.executeJavaScript('cupbox.qqOpen()');let bot;
+ await wait(()=>{bot=BrowserWindow.getAllWindows().find(w=>w!==main&&w.webContents.getURL().includes('qq-bot.html'));return bot&&!bot.webContents.isLoading();},'bot window');
+ const js=s=>bot.webContents.executeJavaScript(s);
+ await wait(()=>js('Boolean(window.qqBotReady)').catch(()=>false),'bot ready');
+ await js("document.querySelector('[data-tab=music]').click();true");
+ check(await js("document.querySelector('[data-setting=qqMusicSource]').value==='echo'&&Array.from(document.querySelector('#music-provider').options).some(o=>o.value==='kugou')"),'点歌页默认EchoMusic曲库、支持酷狗Hash');
+ check(await js("!document.querySelector('[data-panel=music]').hidden&&document.querySelector('.bot-main').scrollWidth<=document.querySelector('.bot-main').clientWidth+1"),'点歌页可见且无横向溢出');
+ await writeFile(path.join(out,'music-echo.png'),(await bot.webContents.capturePage()).toPNG());
+ await js("const field=document.querySelector('[data-setting=qqMusicSource]');field.value='local';field.dispatchEvent(new Event('input',{bubbles:true}));document.querySelector('#bot-form').requestSubmit();true");
+ await wait(()=>js("!document.querySelector('#save-settings').disabled&&document.querySelector('#save-hint').textContent.includes('设置已保存')"),'save local source');
+ check(await js("qqBot.get().then(s=>s.settings.qqMusicSource==='local'&&!s.settings.qqMusicEnabled&&!s.running)"),'曲库选择真实保存、未连接QQ或发送消息');
+ check(!errors.length,'无界面错误');console.log('QQ_ECHO_UI_OK '+out);app.exit(0);
+}catch(error){console.error(error);app.exit(1);}})();

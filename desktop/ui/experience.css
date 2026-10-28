@@ -1,0 +1,63 @@
+/* Shared reading and interaction system; app colours and artwork remain theme driven. */
+body.ux-refined{--ux-gap:20px;--ux-card-padding:24px;--ux-control-height:38px}
+body.ux-refined :is(button,input,select,textarea){font-family:inherit}
+body.ux-refined button{touch-action:manipulation}
+body.ux-refined :is(button,input,select,textarea,summary):focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+body.ux-refined :is(input,select,textarea){scroll-margin-block:100px}
+body.ux-refined :is(.bot-card,.model-editor,.settings-disclosure){border-radius:14px}
+body.ux-refined :is(.hint,.small-note,.field small,.switch-row small){line-height:1.75;font-size:12px}
+body.ux-refined :is(.warning-note,.info-note){line-height:1.8;overflow-wrap:anywhere}
+body.ux-refined :is(.field,.grid-2>*,.settings-grid>*){min-width:0}
+body.ux-refined :is(.field,.grid-2,.settings-grid) :is(input:not([type=checkbox]):not([type=range]):not([type=radio]),select,textarea){font-size:13px;min-width:0;box-sizing:border-box}
+body.ux-refined :is(.field,.grid-2,.settings-grid) :is(input:not([type=checkbox]):not([type=range]):not([type=radio]),select){min-height:var(--ux-control-height)}
+body.ux-refined textarea{line-height:1.8;resize:vertical}
+body.ux-refined :is(.btn-run,.btn-ghost2,.ghost-btn){min-height:34px;line-height:1.5;transition:background .15s,border-color .15s}
+body.ux-refined .button-row{gap:10px;flex-wrap:wrap}
+body.ux-refined :is(.button-row,.wb-actions) button{white-space:normal}
+.ux-field-heading{display:flex!important;align-items:center;justify-content:flex-start;gap:7px;min-width:0;line-height:1.7}
+.ux-field-heading>b{display:inline!important;margin:0!important}
+body.ux-refined .ux-help{display:inline-flex;flex:0 0 20px;align-items:center;justify-content:center;width:20px;height:20px;min-height:20px!important;padding:0!important;border:1px solid var(--stroke);border-radius:50%;font-family:inherit;font-size:11px;font-weight:600;line-height:1;color:var(--txt-dim);background:var(--surface);cursor:help;vertical-align:middle}
+body.ux-refined .ux-help:hover,body.ux-refined .ux-help:focus-visible{border-color:var(--accent);color:var(--accent);background:var(--raised)}
+.ux-tooltip{position:fixed;z-index:10050;width:max-content;max-width:360px;padding:13px 15px;border:1px solid var(--stroke);border-radius:12px;background:var(--surface);color:var(--txt);box-shadow:0 10px 36px #0002;font-size:12px;line-height:1.85;white-space:pre-wrap;overflow-wrap:anywhere;max-height:calc(100vh - 24px);overflow:auto}
+.ux-tooltip[hidden],.ux-back-top[hidden],.ux-message[hidden]{display:none!important}
+.ux-view-tools{display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:auto}
+body.ux-refined .ux-view-button{font-size:11px;line-height:1.5;padding:6px 9px;border:1px solid var(--stroke);border-radius:7px;color:var(--txt-dim);background:var(--surface);white-space:nowrap}
+body.ux-refined .ux-view-button[aria-pressed=true]{color:var(--accent);background:var(--raised);border-color:var(--accent)}
+.ux-message{position:fixed;z-index:10051;bottom:24px;left:50%;transform:translateX(-50%);max-width:calc(100vw - 40px);padding:12px 18px;border:1px solid var(--stroke);border-radius:10px;color:var(--txt);background:var(--surface);box-shadow:0 8px 28px #0002;font-size:12px;line-height:1.7}
+.ux-back-top{position:fixed;z-index:35;right:24px;bottom:92px;padding:8px 12px;border:1px solid var(--stroke);border-radius:9px;color:var(--txt-dim);background:var(--surface);box-shadow:0 4px 16px #0001;font-size:12px}
+body.ux-qq.qq-organized .bot-main{padding:24px 30px 0;scrollbar-gutter:stable;scroll-padding-block:80px 110px}
+body.ux-qq.qq-organized .bot-card{padding:var(--ux-card-padding);margin-bottom:var(--ux-gap)}
+body.ux-qq.qq-organized .bot-card h2{font-size:16px;line-height:1.6;margin-bottom:16px}
+body.ux-qq.qq-organized .page-heading h1{font-size:24px;letter-spacing:-.4px;line-height:1.5}
+body.ux-qq.qq-organized .page-heading p{font-size:13px;line-height:1.8;max-width:76ch}
+body.ux-qq.qq-organized .field{font-size:13px;margin:18px 0;line-height:1.75}
+body.ux-qq.qq-organized .switch-row{gap:18px;padding:17px 0}
+body.ux-qq.qq-organized .switch-row b{font-size:13px}
+body.ux-qq.qq-organized .switch-row small{font-size:12px;margin-top:5px}
+body.ux-qq .qq-settings-location{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-height:36px;margin-bottom:18px;font-size:12px}
+body.ux-qq.qq-organized .qq-section-tabs{position:sticky;top:0;z-index:9;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;gap:5px;padding:8px 0 10px;background:var(--bg);scrollbar-width:thin;scroll-padding-inline:10px}
+body.ux-qq.qq-organized .qq-section-tabs>button{flex:0 0 auto;white-space:nowrap;font-size:12px;min-height:36px}
+body.ux-qq .qq-section-content,.ux-qq .bot-card{scroll-margin-top:70px}
+.ux-page-map{margin:0 0 18px;border:1px solid var(--stroke);border-radius:10px;background:var(--surface)}
+.ux-page-map>summary{padding:11px 14px;font-size:12px;color:var(--txt-dim);cursor:pointer}
+.ux-page-map>.qq-page-outline{margin:0;padding:0 12px 12px}
+body.ux-qq.qq-organized .bot-savebar{gap:12px;align-items:center;min-height:64px;padding:12px 0;margin-top:16px}
+body.ux-qq #save-hint{line-height:1.7;font-size:12px;flex:1;min-width:0}
+body.ux-qq #save-hint.draft{color:var(--accent);font-weight:600}
+body.ux-qq #save-settings{min-width:124px;min-height:38px;font-size:13px}
+body.ux-main #settings-modal .settings-content-head{gap:12px;flex-wrap:wrap;padding:18px 24px;min-height:88px}
+body.ux-main #settings-modal .settings-content-head>p{margin:0;max-width:280px;text-align:left}
+body.ux-main #settings-modal .settings-content>.modal-body{padding:24px;scrollbar-gutter:stable;scroll-padding-block:30px}
+body.ux-main #settings-modal #modal-tabs .tab{min-height:36px;padding:9px 11px;font-size:12px}
+body.ux-main #settings-modal :is(.grid-2,.settings-shortcuts){gap:18px}
+body.ux-main .chat-head{min-height:54px;gap:14px}
+body.ux-main .composer-caption{line-height:1.7}
+body.ux-main .model-editor{padding:22px}
+body.ux-main .model-editor-heading{padding-bottom:14px;margin-bottom:14px}
+html[data-ui-density=compact] body.ux-refined{--ux-gap:12px;--ux-card-padding:18px;--ux-control-height:34px}
+html[data-ui-density=compact] body.ux-qq.qq-organized .field{margin:12px 0}
+html[data-ui-density=compact] body.ux-qq.qq-organized .switch-row{padding:11px 0}
+html[data-ui-notes=hidden] .ux-inline-note{display:none!important}
+@media(max-width:1050px){body.ux-qq.qq-organized .bot-main{padding:20px 20px 0}body.ux-qq.qq-organized .bot-side{width:184px;flex-basis:184px}body.ux-main #settings-modal .settings-content-head>p{max-width:none;flex-basis:100%;order:3}body.ux-main #settings-modal .settings-content>.modal-body{padding:20px}body.ux-main #settings-modal .grid-2{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:850px){body.ux-refined{--ux-card-padding:18px}body.ux-qq .qq-settings-location{gap:8px}body.ux-qq .ux-view-tools{margin-left:0}body.ux-qq.qq-organized .bot-card .settings-grid{grid-template-columns:minmax(0,1fr)}body.ux-qq #save-settings{min-width:106px}body.ux-main .settings-sidebar{width:164px}.ux-back-top{right:18px}}
+@media(prefers-reduced-motion:reduce){body.ux-refined *{scroll-behavior:auto!important}body.ux-refined :is(button,input,select,textarea){transition:none!important}}

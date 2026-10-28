@@ -88,6 +88,10 @@ AI 接入:
            agent <任务> [--max-turns N]  Codex 式 Agent 循环，自动调用本地工具
            config [--provider p --base url --model m --key sk-…]
                                           查看/写入 AI 配置（存于 文档/Cupbox/config.json）
+  freemodel list [--refresh]              列出匿名免费文本模型
+           chat <模型id> <问题>            免 API Key 直接对话
+           probe <模型id>                  探测模型可用性与延迟
+           on | off                        启用/关闭免费模型总开关
   mcp      启动 MCP 服务器（stdio），供 Claude Desktop / Cursor / Cline 使用
 
 记忆（本机 文档/Cupbox/memory，供 AI 记住与回忆）:
@@ -701,6 +705,63 @@ async function main(): Promise<void> {
         console.log(`✅ 已是最新（数据源 ${fromName}）`);
       }
       return;
+    }
+
+    // ---------------- freemodel ----------------
+    case 'freemodel': {
+      const sub = rest[0];
+      const args = rest.slice(1);
+      const json = args.includes('--json');
+      const pos = args.filter((a) => !a.startsWith('--'));
+      const fm = await import('./core/freemodel.js');
+      if (!sub) die('用法: cupbox freemodel list|chat|probe|on|off …（详见 help）');
+      if (sub === 'list') {
+        const r = await fm.listFreeModels({ refresh: args.includes('--refresh') });
+        const store = await fm.loadFreeStore();
+        if (json) {
+          console.log(JSON.stringify({ enabled: store.enabled, models: r.models, live: r.live }, null, 2));
+          return;
+        }
+        console.log(`免费模型总开关：${store.enabled ? '✅ 已启用' : '⭕ 未启用（cupbox freemodel on 启用）'}`);
+        if (!r.live.opencode && !r.live.kilo && !r.live.vireonix) console.log('⚠️ 在线目录拉取失败，以下为本地缓存/兜底表（可能已过时）');
+        const okCount = r.models.filter((m) => !m.blocked).length;
+        console.log(`\n可用免费模型（${okCount} 个可用 / 共 ${r.models.length} 个，免 API Key）：`);
+        for (const m of r.models) {
+          const tags = [m.lane, m.wire, m.vision ? '视觉' : '', m.reasoning ? '思考' : '', m.blocked ? '⛔ 通道已封禁' : '', m.regionSensitive ? '区域敏感' : '', m.stale ? '兜底表' : ''].filter(Boolean).join(' · ');
+          console.log(`  ${m.blocked ? '⛔' : fm.isModelEnabled(store, m.id) ? '✅' : '  '} ${m.id.padEnd(38)} ${m.name}  [${tags}]`);
+        }
+        console.log('\n⚠️ 风险提示：免费通道为第三方公共池，无 SLA、可能限流或区域限制，上游可能记录提示词，请勿发送敏感内容。');
+        return;
+      }
+      if (sub === 'chat') {
+        const model = pos[0];
+        const prompt = pos.slice(1).join(' ').trim();
+        if (!model || !prompt) die('用法: cupbox freemodel chat <模型id> <问题>');
+        const r = await fm.chatFreeLane({ model, messages: [{ role: 'user', text: prompt }] });
+        if (json) {
+          console.log(JSON.stringify(r, null, 2));
+          return;
+        }
+        console.log(r.text);
+        return;
+      }
+      if (sub === 'probe') {
+        const model = pos[0];
+        if (!model) die('用法: cupbox freemodel probe <模型id>');
+        const r = await fm.probeFreeModel(model);
+        if (json) {
+          console.log(JSON.stringify({ model, ...r }, null, 2));
+          return;
+        }
+        console.log(r.ok ? `✅ ${model} 可用（${r.ms}ms）` : `❌ ${model} 不可用：${r.error}`);
+        return;
+      }
+      if (sub === 'on' || sub === 'off') {
+        await fm.saveFreeStore({ enabled: sub === 'on' });
+        console.log(sub === 'on' ? '✅ 免费模型已启用（设置 → 免费模型 可选具体模型）' : '⭕ 免费模型已关闭');
+        return;
+      }
+      die(`未知子命令: ${sub}（可用 list / chat / probe / on / off）`);
     }
 
     // ---------------- memory ----------------

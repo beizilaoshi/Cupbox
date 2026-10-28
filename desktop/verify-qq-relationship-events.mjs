@@ -1,0 +1,35 @@
+import {app,BrowserWindow} from 'electron';
+import path from 'node:path';import {pathToFileURL} from 'node:url';
+import {mkdir,writeFile} from 'node:fs/promises';
+const out=path.resolve('output/qq-relationship-events-review',String(Date.now())),home=path.join(out,'home');
+await mkdir(path.join(home,'.cupbox'),{recursive:true});await writeFile(path.join(home,'.cupbox/desktop.json'),JSON.stringify({startupEnabled:false}));
+process.env.CUPBOX_HOME=home;process.env.CUPBOX_UPDATE_DISABLE='1';process.env.CUPBOX_ANNOUNCEMENT_DISABLE='1';
+app.setPath('userData',path.join(out,'profile'));app.disableHardwareAcceleration();
+const errors=[];app.on('browser-window-created',(_,w)=>{w.show=()=>{};w.showInactive=()=>{};w.webContents.setBackgroundThrottling(false);w.webContents.on('console-message',e=>{if(e.level==='error')errors.push(e.message);});});
+const pause=ms=>new Promise(r=>setTimeout(r,ms));async function wait(fn,label){for(let i=0;i<240;i++){if(await fn())return;await pause(50);}throw Error(label);}
+const check=(value,label)=>{if(!value)throw Error(label);console.log('PASS '+label);};
+void(async()=>{try{
+ const root=path.resolve('release/Cupbox可视化/resources/app'),{BotMemory}=await import(pathToFileURL(path.join(root,'desktop/qq/memory.js')).href),{BotStore}=await import(pathToFileURL(path.join(root,'desktop/qq/store.js')).href);
+ await new BotStore(path.join(home,'.cupbox')).save({enabled:false,restoreLoginOnOpen:false,companionEnabled:true,romanceMode:'route'});
+ const memory=new BotMemory(path.join(home,'.cupbox/memory/qq-bot')),today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(Date.now());
+ await memory.saveRomance({self_id:123456,user_id:654321,message_type:'private'},'654321:companion:cafe',{score:-30,trust:-10,familiarity:60,committed:false,relationshipStatus:'separated',userLabel:'关系事件测试',companionMode:'route',steps:[],emotionCycle:{enabled:true,startDate:today,cycleDays:28,durationDays:5},relationshipEvents:[{id:'event-test',type:'breakup',evidence:'我们分手吧',reason:'尊重双方目前的距离和意愿',at:new Date().toISOString()}]});
+ await import(pathToFileURL(path.join(root,'desktop/main.js')).href);
+ await wait(()=>BrowserWindow.getAllWindows().length,'main window');const main=BrowserWindow.getAllWindows()[0];await wait(()=>main.webContents.executeJavaScript('Boolean(window.cupboxReady)').catch(()=>false),'main ready');
+ await main.webContents.executeJavaScript('cupbox.qqOpen()');let bot;
+ await wait(()=>{bot=BrowserWindow.getAllWindows().find(w=>w!==main&&w.webContents.getURL().includes('qq-bot.html'));return bot&&!bot.webContents.isLoading();},'QQ window');
+ const js=s=>bot.webContents.executeJavaScript(s);await wait(()=>js('Boolean(window.qqBotReady)').catch(()=>false),'QQ ready');
+ await js(`switchTab('relationship');document.querySelector('[data-setting=emotionLowEnabled]').closest('details').open=true;true`);
+ check(await js(`document.querySelectorAll('[data-setting=emotionLowEnabled]').length===1&&!document.querySelector('[data-setting=emotionLowEnabled]').checked&&document.querySelector('[data-setting=breakupEventsEnabled]').checked`),'周期默认关闭，分手判断开关与设置入口可见');
+ await js(`document.querySelector('[data-setting=emotionLowEnabled]').click();true`);
+ check(await js(`draft().emotionLowEnabled&&draft().emotionLowStartDate===${JSON.stringify(today)}&&draft().emotionLowCycleDays===28&&draft().emotionLowDurationDays===5`),'启用后填入日期，周期和持续时间进入设置草稿');
+ await js(`document.querySelector('#bot-form').requestSubmit();true`);
+ await wait(()=>js(`!document.querySelector('#save-settings').disabled&&document.querySelector('#save-hint').textContent.includes('设置已保存')`),'settings saved');
+ check(await js(`qqBot.get().then(s=>s.settings.emotionLowEnabled&&s.settings.emotionLowStartDate===${JSON.stringify(today)})`),'角色周期设置实际保存');
+ await writeFile(path.join(out,'settings.png'),(await bot.webContents.capturePage()).toPNG());
+ await js(`document.querySelector('[data-tab=user-data]').click();true`);await wait(()=>js(`document.querySelectorAll('.profile-person').length===1`),'archive');
+ await js(`document.querySelector('.profile-person').click();true`);
+ check(await js(`document.querySelector('#relationship-summary').textContent.includes('已分手')&&document.querySelector('#relationship-summary').textContent.includes('低谷第1天')&&document.querySelector('#relationship-events').textContent.includes('分手事件')&&document.querySelector('#relationship-events').textContent.includes('我们分手吧')`),'用户与机器人面板展示分手原话、理由及当前低谷阶段');
+ bot.setSize(960,680);await pause(150);check(await js(`document.querySelector('.bot-main').scrollWidth<=document.querySelector('.bot-main').clientWidth+1`),'最小窗口没有横向溢出');
+ await writeFile(path.join(out,'archive.png'),(await bot.webContents.capturePage()).toPNG());check(!errors.length,'没有界面错误 '+errors.join(';'));
+ console.log('QQ_RELATIONSHIP_EVENTS_OK');app.exit(0);
+}catch(e){console.error(e);app.exit(1);}})();

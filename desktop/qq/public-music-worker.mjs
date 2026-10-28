@@ -1,0 +1,3 @@
+import {parentPort,workerData} from 'node:worker_threads';
+import Meting from '@meting/core';
+try{const api=new Meting(workerData.provider);api.format(true);const raw=workerData.action==='search'?await api.search(workerData.query,{limit:5,page:1}):await api.url(workerData.id,128);if(typeof raw!=='string'||raw.length>1024*1024)throw Error('invalid response');const data=JSON.parse(raw);if(workerData.action==='url'){try{const original=JSON.parse(api.raw),items=Array.isArray(original?.data)?original.data:[original?.data];if(items.some(r=>r?.freeTrialInfo||r?.preview===true||r?.trial===true))data.preview=true;}catch{}}parentPort.postMessage({ok:true,data});}catch{parentPort.postMessage({ok:false});}

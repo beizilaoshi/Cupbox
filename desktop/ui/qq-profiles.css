@@ -1,0 +1,80 @@
+.profile-heading{display:flex;align-items:center;justify-content:space-between;gap:20px}.profile-heading .btn-run{white-space:nowrap}.profile-workspace{display:grid;grid-template-columns:220px minmax(0,1fr);gap:20px;align-items:start;margin-bottom:28px}.profile-directory{position:sticky;top:12px}.profile-directory>.field{margin-top:0}.profile-directory .small-note{margin:0 0 12px}.profile-person{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:13px 10px;border:1px solid transparent;border-radius:12px;color:var(--txt);margin-bottom:6px}.profile-person:hover{background:var(--surface)}.profile-person[aria-pressed=true]{background:var(--surface);border-color:var(--stroke)}.profile-person>span:last-child{min-width:0}.profile-person b,.profile-person small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.profile-person b{font-size:12px;font-weight:600}.profile-person small{font-size:10px;color:var(--txt-faint);margin-top:3px}.profile-avatar{display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:11px;background:var(--raised);color:var(--accent);font-size:13px;font-weight:600}.profile-detail{border:1px solid var(--stroke);border-radius:16px;background:var(--surface);overflow:hidden;min-width:0}.profile-detail-head{display:flex;align-items:center;gap:12px;padding:22px 24px 18px}.profile-detail-head h2{font-size:16px}.profile-detail-head p{font-size:10px;color:var(--txt-faint);margin-top:4px;overflow-wrap:anywhere}.profile-live{margin-left:auto;white-space:nowrap;font-size:10px;color:var(--txt-faint)}.profile-live:before{content:' ';display:inline-block;width:5px;height:5px;margin-right:6px;background:var(--ok);border-radius:50%}.profile-detail>.small-note{display:none}.profile-tabs{display:flex;gap:22px;padding:0 24px;border-bottom:1px solid var(--stroke)}.profile-tabs button{font-size:11px;color:var(--txt-faint);padding:11px 0;border-bottom:2px solid transparent;white-space:nowrap}.profile-tabs button[aria-selected=true]{color:var(--accent);border-bottom-color:var(--accent)}.profile-detail fieldset{margin:0;border:0;padding:20px 24px;min-width:0}.profile-detail fieldset:disabled{opacity:.55}.profile-field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px}.profile-detail .field{margin:12px 0}.profile-detail .field input,.profile-detail .field textarea,.profile-detail .field select{background:var(--bg)}.profile-section-head{margin:4px 0 15px}.profile-section-head:not(:first-child){border-top:1px solid var(--stroke);padding-top:20px;margin-top:24px}.profile-section-head h3{font-size:12px;margin:0 0 5px;font-weight:600}.profile-section-head p,.profile-section-head small{font-size:10px;color:var(--txt-faint);font-weight:400}.profile-number-card{padding:14px 16px;background:var(--bg);border-radius:12px;margin:12px 0}.profile-number-control{display:flex;gap:14px;align-items:center}.profile-number-control input[type=number]{width:82px;flex:none}.profile-number-control input[type=range]{min-width:0;flex:1;margin:0}.profile-number-card .switch-row{padding-bottom:0;border:0;margin:15px 0 0}.profile-actions{border-top:1px solid var(--stroke);padding:14px 24px 18px;background:var(--surface)}.profile-actions>.small-note{font-size:10px;margin:0 0 12px}.profile-actions .button-row{display:flex;flex-wrap:wrap;justify-content:flex-end;margin:0;gap:8px}.profile-actions .profile-danger{margin-right:auto}.profile-danger{font-size:11px;color:var(--err);padding:8px 0;cursor:pointer}.profile-empty{font-size:11px;color:var(--txt-faint);padding:22px 2px;line-height:1.8}.profile-memory-row{padding:14px 0;border-bottom:1px solid var(--stroke)}.profile-memory-row p{font-size:12px;line-height:1.7;overflow-wrap:anywhere}.profile-memory-row small{font-size:10px;color:var(--txt-faint)}.profile-memory-row>div{display:flex;align-items:center;gap:14px;margin-top:9px}.profile-memory-row select{font-size:11px;border:1px solid var(--stroke);border-radius:7px;background:var(--bg);padding:6px;color:var(--txt)}.profile-memory-add{display:flex;gap:10px;align-items:end;margin-top:16px}.profile-memory-add textarea{width:100%;min-width:0;border:1px solid var(--stroke);border-radius:9px;background:var(--bg);padding:10px;color:var(--txt);font:inherit;font-size:11px;resize:vertical}.profile-memory-add button{white-space:nowrap}.profile-create-dialog{width:540px;max-width:calc(100vw - 48px);max-height:calc(100vh - 80px);overflow:auto;border:1px solid var(--stroke);border-radius:18px;padding:26px;color:var(--txt);background:var(--bg);box-shadow:0 24px 80px #0003}.profile-create-dialog::backdrop{background:#141b344d;backdrop-filter:blur(4px)}.profile-create-dialog>header{display:flex;align-items:center;justify-content:space-between}.profile-create-dialog>header button{color:var(--txt-faint);font-size:18px}.profile-create-dialog>.settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px}.profile-create-dialog>.button-row{justify-content:flex-end;margin-top:18px}.profile-create-dialog .small-note{margin-bottom:14px}@media(max-width:1040px){.profile-workspace{grid-template-columns:175px minmax(0,1fr);gap:14px}.profile-detail-head{padding:18px}.profile-detail fieldset{padding:16px 18px}.profile-tabs{padding:0 18px;gap:16px}.profile-live{display:none}.profile-actions{padding:14px 18px}.profile-field-grid{gap:0 12px}}@media(max-width:760px){.profile-workspace{grid-template-columns:1fr}.profile-directory{position:static}.profile-field-grid{grid-template-columns:1fr}}
+
+body:has([data-panel="user-data"]:not([hidden])) .bot-savebar{display:none}
+.profile-detail{overflow:clip}.profile-actions{position:sticky;bottom:0;z-index:3;box-shadow:0 -8px 20px color-mix(in srgb,var(--bg) 85%,transparent)}
+.profile-create-dialog>header button{width:32px;height:32px;border-radius:8px}
+@media(max-height:740px){body.qq-settings-layout .bot-side nav button{min-height:28px;padding:4px 10px;margin:1px 0;line-height:1.4}.qq-settings-layout .qq-nav-group{margin-bottom:5px}.qq-settings-layout .qq-nav-group>p,.qq-settings-layout .qq-nav-group>summary{padding:5px 10px}.qq-settings-layout .qq-nav-group>summary{padding-top:8px}body.qq-settings-layout .bot-emblem{margin-bottom:10px}}
+
+body:has([data-panel="user-data"]:not([hidden])) .qq-save-help{display:none}.profile-actions .profile-danger{border:0;background:transparent}
+
+.profile-overview{padding:20px 24px}.profile-overview>.bot-card{border:0;padding:0;margin:0;background:transparent;box-shadow:none}.profile-overview .relationship-stats{gap:10px}.profile-overview .relationship-stats>div{padding:12px}.profile-overview .relationship-stats b{font-size:11px}.profile-overview #relationship-refresh{display:none}.profile-overview .bridge-list{font-size:11px;color:var(--txt-dim)}.profile-overview .small-note:empty{display:none}.profile-tabs{overflow-x:auto;gap:18px}.profile-detail:has([data-profile-pane="overview"]:not([hidden])) #relationship-edit-fields,.profile-detail:has([data-profile-pane="overview"]:not([hidden])) .profile-actions{display:none}.profile-overview .bot-card>header{margin-bottom:12px}
+@media(max-width:1040px){.profile-tabs{gap:14px}.profile-tabs button{font-size:10px}.profile-overview{padding:16px 18px}.profile-overview .relationship-stats{gap:6px}.profile-overview .relationship-stats>div{padding:9px}}
+
+/* Keep the directory and the selected archive in separate scroll regions. */
+.bot-main:has([data-panel="user-data"]:not([hidden])){display:flex;flex-direction:column;overflow:hidden;padding-bottom:20px}
+.bot-main:has([data-panel="user-data"]:not([hidden])) #bot-form{flex:1;min-height:0;min-width:0;width:100%;margin:0 auto;display:flex;flex-direction:column}
+[data-panel="user-data"]:not([hidden]){flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+[data-panel="user-data"]>.profile-heading{flex:none}
+[data-panel="user-data"] .profile-workspace{flex:1;min-height:0;align-items:stretch;overflow:hidden;margin-bottom:0}
+[data-panel="user-data"] .profile-directory{position:static;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+[data-panel="user-data"] .profile-directory>.field,[data-panel="user-data"] .profile-directory>.small-note{flex:none}
+#relation-directory{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior-y:contain;scrollbar-gutter:stable}
+#relation-detail-host{min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior-y:contain;scrollbar-gutter:stable;border-radius:16px}
+@media(max-width:760px){[data-panel="user-data"] .profile-workspace{grid-template-columns:140px minmax(0,1fr);gap:10px}}
+.relationship-growth{margin:18px 0;padding:16px;border:1px solid var(--stroke);border-radius:12px;background:var(--bg)}.relationship-growth h3{font-size:12px;margin:0 0 10px}.relation-growth-milestones{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}.relation-growth-milestones span{font-size:11px;color:var(--txt-faint);padding:7px 9px;background:var(--surface);border-radius:7px}.relation-growth-milestones span[data-achieved=true]{color:var(--accent)}#relation-growth-insights p{margin:6px 0;line-height:1.8}
+
+/* The directory and archive are bounded siblings; only their contents scroll. */
+[data-panel="user-data"] .profile-heading{gap:16px;margin-bottom:20px}
+[data-panel="user-data"] .profile-heading>div{min-width:0}
+[data-panel="user-data"] .profile-workspace{grid-template-columns:clamp(160px,23%,230px) minmax(0,1fr);gap:16px}
+[data-panel="user-data"] .profile-directory{min-width:0;padding:14px 10px 8px;border:1px solid var(--stroke);border-radius:16px;background:var(--surface)}
+[data-panel="user-data"] .profile-directory>.field{margin:0 4px 10px}
+[data-panel="user-data"] .profile-directory>.small-note{margin:0 4px 10px}
+#relation-directory{padding-right:4px;scrollbar-width:thin}
+.profile-person{min-width:0;gap:8px;padding:11px 8px}
+.profile-person>span:last-child{flex:1}
+#relation-detail-frame{min-height:0;min-width:0;display:flex;overflow:hidden}
+#relation-detail-frame>.profile-detail{display:flex;flex:1;flex-direction:column;min-height:0;overflow:hidden}
+.profile-detail-head{flex:none;padding:18px 20px 14px}
+.profile-detail-head>div{flex:1;min-width:0}
+.profile-detail-head h2,.profile-detail-head p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.profile-tabs{flex:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;padding:0 16px;overflow:visible}
+.profile-tabs button{min-width:0;padding:12px 2px;font-size:11px;text-align:center}
+#relation-detail-host{flex:1;border-radius:0;scrollbar-width:thin;scrollbar-gutter:stable;overflow-wrap:anywhere;outline-offset:-3px}
+.profile-detail fieldset{padding:18px 20px}
+.profile-overview{padding:18px 20px}
+.profile-overview>.bot-card{padding:0!important}
+.profile-overview .bot-card>header{display:block;margin-bottom:14px}
+.profile-overview .bot-card>header h2{margin:0 0 6px}
+.profile-overview .bot-card>header .small-note{margin:0;line-height:1.7}
+.profile-overview .relationship-stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:16px 0}
+.profile-overview .relationship-stats>div{min-width:0;padding:10px}
+.profile-actions{position:static;flex:none;padding:12px 20px;box-shadow:none}
+.profile-actions>.small-note{line-height:1.6;margin-bottom:8px}
+.profile-memory-add{flex-wrap:wrap}
+.profile-memory-add textarea{flex:1 1 180px}
+.profile-field-grid>.field{min-width:0}
+body.qq-organized .profile-number-control input[type=number]{width:82px;flex:0 0 82px}
+body.qq-organized .profile-number-control input[type=range]{width:0;flex:1 1 0;min-width:0}
+@media(max-width:1040px){
+ [data-panel="user-data"] .profile-workspace{grid-template-columns:160px minmax(0,1fr);gap:12px}
+ .profile-detail-head,.profile-detail fieldset,.profile-overview{padding:16px}
+ .profile-tabs{padding:0 10px}
+ .profile-field-grid{grid-template-columns:1fr}
+ .profile-actions{padding:10px 16px}
+ .profile-overview .relationship-stats{grid-template-columns:1fr}
+ .profile-overview .relationship-stats>div{padding:10px 12px}
+}
+
+/* Mood belongs to the shared overview pane and follows its scroll area. */
+.mood-profile{margin-top:22px;padding-top:20px;border-top:1px solid var(--stroke);min-width:0}
+.mood-profile h2{font-size:13px;margin:0 0 8px}
+#mood-profile-content>p{font-size:12px;line-height:1.8;margin:14px 0;color:var(--txt-dim)}
+.mood-dimensions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}
+.mood-dimensions .field{margin:0;padding:12px;border:1px solid var(--stroke);border-radius:10px;background:var(--bg);gap:10px}
+.mood-dimensions progress{display:block;width:100%;height:4px;appearance:none;-webkit-appearance:none;border:0;border-radius:999px;overflow:hidden;background:var(--stroke)}
+.mood-dimensions progress::-webkit-progress-bar{background:var(--stroke);border-radius:999px}
+.mood-dimensions progress::-webkit-progress-value{background:var(--accent);border-radius:999px}
+.mood-profile details{padding:12px 0;border-top:1px solid var(--stroke);font-size:11px}
+.mood-profile summary{cursor:pointer;color:var(--txt-dim)}
+.mood-profile details p{white-space:pre-wrap;overflow-wrap:anywhere}

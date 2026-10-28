@@ -1,9 +1,8 @@
-﻿{
+{
   "name": "cupbox-desktop",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "Cupbox 可视化桌面壳（Electron），直调 cupbox 核心引擎",
   "main": "main.js",
   "type": "module"
 }
-

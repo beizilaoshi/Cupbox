@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { dataHome, legacyHome, migrateLegacyHome, systemDocumentsDir } from '../src/core/paths.js';
 
-/** v1.0.2 存储目录：默认「文档/Cupbox」，CUPBOX_HOME 覆盖，旧 ~/.cupbox 自动迁移。 */
+/** v1.0.3 存储目录：默认「文档/Cupbox」，CUPBOX_HOME 覆盖，旧 ~/.cupbox 自动迁移。 */
 
 let tmpRoot: string;
 const envSnapshot: string | undefined = process.env.CUPBOX_HOME;
@@ -42,13 +42,19 @@ describe('数据目录解析', () => {
     expect(legacyHome()).toContain('.cupbox');
   });
 
-  it('未显式传 Documents → 解析系统「文档」目录（Windows 跟随重定向）', () => {
+  it('未显式传 Documents → 系统「文档」目录存在则用它（Windows 跟随重定向），不存在回退 ~/.cupbox', () => {
     delete process.env.CUPBOX_HOME;
     const docs = systemDocumentsDir();
-    expect(existsSync(docs)).toBe(true); // 系统文档目录必须存在
-    // 与桌面端 app.getPath('documents') 同源：文档存在 → 文档/Cupbox，否则回退 ~/.cupbox
-    expect(dataHome()).toBe(existsSync(docs) ? path.join(docs, 'Cupbox') : legacyHome());
-    expect(dataHome().endsWith('Cupbox')).toBe(true);
+    expect(typeof docs).toBe('string');
+    // 与桌面端 app.getPath('documents') 同源：文档存在 → 文档/Cupbox，否则回退 ~/.cupbox（不凭空造目录）
+    if (existsSync(docs)) {
+      expect(dataHome()).toBe(path.join(docs, 'Cupbox'));
+      expect(dataHome().endsWith('Cupbox')).toBe(true);
+    } else {
+      // Linux CI 等环境没有系统文档目录：必须走旧目录回退语义
+      expect(dataHome()).toBe(legacyHome());
+      expect(dataHome().endsWith('.cupbox')).toBe(true);
+    }
   });
 });
 

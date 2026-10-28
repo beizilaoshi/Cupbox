@@ -1,0 +1,1 @@
+{"name":"cupbox-harness-runtime","private":true,"type":"module","dependencies":{"@deepseek-ai/dsh":"0.2.1-rc.2","@deepseek-ai/dsh-experimental-browser-use-stagehand-native":"0.2.1-rc.2","@deepseek-ai/dsh-lsp-stdio":"0.2.1-rc.2","@deepseek-ai/dsh-tool-lsp":"0.2.1-rc.2","pnpm":"10.20.0"}}

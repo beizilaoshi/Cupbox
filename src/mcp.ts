@@ -25,7 +25,9 @@ import { safeRun } from './core/run.js';
 import { listProcesses, killProcess } from './core/proc.js';
 import { obfuscateImage } from './core/obfuscate.js';
 import { aiChat, aiAgent, loadAiConfig, DEFAULT_SYSTEM } from './core/ai.js';
-import { addFact, listFacts, forgetFacts, recall, loadRuntimeMemory, saveRuntimeMemory } from './core/memory.js';
+import { addFact, listFacts, forgetFacts, recall, loadRuntimeMemory, saveRuntimeMemory, memoryOverview } from './core/memory.js';
+import { toolCapabilityPrompt } from './core/capabilities.js';
+import { TOOL_DEFS } from './core/toolkit.js';
 import { VERSION } from './version.js';
 
 type ToolResult = {
@@ -59,6 +61,8 @@ type Args<T extends z.ZodRawShape> = z.infer<z.ZodObject<T>>;
 export function buildServer(): McpServer {
   const server = new McpServer({ name: 'cupbox', version: VERSION });
   const off = disabledTools();
+  const aliases: Record<string,string> = {time:'time_convert',search:'search_files',rename:'batch_rename',organize:'organize_files',csv:'convert_csv_json',ocr:'ocr_image',clip:'clipboard',shot:'take_screenshot',obfuscate:'obfuscate_image',run:'run_command',proc:'process'};
+  const agentTools = TOOL_DEFS.filter(t=>!off.has(t.name)&&!off.has(aliases[t.name]||t.name)).map(t=>t.name);
   const reg = <T extends z.ZodRawShape>(
     name: string,
     meta: {
@@ -543,7 +547,7 @@ export function buildServer(): McpServer {
       const config = a.model ? { ...base, model: a.model } : base;
       const r = await aiChat({
         messages: [
-          { role: 'system', text: a.system?.trim() || DEFAULT_SYSTEM },
+          { role: 'system', text: (a.system?.trim() || DEFAULT_SYSTEM) + '\n' + toolCapabilityPrompt([]) },
           { role: 'user', text: a.prompt },
         ],
         config,
@@ -568,6 +572,7 @@ export function buildServer(): McpServer {
     async (a) => {
       const r = await aiAgent({
         prompt: a.prompt,
+        tools: agentTools,
         ...(a.system?.trim() ? { system: a.system.trim() } : {}),
         ...(a.maxTurns ? { maxTurns: a.maxTurns } : {}),
       });
@@ -622,7 +627,7 @@ export function buildServer(): McpServer {
     'memory_manage',
     {
       title: '列出 / 遗忘记忆',
-      description: '不带参数列出全部长期事实；带 forgetIdOrKeyword 删除匹配项（id 精确、关键词包含）。也可用 forget 关键词一次性忘多条。',
+      description: '分别展示常驻用户画像、协作约定与长期事实，并标明来源和数量。forget 仅删除匹配的长期事实；画像通过 memory_profile 管理。',
       inputSchema: {
         forget: z.string().optional().describe('要遗忘的 id 或关键词（留空则列出全部）'),
       },
@@ -634,8 +639,11 @@ export function buildServer(): McpServer {
         return removed ? `✅ 已遗忘 ${removed} 条` : '（没有匹配的记忆）';
       }
       const facts = await listFacts();
-      if (!facts.length) return '（记忆为空，可用 memory_remember 写入）';
-      return `长期事实（${facts.length} 条）:\n${facts.map((f) => `- [${f.id}] ${f.text}`).join('\n')}`;
+      const overview = await memoryOverview(facts.length);
+      return [overview.runtime.user ? `用户画像（memory/user.md）：\n${overview.runtime.user}` : '用户画像：空',
+        overview.runtime.memory ? `协作约定（memory/memory.md）：\n${overview.runtime.memory}` : '协作约定：空',
+        `长期事实（${facts.length} 条）：\n${facts.map((f) => `- [${f.id}] ${f.text}`).join('\n')}`,
+        overview.note].join('\n\n');
     },
   );
 
@@ -679,6 +687,36 @@ export function buildServer(): McpServer {
       const r = (await toolkit.runTool('context_stats', {
         ...(a.text !== undefined ? { text: a.text } : {}),
         ...(a.window !== undefined ? { window: a.window } : {}),
+      })) as Record<string, unknown>;
+      return JSON.stringify(r, null, 2);
+    },
+  );
+
+  reg(
+    'freemodel_chat',
+    {
+      title: '免费模型对话（免 API Key）',
+      description:
+        '调用免密免费大模型（移植自 dsh-our-free-model，MIT，作者 fish-under-sea，向原项目致谢）。action=list 列出可用免费模型；action=chat 用指定 model 免 API Key 发起一轮纯文本对话；action=probe 探测模型可用性与延迟。免费通道为第三方公共池：无 SLA、可能限流或区域限制，上游可能记录提示词，请勿发送敏感内容。',
+      inputSchema: {
+        action: z.enum(['list', 'chat', 'probe']).optional().describe('list=列模型（默认）/ chat=对话 / probe=探测'),
+        model: z.string().optional().describe('模型 id（chat/probe 必填，如 mimo-v2.6-flash-free）'),
+        prompt: z.string().optional().describe('chat 时的用户消息'),
+        system: z.string().optional().describe('chat 时的系统提示词（可选）'),
+        refresh: z.boolean().optional().describe('list 时强制刷新在线目录'),
+        maxTokens: z.number().int().positive().optional().describe('chat 时的最大输出 token'),
+      },
+      readOnly: true,
+    },
+    async (a) => {
+      const toolkit = await import('./core/toolkit.js');
+      const r = (await toolkit.runTool('freemodel_chat', {
+        ...(a.action !== undefined ? { action: a.action } : {}),
+        ...(a.model !== undefined ? { model: a.model } : {}),
+        ...(a.prompt !== undefined ? { prompt: a.prompt } : {}),
+        ...(a.system !== undefined ? { system: a.system } : {}),
+        ...(a.refresh !== undefined ? { refresh: a.refresh } : {}),
+        ...(a.maxTokens !== undefined ? { maxTokens: a.maxTokens } : {}),
       })) as Record<string, unknown>;
       return JSON.stringify(r, null, 2);
     },

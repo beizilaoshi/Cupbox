@@ -1,0 +1,17 @@
+import {app,BrowserWindow} from 'electron';
+import path from 'node:path';
+import {mkdir,writeFile} from 'node:fs/promises';
+import {pathToFileURL} from 'node:url';
+const out=path.resolve('output/about-room-lighting-review'),home=path.join(out,'home-'+Date.now()),runtime=path.resolve('release/Cupbox可视化/resources/app');
+await mkdir(path.join(home,'.cupbox'),{recursive:true});await writeFile(path.join(home,'.cupbox/desktop.json'),JSON.stringify({startupEnabled:false,musicEnabled:false,desktopPet:{enabled:false}}));
+process.env.CUPBOX_HOME=home;process.env.CUPBOX_UPDATE_DISABLE='1';process.env.CUPBOX_ANNOUNCEMENT_DISABLE='1';app.setPath('userData',path.join(out,'profile-'+Date.now()));app.disableHardwareAcceleration();const errors=[];
+app.on('browser-window-created',(_,w)=>{w.show=()=>{};w.showInactive=()=>{};w.webContents.setBackgroundThrottling(false);w.webContents.on('console-message',e=>{if(e.level==='error')errors.push(e.message);});});
+const pause=ms=>new Promise(r=>setTimeout(r,ms)),check=(v,label)=>{if(!v)throw Error(label);console.log('PASS '+label);};
+async function wait(fn,label){for(let i=0;i<240;i++){if(await fn())return;await pause(50);}throw Error('Timeout '+label);}
+void(async()=>{try{
+ await import(pathToFileURL(path.join(runtime,'desktop/main.js')).href);await wait(()=>BrowserWindow.getAllWindows().length,'main');const win=BrowserWindow.getAllWindows()[0],js=s=>win.webContents.executeJavaScript(s);await wait(()=>js('Boolean(window.cupboxReady)').catch(()=>false),'app');await js(`openModal('about');true`);await wait(()=>js('CupboxRoomArt.status().ready'),'art');
+ await js(`switchTab('general');window.lightCanvas=document.createElement('canvas');lightCanvas.width=1440;lightCanvas.height=900;window.lightCapture=(period,lamp,action='read',x=182,y=230)=>{const ctx=lightCanvas.getContext('2d');ctx.setTransform(3,0,0,3,0,0);CupboxRoomArt.draw(ctx,{period,weather:'clear',lamp,t:2,action,x,y,outfit:'maid',moving:false,animate:true});const far=Array.from(ctx.getImageData(430*3,50*3,1,1).data),bulb=Array.from(ctx.getImageData(175*3,109*3,1,1).data);const actorSample=Array.from(ctx.getImageData(182*3,175*3,1,1).data);return{actorSample,png:lightCanvas.toDataURL().split(',')[1],far,bulb,status:CupboxRoomArt.status()};};true`);
+ for(const period of ['morning','noon','afternoon','dusk','night','midnight']){const on=await js(`lightCapture('${period}',true)`),off=await js(`lightCapture('${period}',false)`);await writeFile(path.join(out,period+'-on.png'),Buffer.from(on.png,'base64'));await writeFile(path.join(out,period+'-off.png'),Buffer.from(off.png,'base64'));check(on.status.lightingModel==='rgb-preserve-alpha'&&on.status.deformation===0,period+' uses local lighting without geometry deformation');check(JSON.stringify(on.far)===JSON.stringify(off.far),period+' lamp leaves distant wall unchanged');const l=p=>p[0]*.2126+p[1]*.7152+p[2]*.0722;check(l(on.actorSample)>l(off.actorSample),period+' nearby character receives light when lamp is on');check(l(off.bulb)<l(on.bulb),period+' lamp off dims the actual desk light');}
+ for(const action of ['work','eat','sleep']){const r=await js(`lightCapture('night',true,'${action}')`);await writeFile(path.join(out,'night-'+action+'.png'),Buffer.from(r.png,'base64'));check(r.status.integrated&&r.status.deformation===0,action+' keeps painted lighting and body shape');}
+ check(!errors.length,'no renderer errors '+errors.join(';'));console.log('ABOUT_ROOM_LIGHTING_OK');app.exit(0);
+}catch(e){console.error(e,errors);app.exit(1);}})();

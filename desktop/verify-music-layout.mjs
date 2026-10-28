@@ -1,0 +1,27 @@
+import {app,BrowserWindow} from 'electron';
+import {mkdir,writeFile} from 'node:fs/promises';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {networkTrack} from './music-network.js';
+const root=path.resolve('release','Cupbox\u53ef\u89c6\u5316','resources/app'),out=path.resolve('output/music-layout',String(Date.now())),home=path.join(out,'home');
+await mkdir(path.join(home,'.cupbox'),{recursive:true});
+const network=networkTrack({songId:'a'.repeat(32),title:'网络歌曲 · 歌名很长也保持整齐',artist:'测试歌手'},'b'.repeat(24),'我的收藏');
+await writeFile(path.join(home,'.cupbox/desktop.json'),JSON.stringify({startupEnabled:false,petEnabled:false,musicEnabled:false,musicTracks:[{id:'custom-12345678-1234-1234-1234-123456789abc',ext:'wav',title:'本地歌曲 · 喜欢的旋律',hash:'c'.repeat(64),size:100}],musicNetworkTracks:[network]}));
+process.env.CUPBOX_HOME=home;process.env.CUPBOX_UPDATE_DISABLE='1';process.env.CUPBOX_ANNOUNCEMENT_DISABLE='1';app.setPath('userData',path.join(out,'profile'));app.disableHardwareAcceleration();app.commandLine.appendSwitch('mute-audio');
+const errors=[];app.on('browser-window-created',(_,w)=>{w.show=()=>{};w.showInactive=()=>{};w.webContents.setBackgroundThrottling(false);w.webContents.on('console-message',e=>{if(e.level==='error')errors.push(e.message);});});
+const pause=ms=>new Promise(r=>setTimeout(r,ms));async function wait(fn){for(let i=0;i<300;i++){if(await fn())return;await pause(50);}throw Error('UI timed out');}const check=(ok,label)=>{if(!ok)throw Error(label);console.log('PASS '+label);};
+void(async()=>{try{
+ await import(pathToFileURL(path.join(root,'desktop/main.js')));await wait(()=>BrowserWindow.getAllWindows().length);const win=BrowserWindow.getAllWindows()[0],js=s=>win.webContents.executeJavaScript(s);
+ await wait(()=>js('Boolean(window.cupboxReady&&window.CupboxMusic?.state&&document.querySelector(".bgmusic-membership-note"))').catch(()=>false));await js(`openModal('music');true`);await pause(200);
+ check(await js(`document.querySelectorAll('#music-track-list .music-track').length===CupboxMusic.state.tracks.length&&!document.querySelector('#music-track-list h5')`),'all sources share My Playlist');
+ check(await js(`new Set([...document.querySelectorAll('#music-track-list .music-track')].map(r=>r.lastElementChild.textContent)).size===3&&[...document.querySelectorAll('#music-track-list .music-track')].every(r=>r.lastElementChild.classList.contains('music-source-label'))`),'each song ends with its source label');
+ check(await js(`Boolean(document.querySelector('.music-library-heading #music-import'))&&Boolean(document.querySelector('.bgmusic-heading h3').textContent.includes('酷狗概念版'))&&document.querySelector('.bgmusic-membership-note').textContent.includes('手机 App 解锁会员')`),'import action and membership hint correctly placed');
+ check(await js(`Boolean(document.querySelector('#music-track-list').compareDocumentPosition(document.querySelector('.bgmusic-online-group'))&Node.DOCUMENT_POSITION_FOLLOWING)`),'concept account and discovery follow the playlist');
+ await writeFile(path.join(out,'music-light.png'),(await win.webContents.capturePage()).toPNG());
+ await js(`document.querySelector('.bgmusic-online-group').scrollIntoView({block:'start'});true`);await pause(150);await writeFile(path.join(out,'concept-light.png'),(await win.webContents.capturePage()).toPNG());
+ win.setSize(1040,760);await js(`document.documentElement.dataset.theme='dark';document.querySelector('.music-library-heading').scrollIntoView({block:'start'});true`);await pause(200);
+ check(await js(`document.getElementById('tab-music').scrollWidth<=document.getElementById('tab-music').clientWidth+1`),'compact layout has no horizontal overflow');
+ await writeFile(path.join(out,'music-dark-compact.png'),(await win.webContents.capturePage()).toPNG());
+ const id=await js(`CupboxMusic.state.tracks.find(t=>!t.system&&!t.network).id`);await js(`document.querySelector('[data-track-id="${id}"] input').click();true`);await wait(()=>js(`CupboxMusic.state.tracks.find(t=>t.id==='${id}').disabled`));check(true,'unified playlist still supports song switches');
+ check(errors.length===0,'no renderer errors');console.log('OUTPUT '+out);app.exit(0);
+}catch(e){console.error(e.stack||e);console.error(errors);app.exit(1);}})();

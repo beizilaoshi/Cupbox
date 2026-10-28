@@ -1,0 +1,38 @@
+#tab-agent-presets{container-type:inline-size}
+.agent-presets-intro{color:var(--txt-dim);font-size:12px;line-height:1.8;margin:10px 0 16px}
+.agent-presets-section-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.agent-presets-section{font-size:12px;color:var(--txt-dim);font-weight:600;margin:0}
+#agent-preset-current{color:var(--txt-faint);font-size:11px;margin:0}
+.agent-preset-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.agent-preset-card{min-width:0;display:flex;flex-direction:column;border:1px solid color-mix(in srgb,var(--txt) 22%,var(--stroke));border-radius:16px;background:color-mix(in srgb,var(--surface) 85%,var(--raised));overflow:hidden;transition:border-color .18s,background .18s,box-shadow .18s}
+.agent-preset-card:hover{border-color:var(--txt-faint);background:var(--raised)}
+.agent-preset-card.selected{border-color:var(--txt);background:var(--raised);box-shadow:0 0 0 1px color-mix(in srgb,var(--txt) 12%,transparent)}
+.agent-preset-select{position:relative;display:flex;flex-direction:column;align-items:stretch;flex:1;width:100%;text-align:left;padding:16px 16px 25px;border-radius:15px 15px 0 0;color:var(--txt)}
+.agent-preset-head{display:flex;align-items:center;gap:7px;min-width:0}
+.agent-preset-name{font-size:14px;font-weight:650;white-space:nowrap}
+.agent-preset-head code{margin-left:auto;color:var(--txt-dim);font:10px ui-monospace,Consolas,monospace;max-width:90px;overflow:hidden;text-overflow:ellipsis}
+.agent-preset-badge{font-size:10px;line-height:1.4;color:var(--txt-dim);border:1px solid color-mix(in srgb,var(--txt) 24%,transparent);padding:2px 7px;border-radius:12px;white-space:nowrap}
+.agent-preset-description{display:block;font-size:12px;line-height:1.75;color:var(--txt);margin-top:12px}
+.agent-preset-check{position:absolute;right:16px;bottom:6px;font-size:10px;color:var(--txt-faint);opacity:0;transition:opacity .18s}
+.agent-preset-select:hover .agent-preset-check,.agent-preset-select:focus-visible .agent-preset-check,.selected .agent-preset-check{opacity:1}
+.agent-preset-card.selected .agent-preset-check{color:var(--txt-dim)}
+.agent-preset-select:focus-visible{outline-offset:-4px}
+.agent-preset-footer{display:flex;align-items:center;gap:14px;border-top:1px solid color-mix(in srgb,var(--stroke) 80%,transparent);padding:10px 16px;min-height:47px}
+.agent-preset-info{font-size:11px;color:var(--txt-dim);padding:3px 0;text-underline-offset:4px;white-space:nowrap}
+.agent-preset-info:hover{color:var(--txt);text-decoration:underline}
+.agent-preset-document{display:grid;place-items:center;width:28px;height:28px;padding:5px;margin-left:auto;border-radius:6px;color:var(--txt-dim);transition:background .18s,color .18s,transform .18s}
+.agent-preset-document svg{width:16px;height:16px}
+.agent-preset-document:hover{background:var(--surface);color:var(--txt);transform:translateY(-1px)}
+.agent-presets-hint{font-size:11px;color:var(--txt-faint);line-height:1.8;margin-top:14px}
+.agent-preset-dialog{width:min(490px,90vw);max-height:80vh;overflow:auto;border:1px solid var(--stroke);border-radius:18px;padding:24px;background:var(--bg);color:var(--txt);box-shadow:0 24px 90px #0005;animation:agent-preset-enter .16s ease-out}
+.agent-preset-dialog::backdrop{background:#10141b88;backdrop-filter:blur(5px)}
+.agent-preset-dialog header{display:flex;align-items:center;gap:12px;justify-content:space-between}
+.agent-preset-dialog h2{font-size:16px}
+.agent-preset-close{width:30px;height:30px;border-radius:7px;color:var(--txt-dim);font-size:23px;line-height:1}
+.agent-preset-close:hover{background:var(--raised);color:var(--txt)}
+.agent-preset-detail-text{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.9;margin:18px 0}
+.agent-preset-boundary{border-top:1px solid var(--stroke);padding-top:14px;color:var(--txt-dim);font-size:11px;line-height:1.8}
+#btn-agent-preset{border:1px solid var(--stroke);font-size:11px;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0}
+@container(max-width:520px){.agent-preset-grid{grid-template-columns:1fr}}
+@keyframes agent-preset-enter{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.agent-preset-card,.agent-preset-check,.agent-preset-document{transition:none}.agent-preset-dialog{animation:none}.agent-preset-document:hover{transform:none}}

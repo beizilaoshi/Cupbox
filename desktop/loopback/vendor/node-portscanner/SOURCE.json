@@ -1,0 +1,8 @@
+{
+  "repository": "https://github.com/baalexander/node-portscanner",
+  "commit": "9a92dcce423da9bc16b4f3c621bacdf7dcc0bfc1",
+  "files": {
+    "LICENSE": "189f5a6d95359b496633164679d8805f8ebe40612f5ca371d747e6fb7c83d43c",
+    "portscanner.js": "6a57a6d80c360ca905a96e9818dd8056945198ff63397f1d39efb7e1f0554f1b"
+  }
+}

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import path from 'node:path';
 import { existsSync } from 'node:fs';
 import { readdir, readFile, writeFile } from 'node:fs/promises';
@@ -41,9 +41,23 @@ function textOf(result: unknown): string {
 }
 
 describe('MCP 冒烟', () => {
-  it('握手成功并暴露 21 个工具', async () => {
+  it('禁用工具不会经由嵌套 ai_agent 重新开放，提示与实际清单相符',async()=>{
+    vi.stubEnv('CUPBOX_DISABLE_TOOLS','run_command,batch_rename');
+    vi.stubEnv('CUPBOX_AI_API_KEY','test');vi.stubEnv('CUPBOX_AI_MODEL','test');vi.stubEnv('CUPBOX_AI_BASE_URL','https://example.test/v1');
+    const fetch=vi.spyOn(globalThis,'fetch').mockResolvedValue(new Response(JSON.stringify({choices:[{message:{content:'checked'}}]})));
+    const scopedServer=buildServer(),scopedClient=new Client({name:'scoped-test',version:'1'});
+    try{
+      const [ct,st]=InMemoryTransport.createLinkedPair();await Promise.all([scopedServer.connect(st),scopedClient.connect(ct)]);
+      const {tools}=await scopedClient.listTools();expect(tools.some(t=>t.name==='run_command')).toBe(false);
+      await scopedClient.callTool({name:'ai_agent',arguments:{prompt:'检查能力'}});
+      const body=JSON.parse(String(fetch.mock.calls[0][1]?.body));
+      expect(body.tools.some((t:any)=>['run','rename'].includes(t.function.name))).toBe(false);
+      expect(body.messages[0].content).toContain('命令执行：未接入');
+    }finally{await scopedClient.close();await scopedServer.close();fetch.mockRestore();vi.unstubAllEnvs();}
+  });
+  it('握手成功并暴露 22 个工具', async () => {
     const { tools } = await client.listTools();
-    expect(tools).toHaveLength(21);
+    expect(tools).toHaveLength(22);
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual([
       'ai_agent',
@@ -53,6 +67,7 @@ describe('MCP 冒烟', () => {
       'codec',
       'context_stats',
       'convert_csv_json',
+      'freemodel_chat',
       'hash',
       'memory_manage',
       'memory_profile',

@@ -1,0 +1,7 @@
+import {describe,it,expect,vi} from 'vitest';
+import {musicPublicLookup} from '../desktop/qq/music-dns.js';
+describe('music CDN public DNS fallback',()=>{
+ it('keeps ordinary public DNS addresses without a remote query',async()=>{const fetcher=vi.fn(),rows=await musicPublicLookup('m801.music.126.net',{all:true},{lookup:async()=>[{address:'8.8.8.8',family:4}],fetcher});expect(rows[0].address).toBe('8.8.8.8');expect(fetcher).not.toHaveBeenCalled();});
+ it('resolves a known music fake-IP via fixed HTTPS DNS and pins public answers',async()=>{const fetcher=vi.fn(async()=>({ok:true,json:async()=>({Answer:[{type:1,data:'8.8.8.8'}]})}));expect(await musicPublicLookup('m801.music.126.net',{all:true},{lookup:async()=>[{address:'198.18.0.100',family:4}],fetcher})).toEqual([{address:'8.8.8.8',family:4}]);expect(fetcher.mock.calls[0][0]).toBe('https://dns.alidns.com/resolve?name=m801.music.126.net&type=A');});
+ it('does not weaken private-IP checks or permit arbitrary host fallback',async()=>{const fetcher=vi.fn();for(const [host,address]of [['music.126.net','127.0.0.1'],['music.126.net','10.0.0.1'],['evil.example','198.18.0.100']])await expect(musicPublicLookup(host,{all:true},{lookup:async()=>[{address,family:4}],fetcher})).rejects.toThrow();expect(fetcher).not.toHaveBeenCalled();await expect(musicPublicLookup('m801.music.126.net',{all:true},{lookup:async()=>[{address:'198.18.0.100',family:4}],fetcher:async()=>({ok:true,json:async()=>({Answer:[{type:1,data:'127.0.0.1'}]})})})).rejects.toThrow();});
+});

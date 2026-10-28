@@ -1,0 +1,45 @@
+{
+  "tool": "built-in image_gen",
+  "reference": "desktop/ui/assets/pet/hanfu-indigo-expressions.png",
+  "assets": [
+    {
+      "id": "hanfu-wisteria",
+      "name": "紫藤月纱",
+      "target": "desktop/ui/assets/pet/hanfu-wisteria-expressions.png",
+      "source": "C:\\Users\\Administrator\\.codex\\generated_images\\01a14eeb-489b-7bc3-b89f-fcdbe10ae306\\exec-e474dbd8-0fd2-4331-ab00-ef1e5880a566.png",
+      "prompt": "Use case: identity-preserve. Create a NEW purple Hanfu costume sprite atlas for the exact same mascot as reference: 筑梦喵, adorable silver-white long-haired chibi catgirl with fluffy white cat ears, amber LEFT eye and blue RIGHT eye, soft refined pastel Japanese anime watercolor shading. Preserve identity and soft detailed rendering. Outfit: elegant lilac/lavender and deep wisteria-purple cross-collar Hanfu ruqun, moon-white inner sleeves, delicate silver wisteria flower embroidery, flowing purple ribbons, small amethyst blossom hairpin, pale purple embroidered shoes. Distinctly PURPLE, not blue or pink. Modest cute costume, full body, skirt hem above ankles so shoes visible. Genuine transparent RGBA background. Square 4x4 atlas EXACTLY 16 figures one per equal cell, NO text, borders, grid lines, background, scenery, shadows or extra characters. Mandatory transparent padding 10% on ALL four sides INSIDE EACH CELL; no hair, feet, sleeves or accessories cross cells. Consistent scale and body proportions. Row-major cells: 0 neutral gentle smile hands together; 1 wink peace sign; 2 happy celebration eyes closed; 3 shy blush; 4 thinking finger cheek; 5 reading small book; 6 seated pout; 7 surprised hands beside cheeks; 8 asleep hugging white plush cat; 9 small stretch eyes closed; 10 mildly angry folded arms; 11 heart hands; 12 polite bow; 13 waving; 14 cheering hands raised; 15 neutral FRONT-FACING STANDING both eyes open arms relaxed slightly away from sides both feet/shoes visible. Every pose full body and fully inside its own cell. Reference is identity and art-style reference only; replace blue clothing with the described purple Hanfu.",
+      "sha256": "1c774d8b53dd82d4c4c67068f1e2cdb0881cae183d573e97426755e055662325"
+    },
+    {
+      "id": "hanfu-wisteria-motion",
+      "target": "desktop/ui/assets/pet/hanfu-wisteria-motion.png",
+      "source": "C:\\Users\\Administrator\\.codex\\generated_images\\01a14eeb-489b-7bc3-b89f-fcdbe10ae306\\exec-39dfa95d-5a37-40ff-9f4c-a0e9ae1d95d4.png",
+      "reference": "C:\\Users\\Administrator\\.codex\\generated_images\\01a14eeb-489b-7bc3-b89f-fcdbe10ae306\\exec-e474dbd8-0fd2-4331-ab00-ef1e5880a566.png",
+      "prompt": "Use case: identity-preserve. PRODUCTION FRAME-BY-FRAME ANIMATION SHEET, exact character identity and costume from supplied reference. Draw the SAME silver-white long-haired catgirl mascot, amber left eye, blue right eye, soft polished pastel watercolor anime chibi proportions, wisteria PURPLE Hanfu, white inner sleeves, silver flower embroidery, purple ribbons and purple floral hairpin, pale purple shoes. Transparent RGBA square canvas, EXACT 4x4 equal cell sprite atlas, sixteen full-body animation drawings. This is NOT an expression collection: ALL figures have the same neutral body proportions, same head angle and gentle expression, same facing FRONT, same scale, same head size, face anchored at same coordinates and feet baseline, no large gestures, NO props. Keep WHOLE hair/sleeves/skirt/shoes inside EACH cell with generous 10 percent transparent inset on every side. Do NOT fill a cell with the figure or touch a boundary. NO grid, labels, text, numbers, background, shadows or signature. Clean precise animation model sheet, stable silhouette and identity, shoes clearly separated. Draw every frame individually with natural anatomy, NO rubber stretching, no digital mesh warping, no limb cutouts. First THREE ROWS (cells 0 through 11): one complete subtle ladylike walking-in-place cycle, 12 sequential poses, tiny alternating left/right steps, modest shoes and lower-leg movement, gentle weight transfer and fabric following gravity, sleeves relaxed at sides and long hair stays approximately still. 0 left contact, 1 left down, 2 right passing, 3 right rising, 4 right contact, 5 right down, 6 left passing, 7 left rising, 8 left contact with eyes half closed, 9 left down eyes completely closed for a natural blink, 10 right passing eyes half reopened, 11 right rising BOTH EYES OPEN joining back to cell0 seamlessly. NO head turns, no arms raised, no jumping, no skirt flipping. Final row (cells12-15): FOUR redrawings of EXACT SAME relaxed upright neutral full-body pose, arms and sleeves relaxed down, feet close together as if gently lifted by scruff, no lifting hand visible. Cell12 eyes open, cell13 eyes half-closed, cell14 eyes fully closed, cell15 eyes half-reopened. NOTHING except the eyelids changes between these final four cells. They are also a calm idle blink loop. All 16 are exactly the same purple costume from reference, cohesive high quality, true transparent background.",
+      "correctionPrompt": "Edit ONLY the eyelids in the LAST ROW of this transparent 4x4 animation atlas. Preserve EXACTLY the entire first THREE rows, all body poses, clothing, hair, outlines, colors, geometry, transparent background, cell sizes and positions. In last row cell 12 keep BOTH EYES OPEN; cell13 must have BOTH eyes SYMMETRICALLY HALF CLOSED (not a wink: upper lids lowered over both amber and blue irises, only lower halves of irises visible); cell14 BOTH EYES COMPLETELY CLOSED as two gentle fine curved lashes with NO visible iris; cell15 BOTH EYES HALF REOPENED symmetrically, matching cell13. Last row full bodies must be pixel-identical in pose, hair, costume, proportions and placement; ONLY eyelids change. No eyebrow or cheek changes. Do not alter or add any other figure. Same crisp soft anime watercolor, transparent RGBA. This is a true gentle blink, never a wink or angry expression.",
+      "walkFrames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "blinkFrames": [
+        15,
+        12,
+        13,
+        14,
+        15
+      ],
+      "note": "The corrected output places the open-eye frame in cell 15; playback uses the inspected order rather than assuming the requested order.",
+      "sha256": "5135d84d2af04be0d4aef1c2913067aa940596ee2f7bcc98f7a93d02d2989bd3"
+    }
+  ]
+}

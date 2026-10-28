@@ -12,6 +12,12 @@
 </p>
 
 <p align="center">
+  <img src="./desktop/ui/assets/logos/mascot-sakura.png" width="220" alt="Dream Weaving Meow holding the Cupbox mark">
+</p>
+
+<p align="center"><em>Dream Weaving Meow helps turn ideas into work you can ship.</em></p>
+
+<p align="center">
   One toolkit, two ways to work.<br>
   A practical command-line toolbox for developers and an MCP server for AI agents.
 </p>
@@ -22,7 +28,8 @@
   <a href="#-quick-start">Quick Start</a> ·
   <a href="#-connect-your-ai">Connect Your AI</a> ·
   <a href="#-security-by-design">Security</a> ·
-  <a href="#-contributing">Contributing</a>
+  <a href="#-contributing">Contributing</a> ·
+  <a href="#-community-chat">Community</a>
 </p>
 
 <p align="center">
@@ -30,6 +37,16 @@
   <a href="https://github.com/beizilaoshi/cupbox">GitHub</a> ·
   <a href="./README.md">简体中文</a>
 </p>
+
+---
+
+## ⚠️ License & Asset Notice
+
+- **Code and documentation:** MIT — free to use, modify and distribute.
+- **All artwork and audio** — images, illustrations, character art, pixel art, icons, startup-animation assets, emoji, background music, sound effects and any other media shipped with the project or its installers — are **NOT covered by the MIT License**. All rights are reserved by the project team; they may not be copied, modified, redistributed or used in any derivative work without written permission.
+- **"Dream Weaving Meow" (筑梦喵) is the team's IP character** — including its appearance, name, lore, costumes and derivative forms. It **may not be reused**: it may not be used, imitated, re-created, or used as another project's or product's character, for either commercial or non-commercial purposes. Violations will be pursued to the extent the law allows.
+
+See [LICENSE](./LICENSE) for the full terms.
 
 ---
 
@@ -447,7 +464,7 @@ cupbox ai agent "Find every TODO in this project and summarize them" --max-turns
 cupbox ai config                 # show current config (key masked)
 ```
 
-- The config lives in `Documents/Cupbox/config.json` (mode 0600; since v1.0.2 the OS Documents folder is the default, the legacy `~/.cupbox` migrates on first launch, `CUPBOX_HOME` still overrides); **the key stays on your machine and is never uploaded**;
+- The config lives in `Documents/Cupbox/config.json` (mode 0600; since v1.0.3 the OS Documents folder is the default, the legacy `~/.cupbox` migrates on first launch, `CUPBOX_HOME` still overrides); **the key stays on your machine and is never uploaded**;
 - Env vars `CUPBOX_AI_API_KEY` / `CUPBOX_AI_BASE_URL` / `CUPBOX_AI_MODEL` / `CUPBOX_AI_PROVIDER` override the file;
 - Inside the agent, `rename` / `organize` are **always dry-run previews** (8 rounds by default, 10 max) and `run` still requires an allowlist — **the AI never gets more permissions than a human user**.
 
@@ -523,8 +540,8 @@ A local Electron desktop app rebuilt as a workbench (since v1.0.0):
 - **Tool drawer** — the former 16-tool form UI folded into a right-side drawer, grouped by data / files / images / system, with dynamic forms and a result panel (pretty JSON, inline image preview).
 - **Settings modal** — four tabs: **API settings** (protocol / base URL / model / key / temperature / agent rounds), **Theme** (dark · light · follow-system × aurora / mint / amber / rose, applied instantly and persisted), **Plugins** (each tool toggle affects both drawer visibility and the Agent's callable tool set), and **About & Updates** (version info, one-click **check the GitHub repository** for new releases with inline results, plus repository / Releases / CHANGELOG shortcuts).
 - **Update check & release announcement** (v1.0.1) — a silent startup check lights up a breathing "vX.Y.Z available" badge in the title bar and pops a one-time announcement (version diff + release notes + **Download on GitHub** / View changelog / Remind later); click the version chip or use **Settings → About & Updates** for a manual check, dismissed versions stay reachable from the badge, `CUPBOX_UPDATE_DISABLE=1` turns checking off.
-- **Data defaults to your Documents folder** (v1.0.2) — config / keys / model library / sessions / memory all live in `Documents/Cupbox`; the **API storage card** in Settings → Model connection opens the folder or reveals `config.json` in one click. The legacy `~/.cupbox` migrates on first launch (copy-only, never overwrites; `CUPBOX_HOME` overrides), and the sidebar **Model management** entry jumps straight to multi-model + capability multi-select.
-- **Live tool-call stream + assistant bubbles** (v1.0.2) — while the agent runs a task each tool call appears as a card in real time (name / args / executing animation → duration or failure detail), then the final message's full trace takes over; assistant replies are now bubble cards mirroring the user's, with an entrance animation.
+- **Data defaults to your Documents folder** (v1.0.3) — config / keys / model library / sessions / memory all live in `Documents/Cupbox`; the **API storage card** in Settings → Model connection opens the folder or reveals `config.json` in one click. The legacy `~/.cupbox` migrates on first launch (copy-only, never overwrites; `CUPBOX_HOME` overrides), and the sidebar **Model management** entry jumps straight to multi-model + capability multi-select.
+- **Live tool-call stream + assistant bubbles** (v1.0.3) — while the agent runs a task each tool call appears as a card in real time (name / args / executing animation → duration or failure detail), then the final message's full trace takes over; assistant replies are now bubble cards mirroring the user's, with an entrance animation.
 
 It shares the exact same engines and safety defaults as the CLI and MCP server (dry-run, allowlists, and extraction pre-flights all active).
 
@@ -682,6 +699,15 @@ npm test
 ```
 
 Whenever possible, include reproducible test cases and describe the motivation, expected behavior, and potential compatibility impact of your changes.
+
+---
+
+## 💬 Community Chat
+
+- QQ group: **638500178**
+- Join link: <https://qm.qq.com/q/R6s16Mc4ay>
+
+The group is for usage questions, release notices, and feature discussions. For reproducible bugs, please still open an Issue first so it can be tracked properly.
 
 ---
 

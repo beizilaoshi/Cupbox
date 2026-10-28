@@ -12,12 +12,12 @@ const server=http.createServer((req,res)=>{let raw='';req.on('data',c=>raw+=c);r
   if(req.url.endsWith('/images/generations')){res.setHeader('content-type','application/json');return res.end(JSON.stringify({data:[{b64_json:png.toString('base64')}]}));}
   if(req.url.endsWith('/audio/speech')){res.setHeader('content-type','audio/mpeg');return res.end('ID3test');}
   if(failVision&&Array.isArray(body.messages?.at(-1)?.content)){res.writeHead(500);return res.end('mock vision error');}
-  const prompt=body.messages?.at(-1)?.content;const text=typeof prompt==='string'&&prompt.includes('只返回 JSON')?JSON.stringify({tasks:[{title:'产品设计',prompt:'明确页面与交互',cap:'text'},{title:'前端实现',prompt:'交付组件代码与接口约定',cap:'text'},{title:'检查与验证',prompt:'设计验收步骤',cap:'text'}]}):'已完成本子项目。\n\n1. 明确交付范围与接口\n2. 实现独立模块\n3. 提供可复查的验收说明\n\n此为本地模拟 API 的集成验证结果。';
+  const prompt=body.messages?.at(-1)?.content;const text=typeof prompt==='string'&&prompt.includes('\"passed\"')?JSON.stringify({passed:true,issues:[]}):typeof prompt==='string'&&prompt.includes('只返回 JSON')?JSON.stringify({tasks:[{id:'design',title:'产品设计',prompt:'明确页面与交互',cap:'text'},{id:'build',title:'前端实现',prompt:'交付组件代码与接口约定',cap:'text',dependsOn:['design']},{id:'verify',title:'检查与验证',prompt:'设计验收步骤',cap:'text',dependsOn:['design']}]}):'已完成本子项目。\n\n1. 明确交付范围与接口\n2. 实现独立模块\n3. 提供可复查的验收说明\n\n此为本地模拟 API 的集成验证结果。';
   setTimeout(()=>{res.setHeader('content-type','application/json');res.end(JSON.stringify({choices:[{message:{content:text}}]}));},slow?3000:350);
 });});await new Promise(r=>server.listen(0,'127.0.0.1',r));const base=`http://127.0.0.1:${server.address().port}/v1`;
 app.on('browser-window-created',(_e,win)=>{
   win.hide();win.webContents.setBackgroundThrottling(false);const errors=[];
-  win.webContents.on('console-message',(_e,d)=>{if(d.level==='error'&&!d.message.includes('DEMUXER'))errors.push(d.message);});
+  win.webContents.on('console-message',d=>{if(d.level==='error'&&!d.message.includes('DEMUXER'))errors.push(d.message);});
   win.webContents.once('did-finish-load',async()=>{
     const js=s=>win.webContents.executeJavaScript(s);
     const check=async(label,s)=>{if(!await js(s))throw Error(label);console.log('PASS '+label);};

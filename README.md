@@ -12,6 +12,12 @@
 </p>
 
 <p align="center">
+  <img src="./desktop/ui/assets/logos/mascot-sakura.png" width="220" alt="筑梦喵抱着 Cupbox 标志">
+</p>
+
+<p align="center"><em>筑梦喵陪你把想法变成可以交付的工作。</em></p>
+
+<p align="center">
   一个工具包，两种使用方式。<br>
   既是开发者的命令行工具箱，也是 AI 智能体可以直接调用的 MCP 工具集。
 </p>
@@ -22,7 +28,8 @@
   <a href="#-快速开始">快速开始</a> ·
   <a href="#-让-ai-替你干活">接入 AI</a> ·
   <a href="#-安全设计">安全设计</a> ·
-  <a href="#-参与贡献">参与贡献</a>
+  <a href="#-参与贡献">参与贡献</a> ·
+  <a href="#-交流群">交流群</a>
 </p>
 
 <p align="center">
@@ -30,6 +37,16 @@
   <a href="https://github.com/beizilaoshi/cupbox">GitHub</a> ·
   <a href="./README.en.md">English Documentation</a>
 </p>
+
+---
+
+## ⚠️ 许可与素材声明
+
+- **代码与文档**：MIT 许可证，可自由使用、修改与分发。
+- **全部美术与音频资源**（插画、角色立绘、服装与动作像素图、图标、界面背景、启动动画素材、表情包、背景音乐与音效等，含随安装包分发的内容）：**不在 MIT 许可范围内**，权利归项目团队所有，未经书面许可不得复制、修改、分发或用于任何衍生作品。
+- **「筑梦喵」（Dream Weaving Meow）是团队 IP 形象**（含形象、名称、设定、服饰与衍生造型）：**不可复用**——无论公益或商业用途均不得使用、仿制、二次创作，或作为其他项目/产品的形象；违者将视情节追究法律责任。
+
+完整条款见 [LICENSE](./LICENSE) 与 [素材许可说明](./docs/ASSETS-LICENSE.md)。
 
 ---
 
@@ -449,7 +466,7 @@ cupbox ai agent "搜索项目里所有 TODO 并汇总" --max-turns 6
 cupbox ai config                 # 查看当前配置（Key 打码显示）
 ```
 
-- 配置保存在 `文档/Cupbox/config.json`（权限 0600；v1.0.2 起默认系统「文档」目录，旧 `~/.cupbox` 首次启动自动迁移，`CUPBOX_HOME` 可覆盖），**密钥只存本机、不上传**；
+- 配置保存在 `文档/Cupbox/config.json`（权限 0600；v1.0.3 起默认系统「文档」目录，旧 `~/.cupbox` 首次启动自动迁移，`CUPBOX_HOME` 可覆盖），**密钥只存本机、不上传**；
 - 环境变量 `CUPBOX_AI_API_KEY` / `CUPBOX_AI_BASE_URL` / `CUPBOX_AI_MODEL` / `CUPBOX_AI_PROVIDER` 优先于配置文件；
 - Agent 内 `rename` / `organize` **永远 dry-run 预览**（轮次默认 8、上限 10），`run` 仍必须白名单——**AI 拿不到任何超出人类使用时的安全权限**。
 
@@ -525,8 +542,9 @@ Cupbox 再次校验并执行操作
 - **工具箱抽屉** —— 原 16 工具表单界面折叠为右侧抽屉，按数据 / 文件 / 图片 / 系统分组选择，动态表单 + 结果面板（JSON 美化、图片预览）；
 - **设置弹窗** —— 四个页签：**API 设置**（协议 / 地址 / 模型 / 密钥 / 温度 / agent 轮次）、**主题**（深色 · 浅色 · 跟随系统 × 极光 / 薄荷 / 琥珀 / 玫瑰四种强调色，即时生效并落盘）、**插件管理**（每个工具的开关同时作用于工具箱显示与 Agent 可调用的工具集）、**关于更新**（版本信息、一键**检查 GitHub 仓库新版本**与结果展示、仓库 / Releases / CHANGELOG 快捷入口）；
 - **版本检测与更新公告**（v1.0.1）—— 启动静默检查更新，发现新版顶栏亮「vX.Y.Z 可用」呼吸徽标并自动弹出一次更新公告（版本对比 + Release 说明 + **前往 GitHub 下载** / 查看更新日志 / 稍后提醒）；点击顶栏版本号或在「设置 → 关于更新」可手动检查（转圈反馈），静默过的版本仍可从徽标再进，`CUPBOX_UPDATE_DISABLE=1` 一键关闭检查。
-- **数据默认存「文档」**（v1.0.2）—— 配置 / 密钥 / 模型库 / 会话 / 记忆都在 `文档/Cupbox`，设置 → 模型连接的「API 储存管理」可一键打开文件夹、定位 `config.json`；旧 `~/.cupbox` 首次启动自动迁移（只复制不覆盖，`CUPBOX_HOME` 可覆盖），侧栏「模型管理」直达多模型与能力多选页面。
-- **工具调用实时直播 + AI 气泡**（v1.0.2）—— Agent 执行任务时每次工具调用以卡片逐条出现（工具名 / 参数 / 执行中动画 → 完成耗时或失败详情），结束后由完整轨迹接管；AI 回复改为与用户气泡对偶的卡片气泡样式，带入场动画。
+- **数据默认存「文档」**（v1.0.3）—— 配置 / 密钥 / 模型库 / 会话 / 记忆都在 `文档/Cupbox`，设置 → 模型连接的「API 储存管理」可一键打开文件夹、定位 `config.json`；旧 `~/.cupbox` 首次启动自动迁移（只复制不覆盖，`CUPBOX_HOME` 可覆盖），侧栏「模型管理」直达多模型与能力多选页面。
+- **工具调用实时直播 + AI 气泡**（v1.0.3）—— Agent 执行任务时每次工具调用以卡片逐条出现（工具名 / 参数 / 执行中动画 → 完成耗时或失败详情），结束后由完整轨迹接管；AI 回复改为与用户气泡对偶的卡片气泡样式，带入场动画。
+- **Use-It 实时 Office 集成** —— 通过 use-it-agent 本地引擎用 COM 操作**已打开的** PowerPoint / Word / Excel / AutoCAD 与桌面 GUI；工具箱「办公 / 系统」新增 6 个工具，Agent 在本机模式下可调用，写入逐次批准。引擎安装与启动见 [docs/USEIT-ENGINE.md](docs/USEIT-ENGINE.md)。
 
 与 CLI、MCP 共用同一套引擎和安全默认（dry-run、白名单、解压预检全部生效）。
 
@@ -534,7 +552,12 @@ Cupbox 再次校验并执行操作
 npm install          # 首次会经 npmmirror 镜像下载 Electron 运行时
 npm run desktop      # 开发运行
 npm run pack:exe     # 打包绿色便携 exe → release/Cupbox可视化/Cupbox可视化.exe
+npm run pack:installer # Windows 安装包（需 Inno Setup 6.7+）→ release/Cupbox-Setup-1.1.1-x64.exe
 ```
+
+安装版提供樱花主题中文引导、深浅色外观、安装位置与快捷方式选择，卸载保留对话和配置。
+侧栏“QQ 机器人”提供独立扫码窗口、自动配置的 NapCat、群聊/私聊规则、共享记忆与受控表情包，见 [QQ 机器人说明](docs/QQ-BOT.md)。
+构建、安装与签名说明见 [Windows 安装版](docs/WINDOWS-INSTALLER.md)。
 
 三阶段路线（工具驾驶舱 → ACP 多引擎接入 → 技能市场/调度/多会话）与选型依据见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
 
@@ -685,6 +708,15 @@ npm test
 
 ---
 
+## 💬 交流群
+
+- QQ 群：**638500178**
+- 加群链接：<https://qm.qq.com/q/R6s16Mc4ay>
+
+群内用于使用答疑、版本通知和功能讨论；遇到可复现的问题，仍建议优先提交 Issue，方便跟踪和沉淀。
+
+---
+
 ## 🗺️ 项目方向
 
 Cupbox 的长期方向是成为一个轻量、可靠、适合人类与 AI 共同使用的开发工具箱。
@@ -725,3 +757,18 @@ Cupbox 使用 [MIT License](./LICENSE) 开源。
   少写一次临时脚本，少做一次重复操作。<br>
   把时间留给真正值得创造的东西。
 </p>
+
+
+### 桌面开发工具与项目授权
+
+设置 → 开发与授权提供 36 项桌面 Agent 工具：文件预览/事务/回滚、HTTP、真实 ConPTY、搜索替换、图片处理、Git、脚本与测试、项目记忆。文件修改需预览令牌，项目策略提案不自动信任，Shell 始终人工批准。详见 [开发工具说明](docs/WORKBENCH.md)。
+
+
+### 本机渗透测试 Agent（默认关闭）
+
+设置 → 权限与环境可开启隐藏的本机渗透测试 Agent，开启时需确认风险。工具和本机模型请求都只允许固定127.0.0.1，不解析域名、不跟随重定向。复用 MIT node-portscanner 检查端口，并提供有界HTTP安全头/配置暴露检查；没有本机模型也可运行固定流程。详见 [边界、来源与使用说明](docs/LOOPBACK-AGENT.md)。当前版本为1.1.1。
+
+### 桌面协作：鼠标、读屏与视觉
+
+设置 → 权限与环境开启需要的权限，在左侧桌面协作手动授权目标窗口，再使用 Agent 对话。新增7个桌面工具，默认关闭，逐次确认；Ctrl+Alt+F12紧急停止。[权限、开源来源与使用说明](docs/COMPUTER-ASSIST.md)。
+

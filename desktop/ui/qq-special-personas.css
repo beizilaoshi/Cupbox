@@ -1,0 +1,20 @@
+.special-persona-toolbar{display:flex;align-items:end;gap:12px;flex-wrap:wrap}
+.special-persona-toolbar>.field:first-child{flex:1 1 240px;margin:0}
+.special-persona-toolbar>.special-persona-page-size{flex:0 0 112px;margin:0}
+.special-persona-toolbar>button{margin-bottom:1px}
+.special-persona-library-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:18px 0;color:var(--txt-faint);font-size:11px}
+.special-persona-library-meta p{margin:0}
+.special-persona-library .preset-card{min-width:0;min-height:160px;justify-content:flex-start}
+.special-persona-library .preset-card b{line-height:1.6}
+.special-persona-library .preset-card small{margin-top:auto;overflow-wrap:anywhere}
+.special-persona-pagination{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:20px;padding-top:16px;border-top:1px solid var(--stroke)}
+.special-persona-pagination[hidden]{display:none}
+.special-persona-pages{display:flex;gap:6px;align-items:center}
+.special-persona-pages>button{display:grid;place-items:center;width:32px;height:32px;border:1px solid var(--stroke);border-radius:8px;color:var(--txt-dim);font-size:11px;cursor:pointer}
+.special-persona-pages>button[aria-current=page]{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.special-persona-pages>button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.special-persona-jump{display:flex;gap:8px;align-items:center;font-size:11px;color:var(--txt-faint)}
+.special-persona-jump select{max-width:110px;background:var(--surface);color:var(--txt);border:1px solid var(--stroke);border-radius:8px;padding:7px;font-size:11px}
+.special-persona-empty{grid-column:1/-1;padding:30px 12px;text-align:center;font-size:12px;line-height:1.8;color:var(--txt-faint)}
+@media(max-width:850px){.special-persona-library .preset-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.special-persona-pagination{gap:8px}.special-persona-jump{width:100%;justify-content:center}}
+.special-persona-jump{white-space:nowrap;flex-shrink:0}

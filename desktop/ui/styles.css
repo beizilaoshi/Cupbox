@@ -94,3 +94,75 @@
 .ctx-empty-note{font-size:11px;color:var(--txt-faint);padding:6px 2px}
 .ctx-modal .upd-foot{margin-top:14px}
 @media(max-width:800px){.ctx-kpis{grid-template-columns:repeat(2,1fr)}.ctx-legend{grid-template-columns:repeat(2,1fr)}}
+
+/* 开屏公告弹窗（announcement.json） */
+.modal.ann-modal{width:620px}
+.ann-meta{display:flex;gap:8px;align-items:center;padding:0 24px 4px}
+.ann-body{padding:16px 24px;overflow:auto;white-space:pre-wrap;font-size:12.5px;line-height:1.75;max-height:46vh;color:var(--txt-dim)}
+.ann-opt{display:flex;align-items:center;gap:9px;padding:2px 24px 6px;font-size:11px;color:var(--txt-faint);cursor:pointer}
+.ann-opt input{width:14px;min-width:14px;height:14px;flex:0 0 14px;padding:0;margin:0;accent-color:var(--accent)}
+@media(max-width:760px){.modal.ann-modal{width:calc(100vw - 36px)}}
+/* Office tools use the same quiet cards and accessible buttons as settings. */
+.office-tool-shortcuts{margin:16px 0;padding:16px;border:1px solid var(--border-color,rgba(128,128,168,.22));border-radius:16px;background:var(--panel-bg,rgba(128,128,168,.06))}
+.office-tool-shortcuts p{font-size:12px;line-height:1.7;opacity:.75;margin:7px 0 12px}
+.office-tool-buttons{display:flex;flex-wrap:wrap;gap:8px}
+.office-tool-buttons button{font-size:12px;min-height:34px;transition:transform .16s ease,background .16s ease}
+.office-tool-buttons button:active{transform:scale(.97)}
+.office-read-block{padding:12px 0;border-bottom:1px solid var(--border-color,rgba(128,128,168,.22))}
+.office-read-block pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;line-height:1.7}
+@media(prefers-reduced-motion:reduce){.office-tool-buttons button{transition:none}}
+
+.office-tool-buttons button{padding:8px 12px;border:1px solid rgba(128,128,168,.24);border-radius:9px;background:rgba(128,128,168,.08);color:inherit;cursor:pointer}
+.office-tool-buttons button:hover{background:rgba(128,128,198,.18)}
+
+.office-workflow-presets{padding:12px 0;border-top:1px solid var(--stroke);margin-top:12px}.office-workflow-presets p{font-size:12px;color:var(--txt-dim);line-height:1.65;margin:6px 0 10px}.office-workflow-presets .office-tool-buttons{margin-bottom:4px}#result-body pre{white-space:pre-wrap;overflow-wrap:anywhere}
+
+body .composer-capabilities[open]{max-height:min(48vh,420px);overflow-y:auto;scrollbar-gutter:stable}
+#result-body h3,#result-body h4{margin:14px 0 8px}#result-body p{line-height:1.75;margin:7px 0}
+
+
+#office-family-filters{margin:0 0 16px}#office-family-filters[hidden]{display:none}#office-family-filters button[aria-pressed=true]{background:var(--raised);border-color:var(--accent);color:var(--accent)}
+
+/* Interface chrome should behave like an app, while editable values remain selectable. */
+body{-webkit-user-select:none;user-select:none}
+input,textarea,[contenteditable=true],[contenteditable=plaintext-only]{-webkit-user-select:text;user-select:text}
+
+/* 消息定位条：固定 10px 间距的轮次刻度，超出高度在条内滚动，悬停出预览。 */
+.chat-rail{position:absolute;right:12px;width:24px;z-index:7;max-height:420px;transform:translateY(-50%);display:block;pointer-events:auto;contain:layout}
+.chat-rail[hidden]{display:none}
+.chat-rail-scroller{position:relative;max-height:inherit;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;mask-image:none}
+.chat-rail-scroller::-webkit-scrollbar{display:none}
+.chat-rail-scroller.fade-top{mask-image:linear-gradient(to bottom,transparent 0,#000 24px,#000 100%)}
+.chat-rail-scroller.fade-bottom{mask-image:linear-gradient(to bottom,#000 0,#000 calc(100% - 24px),transparent 100%)}
+.chat-rail-scroller.fade-top.fade-bottom{mask-image:linear-gradient(to bottom,transparent 0,#000 24px,#000 calc(100% - 24px),transparent 100%)}
+.chat-rail-marks{position:relative}
+.chat-rail-mark{position:absolute;left:0;right:0;height:10px;padding:0;border:0;border-radius:8px;background:transparent;cursor:pointer}
+.chat-rail-mark::before{content:"";position:absolute;top:50%;right:0;width:20px;height:2px;border-radius:2px;background:var(--txt-faint);opacity:.7;transform:translateY(-50%) scaleX(.6);transform-origin:right center;transition:transform .14s ease,background .14s ease,opacity .14s ease}
+.chat-rail-mark:hover::before,.chat-rail-mark:focus-visible::before{transform:translateY(-50%) scaleX(.9);background:var(--txt-dim);opacity:1}
+.chat-rail-mark.active::before{transform:translateY(-50%) scaleX(1);background:var(--accent);opacity:1}
+.chat-rail-mark.folded::before{transform:translateY(-50%) scaleX(.4);opacity:.45}
+.chat-rail-mark:focus-visible{outline:none}
+.chat-rail-mark:focus-visible::after{content:"";position:absolute;inset:0 0 0 auto;width:20px;border-radius:8px;outline:1px solid var(--accent);outline-offset:-1px}
+.chat-rail-preview{position:absolute;right:calc(100% + 8px);width:min(250px,40vw);max-height:104px;overflow:hidden;background:var(--surface);border:1px solid var(--stroke);border-radius:10px;padding:9px 12px;box-shadow:0 8px 30px #0003;pointer-events:none;z-index:2;animation:railPreview .12s ease-out}
+.chat-rail-preview[hidden]{display:none}
+.chat-rail-preview-prompt{font-size:12px;font-weight:600;color:var(--txt);overflow:hidden;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical}
+.chat-rail-preview-response{margin-top:4px;font-size:11px;line-height:1.55;color:var(--txt-dim);overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+@keyframes railPreview{from{opacity:0;transform:translateX(4px)}to{opacity:1;transform:none}}
+
+/* 历史折叠：单行小胶囊，长对话默认只渲染最近 40 条，其余按 30 条一批展开。 */
+.chat-fold{max-width:780px;margin:2px auto 14px;display:flex;justify-content:center}
+.chat-fold-btn{border:1px solid transparent;background:var(--surface);color:var(--txt-faint);border-radius:999px;padding:3px 12px;font:inherit;font-size:11px;cursor:pointer;display:flex;flex-direction:row;gap:7px;align-items:center;transition:background .15s,color .15s,border-color .15s}
+.chat-fold-btn:hover{background:var(--raised);color:var(--txt);border-color:var(--stroke)}
+.chat-fold-btn small{font-size:10px;color:var(--txt-faint)}
+.chat-fold-count{font-size:11px;color:var(--txt-dim)}
+.chat-fold.flash .chat-fold-btn{border-color:var(--accent);color:var(--accent);animation:chatFoldFlash 1.4s ease}
+@keyframes chatFoldFlash{0%,100%{box-shadow:0 0 0 0 transparent}30%{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent)}}
+
+.msg-jump{animation:msgJump 1.5s ease}
+@keyframes msgJump{0%{box-shadow:0 0 0 2px var(--accent)}70%{box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 25%,transparent)}100%{box-shadow:0 0 0 2px transparent}}
+
+.stage[data-work-engine=harness] .chat-rail{display:none}
+@media(max-width:900px){.chat-rail{display:none}}
+
+.sess-item.harness-task{padding-right:12px}
+.sess-item.harness-task .s-mode{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent);padding:0 5px;border-radius:4px;line-height:1.5}

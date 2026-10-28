@@ -1,0 +1,2 @@
+import {WeixinChannel} from './weixin.js';import {WecomChannel} from './wecom.js';import {FeishuChannel} from './feishu.js';import {DingTalkChannel} from './dingtalk.js';
+export function createChannel(options){const constructors={weixin:WeixinChannel,wecom:WecomChannel,feishu:FeishuChannel,dingtalk:DingTalkChannel};const Ctor=constructors[options.platform];if(!Ctor)throw Error('不支持此连接平台');return new Ctor(options);}

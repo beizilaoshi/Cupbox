@@ -19,8 +19,9 @@ import { clipRead, clipWrite } from './clip.js';
 import { screenshot } from './shot.js';
 import { safeRun } from './run.js';
 import { listProcesses, killProcess } from './proc.js';
-import { addFact, listFacts, forgetFacts, recall, loadRuntimeMemory, saveRuntimeMemory } from './memory.js';
+import { addFact, listFacts, forgetFacts, recall, loadRuntimeMemory, saveRuntimeMemory, memoryOverview } from './memory.js';
 import { estimateTokens, resolveWindow } from './context.js';
+import type { FreeTurn } from './freemodel.js';
 
 const CODEC_MAP: Record<string, (s: string) => string> = {
   b64e: base64Encode, b64d: base64Decode,
@@ -256,7 +257,7 @@ export const TOOL_DEFS: ToolDef[] = [
   },
   {
     name: 'memory_manage',
-    description: '列出全部长期事实，或按 id/关键词遗忘匹配项。',
+    description: '分别展示常驻用户画像、协作约定、长期事实及来源和数量；事实0条不代表没有画像。forget 仅遗忘事实。',
     parameters: {
       type: 'object',
       properties: {
@@ -285,6 +286,22 @@ export const TOOL_DEFS: ToolDef[] = [
       properties: {
         text: { type: 'string', description: '要估算的文本；省略则估算 Agent 基线开销' },
         window: { type: 'number', description: '上下文窗口 token 数，默认 128000' },
+      },
+    },
+  },
+  {
+    name: 'freemodel_chat',
+    description:
+      '调用免密免费大模型（移植自 dsh-our-free-model）。action=list 列出可用免费模型；action=chat 用指定 model 免 API Key 发起一轮纯文本对话；action=probe 探测模型可用性。免费通道为第三方公共池，请勿发送敏感内容。',
+    parameters: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['list', 'chat', 'probe'], description: 'list=列模型 / chat=对话 / probe=探测' },
+        model: { type: 'string', description: '模型 id（chat/probe 必填，如 mimo-v2.6-flash-free）' },
+        prompt: { type: 'string', description: 'chat 时的用户消息' },
+        system: { type: 'string', description: 'chat 时的系统提示词（可选）' },
+        refresh: { type: 'boolean', description: 'list 时强制刷新在线目录' },
+        maxTokens: { type: 'number', description: 'chat 时的最大输出 token' },
       },
     },
   },
@@ -437,7 +454,7 @@ export async function runTool(tool: string, a: Record<string, unknown>): Promise
         return { forgotten: removed };
       }
       const facts = await listFacts();
-      return { facts: facts.map((f) => ({ id: f.id, text: f.text, source: f.source })), total: facts.length };
+      return { facts: facts.map((f) => ({ id: f.id, text: f.text, source: f.source })), total: facts.length, ...await memoryOverview(facts.length) };
     }
     case 'memory_profile': {
       const kind = str(a.kind) === 'collab' ? 'memory' : 'user';
@@ -479,6 +496,50 @@ export async function runTool(tool: string, a: Record<string, unknown>): Promise
         occupancy: Number((total / window).toFixed(4)),
         note: '固定密度启发式估算（≈），非精确 tokenizer 计数',
       };
+    }
+    case 'freemodel_chat': {
+      const action = str(a.action).trim() || 'list';
+      const fm = await import('./freemodel.js');
+      if (action === 'list') {
+        const r = await fm.listFreeModels({ refresh: a.refresh === true });
+        return {
+          models: r.models.map((m) => ({
+            id: m.id, name: m.name, lane: m.lane, wire: m.wire,
+            vision: m.vision, reasoning: m.reasoning,
+            contextWindow: m.contextWindow, maxOutput: m.maxOutput,
+            ...(m.regionSensitive ? { regionSensitive: true } : {}),
+            ...(m.stale ? { stale: true } : {}),
+            ...(m.blocked ? { blocked: true } : {}),
+          })),
+          total: r.models.length,
+          usable: r.models.filter((m) => !m.blocked).length,
+          live: r.live,
+          note: '免费通道由第三方公共池提供，无 SLA；请勿发送敏感内容',
+        };
+      }
+      if (action === 'probe') {
+        const model = str(a.model).trim();
+        if (!model) throw new Error('probe 需要 model');
+        const r = await fm.probeFreeModel(model);
+        return { model, ...r };
+      }
+      if (action === 'chat') {
+        const model = str(a.model).trim();
+        const prompt = str(a.prompt).trim();
+        if (!model) throw new Error('chat 需要 model');
+        if (!prompt) throw new Error('chat 需要 prompt');
+        const messages: FreeTurn[] = [
+          ...(str(a.system).trim() ? [{ role: 'system' as const, text: str(a.system).trim() }] : []),
+          { role: 'user' as const, text: prompt },
+        ];
+        const r = await fm.chatFreeLane({
+          model,
+          messages,
+          ...(a.maxTokens ? { maxTokens: Number(a.maxTokens) } : {}),
+        });
+        return { model: r.model, lane: r.lane, text: r.text, ...(r.usage ? { usage: r.usage } : {}) };
+      }
+      throw new Error(`未知 action: ${action}（可用 list / chat / probe）`);
     }
     default:
       throw new Error(`未知工具: ${tool}`);

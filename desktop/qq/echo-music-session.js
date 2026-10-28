@@ -1,0 +1,67 @@
+import path from 'node:path';
+import {mkdir,readFile,writeFile,lstat,unlink} from 'node:fs/promises';
+import {randomBytes,randomUUID,createHash} from 'node:crypto';
+import {createRequire} from 'node:module';
+import {replaceMemoryFile} from './atomic-memory.js';
+import {runEchoRequest} from './echo-music.js';
+const require=createRequire(import.meta.url),sdk=createRequire(require.resolve('echomusic-api/package.json'));
+const encodeQR=value=>sdk('qrcode').toDataURL(value,{width:220,margin:2});
+const validId=value=>/^\d{1,20}$/.test(String(value||''))&&String(value)!=='0';
+const name=value=>typeof value==='string'?value.replace(/[\x00-\x1f\x7f\u202a-\u202e\u2066-\u2069]/g,'').trim().slice(0,80):'';
+export const MUSIC_LOGIN_METHODS=['kugou','sms','account','qq','wechat'];
+const hash=value=>createHash('sha256').update(value).digest('hex');
+const qrImage=(value,mime='png')=>{if(typeof value!=='string'||value.length>2000000)throw Error('登录二维码图片无效');const image=value.startsWith('data:')?value:'data:image/'+mime+';base64,'+value;if(!/^data:image\/(png|jpeg);base64,[a-z0-9+/=]+$/i.test(image))throw Error('登录二维码图片无效');return image;};
+export class EchoMusicSession{
+ constructor(home,{encrypt,decrypt,request=runEchoRequest,qrEncode=encodeQR,clock=Date.now}){Object.assign(this,{encrypt,decrypt,transport:request,qrEncode,clock});this.root=path.join(home,'qq-bot');this.file=path.join(this.root,'echo-music-session.json');this.pending=Promise.resolve();this.generation=0;this.controller=new AbortController();this.phase='idle';this.method='kugou';this.error='';this.qr=null;this.lastPoll=0;this.candidates=[];this.candidateKey='';}
+ async check(){for(const p of [this.root,this.file])try{if((await lstat(p)).isSymbolicLink())throw Error('音乐登录凭证路径不能使用符号链接');}catch(e){if(e.code!=='ENOENT')throw e;}}
+ async read(){await this.check();try{const bytes=await readFile(this.file);if(bytes.length>64000)throw Error('large');const envelope=JSON.parse(bytes);if(envelope.version!==1||typeof envelope.encrypted!=='string')throw Error('format');const value=JSON.parse(this.decrypt(Buffer.from(envelope.encrypted,'base64')));if(!/^[a-f0-9]{32}$/.test(value.mid)||!/^[a-f0-9]{32}$/.test(value.device)||value.token&&(typeof value.token!=='string'||value.token.length>4096||/[\s\x00-\x1f]/.test(value.token)||!validId(value.userid)))throw Error('format');return value;}catch(e){if(e.code==='ENOENT')return null;throw Error('酷狗登录凭证无法读取或解密，请退出音乐账号后重新扫码');}}
+ change(fn){const run=this.pending.catch(()=>{}).then(fn);this.pending=run;return run;}
+ async write(value){await mkdir(this.root,{recursive:true});await this.check();const encrypted=this.encrypt(JSON.stringify(value)),temp=this.file+'.'+randomUUID()+'.tmp';try{await writeFile(temp,JSON.stringify({version:1,encrypted:encrypted.toString('base64')}),{flag:'wx',mode:0o600});await replaceMemoryFile(temp,this.file);}finally{await unlink(temp).catch(()=>{});}}
+ async data(){await this.pending.catch(()=>{});return this.read();}
+ async status(){const data=await this.data();return{loggedIn:!!data?.token,userid:data?.token?String(data.userid):'',nickname:data?.token?name(data.nickname):'',method:this.method,loginMethod:data?.loginMethod||'kugou',methods:MUSIC_LOGIN_METHODS,accounts:this.candidates,smsRetryAt:Number(data?.smsRetryAt)||0,phase:this.qr||['expired','choosing','smsSent'].includes(this.phase)?this.phase:data?.token?(this.phase==='verified'?'verified':'saved'):this.phase,qrImage:this.qr?.image||'',expiresAt:this.qr?.expiresAt||0,error:this.error};}
+ cookie(data,includeAuth=true){return{KUGOU_API_MID:data.mid,KUGOU_API_DEV:data.device,KUGOU_API_GUID:data.guid||data.mid,KUGOU_API_MAC:data.mac||'02:00:00:00:00:00',...(data.dfid?{dfid:data.dfid}:{}),...(includeAuth&&data.token?{token:data.token,userid:data.userid,...(data.t1?{t1:data.t1}:{})}:{} )};}
+ invalidate(){this.generation++;this.controller.abort();this.controller=new AbortController();this.qr=null;this.lastPoll=0;this.error='';this.phase='idle';this.candidates=[];this.candidateKey='';}
+ assertCurrent(generation){if(generation!==this.generation||this.controller.signal.aborted)throw Error('音乐登录已取消');}
+ setMethod(method){if(!MUSIC_LOGIN_METHODS.includes(method))throw Error('请选择有效的音乐登录方式');this.invalidate();this.method=method;return this.status();}
+ identity(generation){return this.change(async()=>{this.assertCurrent(generation);const saved=await this.read(),value=saved||{mid:randomBytes(16).toString('hex'),device:randomBytes(16).toString('hex'),guid:randomUUID(),mac:'02:'+Array.from(randomBytes(5),b=>b.toString(16).padStart(2,'0')).join(':')};this.assertCurrent(generation);await this.write(value);return value;});}
+ async complete(response,data,generation,method){
+  this.assertCurrent(generation);if(typeof response?.token!=='string'||!response.token||response.token.length>4096||/[\s\x00-\x1f]/.test(response.token)||!validId(response.userid))throw Error('酷狗登录结果不完整，请重试');
+  await this.change(async()=>{this.assertCurrent(generation);const current=await this.read();await this.write({...data,...current,token:response.token,userid:String(response.userid),nickname:name(response.nickname||response.username),loginMethod:method,...(typeof response.t1==='string'&&response.t1.length<=4096?{t1:response.t1}:{}),savedAt:this.clock()});});
+  this.assertCurrent(generation);this.qr=null;this.phase='verified';this.error='';this.candidates=[];return this.status();
+ }
+ async begin(method='kugou'){
+  if(!['kugou','qq','wechat'].includes(method))throw Error('请选择扫码登录方式');this.invalidate();this.method=method;const generation=this.generation,signal=this.controller.signal,data=await this.identity(generation),options={signal,cookie:this.cookie(data,false)};
+  let qr;
+  if(method==='kugou'){const result=await this.transport('qrKey',{},options),key=result?.data?.qrcode||result?.data?.key;this.assertCurrent(generation);if(result?.status!==1||typeof key!=='string'||!/^[\w-]{1,256}$/.test(key))throw Error('酷狗未返回有效登录二维码，请重试');qr={key,image:await this.qrEncode('https://h5.kugou.com/apps/loginQRCode/html/index.html?appid=3116&qrcode='+encodeURIComponent(key))};}
+  else if(method==='qq'){const result=await this.transport('qqCreate',{},options);this.assertCurrent(generation);const session={};for(const field of ['cookie','qrsig','ptqrtoken','pt_login_sig','pt_openlogin_data','xlogin_url']){if(!['string','number'].includes(typeof result?.[field])||!String(result[field])||String(result[field]).length>16000)throw Error('QQ授权二维码会话不完整');session[field]=result[field];}const url=new URL(session.xlogin_url);if(url.protocol!=='https:'||url.username||url.password||url.port||!/(^|\.)qq\.com$/.test(url.hostname))throw Error('QQ授权地址无效');qr={session,image:qrImage(result.qrcode)};}
+  else{const result=await this.transport('wxCreate',{},options);this.assertCurrent(generation);if(typeof result?.uuid!=='string'||!/^[-\w]{1,256}$/.test(result.uuid))throw Error('微信授权二维码会话不完整');qr={uuid:result.uuid,image:result.qrcode?.qrcodebase64?qrImage(result.qrcode.qrcodebase64,'jpeg'):await this.qrEncode('https://open.weixin.qq.com/connect/confirm?uuid='+encodeURIComponent(result.uuid))};}
+  this.assertCurrent(generation);this.qr={...qr,method,image:qrImage(qr.image),expiresAt:this.clock()+180000};this.phase='waiting';return this.status();
+ }
+ async poll(){
+  if(!this.qr||this.pollingGeneration===this.generation)return this.status();if(this.clock()>=this.qr.expiresAt){this.qr=null;this.phase='expired';return this.status();}if(this.lastPoll&&this.clock()-this.lastPoll<2500)return this.status();
+  const generation=this.generation,qr=this.qr,signal=this.controller.signal;this.pollingGeneration=generation;this.lastPoll=this.clock();
+  try{const data=await this.data(),options={signal,cookie:this.cookie(data,false)};
+   if(qr.method==='qq'){const result=await this.transport('qqCheck',{...qr.session},options);this.assertCurrent(generation);if(Number(result?.status)===1&&result.data?.token)return await this.complete(result.data,data,generation,'qq');const state=String(result?.status);if(['expired','65'].includes(state)){this.qr=null;this.phase='expired';}else if(['wait','66','67'].includes(state)){this.phase=state==='67'?'confirming':'waiting';this.error='';}else throw Error('QQ授权失败，请刷新二维码');}
+   else if(qr.method==='wechat'){const result=await this.transport('wxCheck',{uuid:qr.uuid,timestamp:this.clock()},options);this.assertCurrent(generation);const code=Number(result.wx_errcode??result.status);if(code===405){if(typeof result.wx_code!=='string'||!/^[-\w]{1,512}$/.test(result.wx_code))throw Error('微信授权信息缺失');const login=await this.transport('wxLogin',{code:result.wx_code,plat:2},options);this.assertCurrent(generation);if(Number(login?.status)!==1)throw Error('微信授权登录失败');return await this.complete(login.data,data,generation,'wechat');}else if([402,403].includes(code)){this.qr=null;this.phase='expired';}else if([404,408].includes(code)){this.phase=code===404?'confirming':'waiting';this.error='';}else throw Error('微信授权状态无效');}
+   else{const result=await this.transport('qrCheck',{key:qr.key},options);this.assertCurrent(generation);const response=result?.data,status=Number(response?.status);if(status===4)return await this.complete(response,data,generation,'kugou');if(status===0){this.qr=null;this.phase='expired';}else if(status===1||status===2){this.phase=status===2?'confirming':'waiting';this.error='';}else throw Error('酷狗未返回有效扫码状态');}
+  }catch{if(generation===this.generation&&!signal.aborted)this.error='扫码授权暂未完成，请检查网络；平台要求验证时请在手机完成，或刷新二维码';else throw Error('音乐登录已取消');}finally{if(this.pollingGeneration===generation)this.pollingGeneration=null;}return this.status();
+ }
+ async sendSms({mobile}={}){
+  if(typeof mobile!=='string'||!/^1\d{10}$/.test(mobile))throw Error('请输入11位手机号');if(this.method!=='sms')throw Error('请先切换到手机号验证码登录');const generation=this.generation,signal=this.controller.signal;await this.identity(generation);
+  const data=await this.change(async()=>{this.assertCurrent(generation);const value=await this.read();if(Number(value.smsRetryAt)>this.clock())throw Error('验证码已申请，请等待倒计时结束后重试');const next={...value,smsRetryAt:this.clock()+60000};await this.write(next);return next;});
+  try{const result=await this.transport('smsSend',{mobile},{signal,cookie:this.cookie(data,false)});this.assertCurrent(generation);if(Number(result?.status)!==1)throw Error('发送失败');this.phase='smsSent';this.error='';return this.status();}catch{this.assertCurrent(generation);throw Error('验证码发送未确认，请先检查手机短信；稍后重试或换用扫码登录');}
+ }
+ async loginForm(input={}){
+  const {method,mobile,code,username,password,userid}=input;if(!['sms','account'].includes(method)||this.method!==method)throw Error('请先切换到对应登录方式');
+  let params;if(method==='sms'){if(typeof mobile!=='string'||!/^1\d{10}$/.test(mobile)||typeof code!=='string'||!/^\d{4,8}$/.test(code))throw Error('请输入正确的手机号和4～8位验证码');if(userid&&(!validId(userid)||this.candidateKey!==hash(mobile)||!this.candidates.some(r=>r.userid===String(userid))))throw Error('请选择本次验证码返回的关联账号');params={mobile,code,...(userid?{userid:String(userid)}:{})};}else{if(typeof username!=='string'||!username.trim()||username.length>128||typeof password!=='string'||!password||password.length>256)throw Error('请输入账号和密码');params={username:username.trim(),password};}
+  if(this.formGeneration===this.generation)throw Error('登录正在进行，请稍候');const generation=this.generation,signal=this.controller.signal;this.formGeneration=generation;
+  try{const data=await this.identity(generation),result=await this.transport(method==='sms'?'smsLogin':'passwordLogin',params,{signal,cookie:this.cookie(data,false)});this.assertCurrent(generation);
+   if(Number(result?.error_code)===34175&&method==='sms'){this.candidates=(Array.isArray(result.data?.info_list)?result.data.info_list:[]).filter(r=>validId(r.userid)).slice(0,20).map(r=>({userid:String(r.userid),nickname:name(r.nickname||r.username)||'酷狗用户'}));if(!this.candidates.length)throw Error('关联账号为空');this.candidateKey=hash(mobile);this.phase='choosing';return this.status();}
+   if(Number(result?.status)!==1)throw Error('登录未成功');return await this.complete(result.data,data,generation,method);
+  }catch{this.assertCurrent(generation);throw Error(method==='sms'?'验证码登录未成功，请核对验证码；平台要求验证时可改用手机扫码':'账号登录未成功，请核对账号密码；平台要求验证时可改用手机扫码');}finally{if(this.formGeneration===generation)this.formGeneration=null;}
+ }
+ async request(action,params,{signal}={}){const data=await this.data(),generation=this.generation,combined=AbortSignal.any([this.controller.signal,...(signal?[signal]:[])]);const result=await this.transport(action,params,{signal:combined,...(data?{cookie:this.cookie(data)}:{})});combined.throwIfAborted();if(generation!==this.generation)throw Error('音乐账号已变化，请重新操作');return result;}
+ async verify(){const data=await this.data(),generation=this.generation;if(!data?.token)throw Error('请先使用酷狗概念版扫码登录');try{const result=await this.request('profile',{});if(result?.status!==1)throw Error('invalid');if(generation!==this.generation)throw Error('cancelled');this.phase='verified';this.error='';return this.status();}catch{if(generation!==this.generation)throw Error('音乐登录已取消');this.error='登录验证失败，请检查网络；登录已失效时请重新扫码';return this.status();}}
+ logout(){this.invalidate();return this.change(async()=>{await this.check();await unlink(this.file).catch(e=>{if(e.code!=='ENOENT')throw e;});return{loggedIn:false,userid:'',nickname:'',phase:'idle',qrImage:'',expiresAt:0,error:''};});}
+ cancelLogin(){this.invalidate();}
+}

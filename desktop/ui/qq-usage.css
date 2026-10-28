@@ -1,0 +1,73 @@
+[data-panel=consumption] .qq-page-outline{display:none}
+[data-panel=consumption] .bot-card{border-radius:16px;padding:20px;margin-bottom:16px}
+[data-panel=consumption] .bot-card>header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 16px;padding-bottom:14px;border-bottom:1px solid var(--stroke)}
+[data-panel=consumption] header h2{font-size:13px;margin:0}
+[data-panel=consumption] header>span,[data-panel=consumption] header>div>span{font-size:11px;color:var(--txt-faint)}
+.usage-page-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:22px}
+#usage-updated{font-size:11px;color:var(--txt-faint);white-space:nowrap}
+.usage-overview>header>div:first-child{display:flex;align-items:center;gap:10px}
+.usage-ranges{display:flex;flex-wrap:wrap;gap:2px;background:var(--bg);padding:4px;border:1px solid var(--stroke);border-radius:20px}
+.usage-ranges button{font:inherit;font-size:11px;color:var(--txt-dim);padding:5px 10px;border-radius:14px;cursor:pointer;white-space:nowrap}
+.usage-ranges button[aria-pressed=true]{background:var(--surface);color:var(--accent);box-shadow:0 1px 4px #0001}
+.usage-ranges button:focus-visible,.usage-legend-row:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.usage-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.usage-summary{min-width:0;background:var(--bg);border:1px solid var(--stroke);border-radius:12px;padding:15px;display:flex;flex-direction:column;gap:9px}
+.usage-summary>span{font-size:11px;color:var(--txt-faint)}
+.usage-summary>strong{font-size:23px;line-height:1.15;font-weight:650;letter-spacing:-.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt);font-variant-numeric:tabular-nums}
+.usage-summary:last-child>strong{font-size:14px;letter-spacing:0;line-height:26px}
+.usage-summary>small{font-size:10px;line-height:1.6;color:var(--txt-faint)}
+.usage-quality{display:flex;gap:8px 18px;flex-wrap:wrap;font-size:10px;color:var(--txt-faint);padding-top:14px}
+.usage-filter{margin-top:14px;border-top:1px solid var(--stroke);padding-top:12px}
+.usage-filter summary,.usage-pricing>summary{font-size:11px;color:var(--txt-dim);cursor:pointer}
+.usage-filters-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 14px;align-items:end}
+.usage-filters-grid>.field{margin:14px 0 0}.usage-filters-grid>button{margin-top:14px;justify-self:start}
+.usage-report-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+[data-panel=consumption] .usage-report-grid>.bot-card{margin:0;min-width:0}
+.usage-rank-list{padding:12px;background:var(--bg);border:1px solid var(--stroke);border-radius:12px;min-height:92px}
+.usage-rank-row{display:grid;grid-template-columns:minmax(64px,1.2fr) minmax(36px,1fr) 53px 44px;gap:10px;align-items:center;margin:10px 0;font-size:11px;font-variant-numeric:tabular-nums}
+.usage-rank-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt-dim)}
+.usage-rank-row>span:nth-last-child(2){text-align:right;color:var(--txt-faint);font-size:10px}.usage-rank-row>b{text-align:right;font-size:10px;color:var(--txt)}
+.usage-rank-row progress,.usage-day-row progress{width:100%;height:7px;border:0;appearance:none;-webkit-appearance:none;border-radius:20px;overflow:hidden;background:var(--stroke)}
+.usage-rank-row progress::-webkit-progress-bar,.usage-day-row progress::-webkit-progress-bar{background:var(--stroke);border-radius:20px}
+.usage-rank-row progress::-webkit-progress-value,.usage-day-row progress::-webkit-progress-value{background:var(--accent);border-radius:20px}
+.usage-donut-layout{position:relative;display:grid;grid-template-columns:minmax(160px,1fr) minmax(130px,1fr);gap:8px;align-items:center;min-height:236px}
+.usage-donut{position:relative;width:100%;max-width:250px;min-width:0;justify-self:center;aspect-ratio:1}
+.usage-donut svg{display:block;width:100%;height:100%;overflow:visible}.usage-donut-track{stroke:var(--stroke);opacity:.7}
+.usage-donut-center{position:absolute;inset:30%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;pointer-events:none;text-align:center;min-width:0}
+.usage-donut-center strong{font-size:24px;color:var(--txt);white-space:nowrap;font-variant-numeric:tabular-nums;letter-spacing:-.6px}
+.usage-donut-center span{font-size:10px;color:var(--txt-faint);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.usage-slice{stroke:var(--usage-color);transition:opacity .18s,stroke-width .18s;cursor:default}.usage-slice:focus-visible{outline:none;stroke-width:30}.usage-has-highlight .usage-slice{opacity:.25}.usage-has-highlight .usage-slice.usage-slice-active{opacity:1;stroke-width:29}
+.usage-color-0{--usage-color:#ff6435}.usage-color-1{--usage-color:#438cf5}.usage-color-2{--usage-color:#36af80}.usage-color-3{--usage-color:#edb328}.usage-color-4{--usage-color:#ab78e0}.usage-color-5{--usage-color:#ed789b}.usage-color-6{--usage-color:#38aabd}.usage-color-7{--usage-color:#8792aa}
+.usage-legend{min-width:0;display:grid;gap:6px}.usage-legend-row{display:grid;grid-template-columns:7px minmax(0,1fr) auto;gap:7px;align-items:center;width:100%;padding:6px 2px;text-align:left;background:transparent;border:0;font-size:10px;color:var(--txt-dim);cursor:default;border-radius:5px;font-variant-numeric:tabular-nums}
+.usage-legend-row:hover,.usage-legend-row:focus{background:var(--bg)}.usage-dot{width:7px;height:7px;border-radius:50%;background:var(--usage-color)}.usage-legend-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.usage-legend-value{grid-column:2;color:var(--txt-faint);font-size:10px}.usage-legend-row>b{grid-column:3;grid-row:1/3;font-size:10px;font-weight:600;color:var(--txt)}
+.usage-chart-tooltip{position:absolute;top:0;right:0;z-index:2;max-width:100%;padding:8px 10px;border:1px solid var(--stroke);border-radius:8px;background:var(--surface);box-shadow:0 6px 22px #0001;font-size:10px;overflow-wrap:anywhere;color:var(--txt);pointer-events:none}.usage-chart-tooltip[hidden]{display:none}
+.usage-empty{font-size:11px;line-height:1.8;color:var(--txt-faint);padding:10px 0;margin:0}
+[data-panel=consumption] .usage-trend-card{margin-top:16px}.usage-day-bars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 24px}.usage-day-row{display:grid;grid-template-columns:40px minmax(40px,1fr) 62px;gap:10px;align-items:center;font-size:10px;color:var(--txt-faint);font-variant-numeric:tabular-nums}.usage-day-row>b{text-align:right;font-size:10px;font-weight:500}
+.usage-breakdown{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}.usage-breakdown h3{font-size:11px;color:var(--txt-faint);font-weight:500;margin:0 0 12px}.usage-breakdown-row{padding:10px 0;border-bottom:1px solid var(--stroke);display:flex;flex-direction:column;gap:5px;min-width:0;overflow-wrap:anywhere}.usage-breakdown-row>strong{font-size:11px;font-weight:550;color:var(--txt)}.usage-breakdown-row>span,.usage-breakdown-row>small{font-size:10px;color:var(--txt-faint)}
+.usage-table-scroll{overflow-x:auto;max-height:420px;scrollbar-width:thin}.usage-table{border-collapse:collapse;width:100%;min-width:620px;font-size:11px;text-align:left;font-variant-numeric:tabular-nums}.usage-table th{position:sticky;top:0;background:var(--surface);font-size:10px;font-weight:500;color:var(--txt-faint)}.usage-table th,.usage-table td{padding:11px 10px;border-bottom:1px solid var(--stroke);vertical-align:middle}.usage-table td{color:var(--txt-dim)}.usage-table td:first-child{max-width:230px;overflow-wrap:anywhere}.usage-table td strong{display:block;font-size:11px;font-weight:500;color:var(--txt)}.usage-table td small{display:block;font-size:10px;margin-top:4px;color:var(--txt-faint)}
+.usage-pricing{border:1px solid var(--stroke);border-radius:12px;padding:16px 20px;margin-top:20px}.usage-pricing>.bot-card{border:0!important;padding:16px 0 0!important;margin:0!important}
+@media(min-width:1500px){.usage-summary-grid{grid-template-columns:repeat(6,minmax(0,1fr))}}
+@media(max-width:1120px){.usage-donut-layout{grid-template-columns:1fr;gap:4px}.usage-donut{max-width:210px}.usage-legend-row{grid-template-columns:7px minmax(0,1fr) auto auto}.usage-legend-value{grid-column:auto}.usage-legend-row>b{grid-column:auto;grid-row:auto}.usage-overview>header{align-items:flex-start!important;flex-direction:column}}
+@media(max-width:850px){.usage-report-grid{grid-template-columns:1fr}.usage-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.usage-filters-grid,.usage-breakdown{grid-template-columns:1fr 1fr}.usage-day-bars{grid-template-columns:1fr}.usage-page-heading{align-items:flex-start;flex-direction:column}.usage-donut-layout{grid-template-columns:minmax(150px,1fr) minmax(130px,1fr)}.usage-legend-row{grid-template-columns:7px minmax(0,1fr) auto}.usage-legend-value{grid-column:2}.usage-legend-row>b{grid-column:3;grid-row:1/3}}
+@media(prefers-reduced-motion:reduce){.usage-slice{transition:none}}
+
+/* Keep this report compact even when the general settings view uses roomy cards. */
+body.ux-qq.qq-organized [data-panel=consumption] .bot-card{padding:18px}
+body.ux-qq.qq-organized [data-panel=consumption] .bot-card>header{padding-bottom:12px;margin-bottom:14px}
+body.ux-qq.qq-organized [data-panel=consumption] header h2{font-size:13px}
+[data-panel=consumption] .ux-page-map{display:none}
+.usage-summary{padding:12px}
+.usage-slice{stroke-linecap:butt}
+@media(min-width:1250px){.usage-summary-grid{grid-template-columns:repeat(6,minmax(0,1fr))}}
+
+body.ux-qq.qq-organized [data-panel=consumption] .page-heading{margin-bottom:16px}
+body.ux-qq.qq-organized [data-panel=consumption] .page-heading h1{font-size:22px}
+body.ux-qq.qq-organized [data-panel=consumption] .page-heading p{display:none}
+body.ux-qq.qq-organized [data-panel=consumption] .bot-card{padding:14px}
+body.ux-qq.qq-organized [data-panel=consumption] .bot-card>header{padding-bottom:10px;margin-bottom:10px;min-height:0}
+body.ux-qq.qq-organized [data-panel=consumption] header h2{line-height:20px}
+.usage-summary{padding:10px;gap:6px}.usage-summary>strong{font-size:21px}.usage-summary>small{font-size:9px;line-height:1.5}
+.usage-quality{padding-top:10px}.usage-filter{margin-top:10px;padding-top:8px}
+body.ux-qq.qq-organized [data-panel=consumption] .usage-filter>summary{padding:0;line-height:22px}
+.usage-rank-list{padding:8px;min-height:76px}.usage-rank-row{margin:7px 0;line-height:16px}
+.usage-report-grid{gap:12px}

@@ -1,0 +1,30 @@
+{
+  "provider": "built-in image_gen",
+  "date": "2026-10-23",
+  "assets": [
+    {
+      "path": "desktop/ui/assets/opening-hive.png",
+      "prompt": "Use case: stylized-concept. Fullscreen widescreen 16:9 cinematic anime science-fantasy opening backdrop. A breathtaking black-and-gold hexagonal megastructure, gigantic beveled golden honeycomb columns and angular hexagonal arches receding into an infinite dark center, black obsidian glossy materials, liquid gold light running through seams, gold dust and luminous molten reflections below, rich architectural grandeur, warm amber volumetric rays. Center middle has a dark clear void for animated brand/geometry. Luxurious, dramatic, highly detailed, sophisticated. No text, no logos, no characters, no UI, no panels."
+    },
+    {
+      "path": "desktop/ui/assets/opening-paper.png",
+      "prompt": "Use case: stylized-concept. Fullscreen widescreen 16:9 Japanese fantasy anime opening backdrop. A heavenly world made of exquisite folded pearlescent paper and translucent crystal, giant origami flower and faceted folded wings arching around edges, ivory white blush rose lavender sky-blue foil materials with gold edges, luminous clouds, subtle prism refractions and floating geometric petal fragments. Vast majestic cathedral-like scale, sophisticated dimensional shading, dramatic radiant lighting, not flat. Center middle has a dark lavender mist-filled opening with restrained detail for an animated brand. No people, no characters, no writing, no logos, no UI, no panels."
+    },
+    {
+      "path": "desktop/ui/assets/opening-emerald.png",
+      "prompt": "Use case: stylized-concept. Fullscreen widescreen 16:9 spectacular anime fantasy opening backdrop. An infinite celestial emerald-and-gold crystal sanctuary, massive faceted green jade polyhedra and golden star constellations suspended at the perimeter, elegant monumental green crystal architecture, verdant nebula mist and liquid gold caustics, dark emerald obsidian reflections beneath, opulent but sophisticated, immense depth, luminous fine detail. The center is a dark calm green void for live animated geometry and branding. No text, no logo, no characters, no UI, no panels."
+    },
+    {
+      "path": "desktop/ui/assets/opening-orbital.png",
+      "prompt": "Use case: stylized-concept. Fullscreen widescreen 16:9 cinematic anime science fantasy background. An awe-inspiring immense planetary orbital gateway, several colossal sculptural rings sweeping around the full frame perimeter in violet sapphire rose gold and white, complex refractive crystalline ring surfaces lit by stars, deep cosmic nebula and starry clouds, sweeping luminous comet arcs, dramatic god rays and majestic perspective into centered dark infinity. Keep central 30 percent mostly dark for an animated geometric core and brand. Polished luxurious cinematic concept art, richly detailed, not wireframe. No words, no letters, no logos, no characters, no UI, no panels."
+    },
+    {
+      "path": "desktop/ui/assets/opening-liquid.png",
+      "prompt": "Use case: stylized-concept. Fullscreen widescreen 16:9 high-end anime science fantasy opening backdrop. An endless mirror palace sculpted from fluid chrome and iridescent glass ribbons, magnificent twisted infinity arches and smooth liquid-metal loops sweeping around the outer perimeter, cyan indigo pearl and violet reflections with tiny champagne highlights, deep mist and stars, liquid glossy floor reflecting celestial curves, intense prismatic caustics. Center middle has a dark calm sapphire void for live animated geometry and branding. Majestic, captivating, extremely beautiful materials, no cheap wireframes. No text, no logos, no characters, no UI, no panels."
+    },
+    {
+      "path": "desktop/ui/assets/opening-festival.png",
+      "prompt": "Use case: stylized-concept. Fullscreen widescreen 16:9 cinematic Japanese anime festival night background. A breathtaking elevated panoramic view of a jewel-like Japanese riverside town at blue-purple twilight, ornate lanterns and shimmering warm window lights along the river at bottom third, violet sakura trees framing bottom corners, glittering water reflections, majestic layered clouds lit in pink rose lavender, tiny stars. Leave the expansive upper two thirds of night sky clear and dark for live animated fireworks, and middle center calm for a later brand overlay. Exquisite hand-painted anime film background, luminous and richly detailed, magical festive atmosphere. Do not draw large fireworks (added live in code). No people, no text, no logos, no UI, no panels."
+    }
+  ]
+}

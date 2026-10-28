@@ -1,0 +1,9 @@
+'use strict';
+(()=>{
+ let root=null,status=null,catalogue={};
+ const field=key=>document.querySelector('[data-setting='+key+']');
+ function mount(){if(root)return;root=document.querySelector('[data-chat-profile]').parentElement;root.classList.add('chat-rhythm-presets');status=document.createElement('p');status.className='small-note';status.id='chat-rhythm-status';root.after(status);document.addEventListener('input',e=>{if(e.target?.dataset.setting)sync();});}
+ function sync(saved=false){if(!root)return;let selected='';for(const button of root.querySelectorAll('[data-chat-profile]')){const entry=catalogue[button.dataset.chatProfile],patch=entry?.patch,match=Boolean(patch)&&Object.entries(patch).every(([key,value])=>{const f=field(key);return f&&(f.type==='checkbox'?f.checked:typeof value==='number'?Number(f.value):f.value)===value;});button.setAttribute('aria-pressed',String(match));if(match)selected=entry.name;}if(saved)status.textContent=selected?'当前已保存节奏：'+selected+'。可继续调整下方选项。':'当前为手动调整的节奏，可继续微调。';}
+ function load(rows){if(!rows)return;mount();catalogue=rows;root.replaceChildren();for(const [id,row]of Object.entries(rows)){const button=document.createElement('button');button.type='button';button.className='chat-rhythm-card';button.dataset.chatProfile=id;const title=document.createElement('b'),description=document.createElement('span');title.textContent=row.name;description.textContent=row.description;button.append(title,description);button.onclick=()=>{const patch={...row.patch};if(patch.listenContext&&!Number(field('contextCount').value))patch.contextCount=12;for(const [key,value]of Object.entries(patch)){const f=field(key);if(!f)continue;if(f.type==='checkbox')f.checked=value;else f.value=value;f.dispatchEvent(new Event('input',{bubbles:true}));}window.BotBridge.syncMode();markDirty();sync();status.textContent='已将「'+row.name+'」写入草稿，保存后生效。可继续调整下方选项。';};root.append(button);}sync();}
+ window.BotChatRhythms={mount,load,sync};
+})();
