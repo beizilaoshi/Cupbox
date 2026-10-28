@@ -9,25 +9,99 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.2.0] - 2026-10-28
 
-This release brings the workflow experience back into Cupbox itself and refreshes the GitHub presentation.
+> 1.1.1 was never published on its own; its changes ship together with everything after 1.1.0 in 1.2.0.
 
-- Work mode now uses the native Cupbox interface: normal chat does not ask for a folder, while work mode selects a workspace only when needed.
-- The Work page gains a Normal / Advanced task switch and defaults to Normal; Advanced tasks run embedded in the main window instead of a separate window or external WebView.
-- The sidebar's recent tasks list now unifies normal sessions and advanced tasks (marked "Advanced"); clicking one resumes the matching mode, and switching view never interrupts a running task.
-- Tool calls, AI questions, approvals, plan reviews, execution traces, task resume and legacy Harness imports all stay inside the same Cupbox chat surface.
-- Added the native work engine and tool adapters for file access, hashing, cancellation and context cleanup.
-- Added a chat rail with per-turn ticks, hover previews and click-to-jump that expands folded history; long chats fold messages in batches (40 kept, 30 per expansion) instead of rendering everything at once.
-- Fixed forced scrolling during streaming: the view follows only while pinned to the bottom, and reading history above is no longer yanked back; following resumes at the bottom.
-- Added Use-It live Office tools (status, action catalogue, PPT/Word/Excel/AutoCAD, desktop capture and actions) that drive already-open Office windows through a local engine; when the engine is missing the tool prints install and start commands. See [docs/USEIT-ENGINE.md](docs/USEIT-ENGINE.md).
+### Work mode and Harness
+
+- Work mode is now the native Cupbox interface: normal chat never asks for a folder, and a workspace is chosen only when entering work mode; cancelling keeps the current chat and draft.
+- The Work page adds a Normal / Advanced task switch and defaults to Normal; Advanced tasks run embedded in the same main window, with no extra window, external browser or separate WebView.
+- The sidebar's recent tasks list unifies normal sessions and advanced tasks (marked "Advanced") by update time; normal sessions resume in place, advanced tasks switch the view, and running tasks are not interrupted.
+- Tool calls, AI questions, permission confirmations, plan reviews, execution traces, task resume and legacy Harness imports all use the native Cupbox chat surface; questions support single choice, multi-select and free text, and plans are never approved by default.
+- Added the native work engine, tool adapters and Harness policy layer, connecting file, task, skill, subtask and background-task capabilities to Cupbox's existing executor, authorisation checks and auditing.
+- The toolbox Agent category exposes a searchable catalogue of 70 tools and filters the actually available set by preset, tool switches, runtime environment and subtask scope; catalogue size is not the number of enabled tools.
+- Work sessions keep both the Cupbox conversation and the kernel session identity, so sending again restores the original task context; clearing or deleting a Cupbox entry disconnects the kernel record to avoid bringing stale context into a new chat.
+- Tasks can be stopped and the background kernel released; native commands in work mode still require per-call human approval, and model-supplied allowPrefixes grants no permissions.
+- Added Agent file-delivery and memory guidance: without a chosen workspace, work mode uses the sandbox under the app data directory; files cannot escape the workspace or bypass it through symlinks/junctions; writes return a preview and token first and invalidate when files change; file-sandbox mode provides no command, terminal, Git or package-script execution.
+
+### Chat interface
+
+- Added a right-side turn rail: fixed-pitch ticks, hover previews with one prompt line and three response lines, and click-to-jump with highlight; unloaded turns expand history before jumping.
+- Long chats fold history at 40 messages and expand 30 per batch; the fold bar shows "N earlier messages", and the rail hints at folded turns and expands them automatically.
+- Streaming output follows only while pinned to the bottom; reading history above is no longer yanked back, and following resumes at the bottom.
+- Live tool cards gain dark/light backgrounds, running-state highlights, a left status bar and status pills, making execution easier to follow.
+
+### Toolbox and docs
+
+- Added 7 Use-It live Office tools: status, action catalogue, PPT, Word, Excel, AutoCAD, and desktop screenshot/actions; they drive already-open Office windows through a local engine and complement the file-generating word_* / ppt_* / excel_* tools.
+- When the Use-It engine is missing or stopped, the tools return install and start commands; they only connect to loopback addresses, strip large fields such as screenshots, and keep Cupbox approval and auditing for mutating actions.
+- Added docs/USEIT-ENGINE.md covering installation, startup, tool parameters, the action catalogue and security boundaries.
+
+### Desktop experience
+
+- The About page gains an interactive pixel room (V2→V5): desk, computer chair, dining table and chairs, planter, bed, bench and cat bed occupy and occlude space, and the character can walk, sit, eat and sleep in the room.
+- The room adds six time-of-day lighting states, a toggleable desk lamp, window-light direction, contact shadows and ambient falloff, preserving alpha so the character is not tinted by a light overlay or stretched outside the frame.
+- Added four-direction walk cycles and pose transitions, furniture foreground occlusion, rounded pathfinding and reachable floor targets to reduce clipping, ghosts and atlas bleed.
+- The About page adds an acknowledgement list and community entry; thanks data lives in thanks.json.
+- Added mail and alerts: up to 10 independent SMTP profiles, 1–20 recipients each, Bcc delivery, presets for QQ Mail, NetEase, Tencent Exmail, Aliyun, Gmail and iCloud, with mandatory TLS and server certificate verification.
+- Background music gains Kugou Concept online music: login, song search, syncing "Liked / Favourites / self-built playlists", adding network playlists, playback and caching; up to 1000 account playlists, 1000 entries per playlist and 1000 local network tracks, with 40 MB per audio download.
 - Fixed network song playback: tolerate the Kugou CDN's HTTP URLs and shared-certificate hosts; after switching accounts, old network tracks play with the current account's authorisation instead of failing with a "log in with the account used to sync" error.
-- Live tool cards now have dark/light backgrounds, running-state highlights and status pills, making tool execution easier to follow.
-- Added the Dream Weaving Meow hero visual and project positioning copy to the Chinese and English README home pages.
-- Added coverage for native work mode, tool calls, question approval, history restore, the unified task list, the chat rail, network music and Use-It tools.
+- Added a companion diary for the desktop pet summarising interactions and diary entries.
+- Packaging excludes verify-*/capture-*, *.test.ts, installer assets and packaging scripts; install and uninstall still preserve user conversations, settings, sticker library and memories.
 
-## [1.1.1] - 2026-10-25
+### QQ bot
 
-- Add remembered QQ login, negative affection and memories, a centered affection meter, live relationship updates, and local user data management.
-- Update project, desktop, and displayed versions to 1.1.1.
+#### Connections and accounts
+
+- Added multi-platform connections: personal QQ / NapCat (OneBot 11), QQ official bot, Feishu, DingTalk, WeCom and WeChat, switchable in one workbench; each account workspace keeps separate settings, credentials and memories, with the existing limit of 8 profiles and 8 running instances.
+- The connection page is reorganised into platform selection at the top, account workspaces on the left and "Connection settings / Runtime status / More settings" on the right; saving credentials never starts a connection or auto-reply, and switching the edited account does not stop other instances.
+- Added remembered login and login-session management; the QQ official bot uses AppID/AppSecret and the official SDK WebSocket, connecting outward from the local machine without a personal QQ login or public callback.
+- Added multi-account workspaces and account isolation; closing the workbench or quitting the app stops all connections.
+
+#### Chat and persona
+
+- Added Chat Lab: test saved models and personas without logging into QQ or enabling auto-reply, with continuous context, segmented display, stop/clear, actual usage and elapsed time.
+- Added chat rhythm settings: rhythm and turn-taking, message sending, context and frequency, and proactive group chat; the settings page supports arrow keys and Home/End.
+- Added fast chat and natural companionship: fewer fixed consolation lines, support-agent openings, emotion restatements, mechanical follow-ups and per-turn summaries; short replies, disagreement, stubbornness, dissatisfaction, banter, meme pickup and natural counter-questions are allowed.
+- Added living expression: profanity scale adapts to the current persona, custom personality, relationship and speaking habits; morning/evening greetings, sleep prompts and diary entries stay restrained, and work mode or an explicitly chosen assistant does not use this layer.
+- Added special persona cards and custom personas; relationship growth supports six stages, affection plus three states, a two-way affection meter, live relationship refresh, mood troughs and relationship events.
+- Added proactive companionship: a contactable list (up to 20), morning 08:00, goodnight 23:00, sleep prompt 23:00 and daily sharing 15:00, all customisable; quiet 23:30–07:30 by default; at most 3 attempts per person per day and at least 60 minutes apart; users can pause with "don't contact me proactively".
+- Added autonomous social features: sharing and reporting, recipient lists, material groups and daily topics; Qzone lets the AI decide whether and to whom to publish, while manual execution keeps the text and target review.
+- Added sleep and fixed replies: between rest and wake times, requests matching private chat, group @, quote, keyword or poke rules use local fixed text without calling the reply model, vision, sticker selection or speech; {model} and {wake} placeholders are supported.
+- Fixed poke replies: unify notice.notify.poke and notice_type=poke, identify the real sender via sender_id in private chat, and ignore the bot itself, non-bot targets, invalid accounts and group numbers.
+- Fixed group speaker attribution: identity comes from message metadata name/subject/sender.qq rather than parsing body tags; missing identity becomes qq_unknown and is never assumed to be the current speaker; history, summaries and model input use `[qq_id] "text"`.
+- Added message splitting, reply recovery, loop guard, media network and web-page excerpts.
+
+#### Voice and music
+
+- Added AI voice replies: connect GPT-SoVITS api_v2 with separate Chinese and Japanese services, ports and reference audio; preview locally, then enable; when QQ is online, send text first and a voice message after.
+- Added speech recognition (ASR) and living voice; supports imported voice material, voice conversion and voice messages.
+- Added QQ song requests: Meting free aggregated catalogues, @ / no-@ modes and custom prefixes, then local conversion to QQ voice messages; no Kugou Concept login required.
+- Kugou Concept background music supports login, online catalogue, playlist sync and network playlist playback; credentials continue to use Windows local encryption.
+
+#### Content and interactions
+
+- Added QQ AI image generation: a separate image model, daily limit, cooldown and command prefix; supports OpenAI-compatible /images/generations and Volcano image_size; results are saved locally, previewed and can be added to a Qzone draft.
+- Added image recognition, image-download fixes, research search, knowledge-base Q&A, short-video link parsing and larger sticker capacity.
+- Added interactive games: check-in, fortune, dice, help-me-choose and voting, plus guess-the-number, idiom chain, countdown and group sign-up; the master switch is off by default and group chat requires a real @.
+- Added group management: banned words, blocklist, link/share-card/image/file segments, long text, mass mentions, flooding and duplicate messages, quiet hours, recall/warn/mute; observation-only mode and per-group overrides are supported.
+- Added welcome and farewell templates: join, generic farewell and removed-from-group templates (up to 500 characters each) with placeholder preview.
+- Added runtime health checks and mutual-bot protection: identify bot QQ accounts running in the same Cupbox and ignore each other's inbound messages; three identical Q&A rounds within 90 seconds pause that combination's auto-reply for 120 seconds.
+- Added usage reports, persistent diagnostics, disk health, account health checks and dashboard additions.
+
+#### Memory and relationships
+
+- Memory retrieval is now local Chinese hybrid retrieval: Intl Chinese segmentation, bigram terms, BM25, topic expansion, exact phrases, self-preference, pinned and profile weighting; about 570 tokens of the default 3000 budget go to recall.
+- Added memory sharing scopes: per-conversation, group-to-group and global; different users keep their QQ identity and source markers, so one person's preference is not treated as another's.
+- Memory reliability upgrade: per-account index.json index cache, 128-entry/32 MB LRU, over-capacity archiving under archive/, at most 30 extra sources per fact with serialised size under 4 KB, and recall-usage.json recording recall counts and last-used times.
+- Explicit fact extraction: first-person allergies, dietary restrictions, birthday, residence, occupation, timezone, family/pets and commitments can become profile facts; "remember …" works when auto-save memory is on, without enabling auto-organise.
+- Summaries update only when the active window exceeds its message or token budget; BM25 is normalised, pinning becomes a multiplier, unknown dates are treated as old records, and legacy matching no longer double-counts decay.
+- Added negative affection and negative memories, a two-way affection meter, live relationship refresh and local user-data management.
+
+### Verification and installation
+
+- Added and expanded tests for the Harness host, native work, questions, unified task list, Use-It, network music, QQ multi-channel, voice, image generation, memory retrieval/sharing/reliability, relationship events, SMTP, About-room lighting/motion and the thanks page.
+- 1300+ tests pass; Electron smoke tests cover work mode, the unified task list, the chat rail, network music and packaged presets.
+- Installer Cupbox-Setup-1.2.0-x64.exe is about 606 MB, SHA256 `c6e48978d48d47ea89fd89f6c4d37ea7d9d9f96d9fbec66b2008b406f4af74b5`; Windows 10 2004 (19041)+ x64, no administrator required, offline install.
 
 ## [1.1.0] - 2026-10-24
 
