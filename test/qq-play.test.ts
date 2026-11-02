@@ -14,7 +14,7 @@ async function fixture(patch:any={}){
  cleanup.unshift(async()=>{s.background.dispose();await s.stop();await rm(home,{recursive:true,force:true});});
  s.config=validateSettings({enabled:true,playEnabled:true,cooldown:0,retainDialogue:false,globalMemory:false,...patch});s.engine.update(s.config);s.started=true;s.online=true;s.connectionState='online';s.bot={send:vi.fn(async()=>({message_id:99})),close:()=>{}};
  let now=Date.parse('2026-10-27T12:00:00+08:00');s.play=new QQPlay(s,{clock:()=>now,roll:(min:number)=>min});
- return{s,model,advance:(ms=6000)=>{now+=ms;},text:()=>s.bot.send.mock.calls.at(-1)?.[1].filter((x:any)=>x.type==='text').map((x:any)=>x.data.text).join('')||'',data:()=>s.store.json('play-data.json',null)};
+ return{s,model,clock:()=>now,advance:(ms=6000)=>{now+=ms;},text:()=>s.bot.send.mock.calls.at(-1)?.[1].filter((x:any)=>x.type==='text').map((x:any)=>x.data.text).join('')||'',data:()=>s.store.json('play-data.json',null)};
 }
 describe('QQ 本地互动玩法',()=>{
  it('defaults off, validates configuration and preserves old settings',()=>{
@@ -56,7 +56,7 @@ describe('QQ 本地互动玩法',()=>{
  });
  it('deduplicates persisted events after recreation and never retries unknown sends',async()=>{
   const f=await fixture(),e=message('/签到');f.s.bot.send.mockRejectedValueOnce(Object.assign(Error('timeout'),{code:'ONEBOT_TIMEOUT'}));expect(await f.s.receive(e)).toHaveProperty('skipped');expect((await f.data()).checkins[0].total).toBe(1);
-  f.s.play=new QQPlay(f.s);expect(await f.s.receive(e)).toMatchObject({skipped:'重复玩法事件'});expect(f.s.bot.send).toHaveBeenCalledTimes(1);expect(f.model).not.toHaveBeenCalled();
+  f.s.play=new QQPlay(f.s,{clock:f.clock});expect(await f.s.receive(e)).toMatchObject({skipped:'重复玩法事件'});expect(f.s.bot.send).toHaveBeenCalledTimes(1);expect(f.model).not.toHaveBeenCalled();
  });
  it('cools down spam, shares delivery budget, and cancels before saving after settings change',async()=>{
   const f=await fixture({maxPerMinute:1});await f.s.receive(message('/签到'));expect(await f.s.receive(message('/积分'))).toMatchObject({skipped:'互动玩法冷却中'});f.advance();expect(await f.s.receive(message('/今日运势'))).toHaveProperty('skipped');expect(f.s.bot.send).toHaveBeenCalledTimes(1);
@@ -92,7 +92,7 @@ describe('扩展小游戏与群活动',()=>{
   f.advance();await f.s.receive(message('/猜数字 10'));f.advance(31*60000);await f.s.receive(message('/猜 1'));expect(f.text()).toContain('这局已结束');
  });
  it('restores a running game after recreation and does not duplicate a replayed guess',async()=>{
-  const f=await fixture({playGuess:true});await f.s.receive(message('/猜数字'));f.s.play=new QQPlay(f.s);const e=message('/猜 50');await f.s.receive(e);expect((await f.data()).guessGames[0].attempts).toBe(1);f.s.play=new QQPlay(f.s);expect(await f.s.receive(e)).toMatchObject({skipped:'重复玩法事件'});expect((await f.data()).guessGames[0].attempts).toBe(1);
+  const f=await fixture({playGuess:true});await f.s.receive(message('/猜数字'));f.s.play=new QQPlay(f.s,{clock:f.clock});const e=message('/猜 50');await f.s.receive(e);expect((await f.data()).guessGames[0].attempts).toBe(1);f.s.play=new QQPlay(f.s,{clock:f.clock});expect(await f.s.receive(e)).toMatchObject({skipped:'重复玩法事件'});expect((await f.data()).guessGames[0].attempts).toBe(1);
  });
  it('checks real dictionary entries, word boundaries, repeats, hints and custom idioms',async()=>{
   const f=await fixture({playIdiom:true,playIdioms:'大展宏图\n图穷匕见'});await f.s.receive(message('/成语接龙 一心一意'));expect(f.text()).toContain('成语接龙开始');

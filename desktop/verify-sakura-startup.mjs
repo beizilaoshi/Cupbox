@@ -6,7 +6,7 @@ void(async()=>{try{
  await import('./main.js');await wait(()=>BrowserWindow.getAllWindows().length,'main');const main=BrowserWindow.getAllWindows()[0],js=s=>main.webContents.executeJavaScript(s);await wait(()=>js(`Boolean(window.cupboxReady&&window.CupboxSakuraScene)`).catch(()=>false),'ready');await js(`Object.defineProperty(document,'hidden',{get:()=>false,configurable:true});true`);
  check(await js(`cupbox.prefsGet().then(p=>p.startupDuration===5&&CupboxStartup.defaults.startupDuration===5)`),'five-second default follows former built-in duration');
  await js(`cupbox.prefsSet({startupDuration:2.8,startupDurationCustomized:true})`);check(await js(`cupbox.prefsGet().then(p=>p.startupDuration===2.8)`),'explicit custom duration survives preference reload');await js(`cupbox.prefsSet({startupDuration:5,startupDurationCustomized:false})`);
- check(await js(`document.querySelector('#ver-chip').textContent==='v1.2.0'`),'UI version 1.2.0');
+ check(await js(`document.querySelector('#ver-chip').textContent==='v1.2.1'`),'UI version 1.2.1');
  for(const theme of ['light','dark']){
   await js(`document.documentElement.dataset.theme=${JSON.stringify(theme)};window.__startupResult=null;CupboxStartup.play({startupStyle:'orbit',startupDuration:5,startupCaption:'让灵感，轻轻启程。'},{preview:true}).then(r=>window.__startupResult=r);true`);await pause(150);
   check(await js(`document.getElementById('startup-screen').dataset.scenePhase==='gather'`),theme+' opening gathers petals');

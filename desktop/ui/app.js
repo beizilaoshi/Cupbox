@@ -1183,7 +1183,7 @@ function clearChatDom() {
     <div class="quick-grid"><button class="quick-card" data-quick="organize"><span class="quick-icon">⌑</span><span><b>给文件安个家</b><small>分类整理，先预览再执行</small></span><i>↗</i></button><button class="quick-card" data-quick="codec"><span class="quick-icon">{ }</span><span><b>整理一段 JSON</b><small>格式化、编码与文本转换</small></span><i>↗</i></button><button class="quick-card" data-quick="ocr"><span class="quick-icon">▤</span><span><b>读出图片里的文字</b><small>提取文字，少一点手动输入</small></span><i>↗</i></button></div>
     <button class="setup-link" id="setup-link"><span>✧ 配置 AI 模型，开始第一段对话</span><span>去设置 →</span></button>
     <div class="home-note"><span>⌘</span><p><b>本机优先，安心开工</b><small>文件工具在本地运行；聊天记录保存在这台设备。</small></p><span class="note-status">LOCAL · READY</span></div></section>
-    <section class="snake-card" aria-labelledby="snake-title"><header class="snake-heading"><div><span class="section-eyebrow"><span class="live-dot"></span> LITTLE ARCADE</span><h2 id="snake-title">贪吃蛇</h2><p>吃掉星星，和筑梦喵一起冲分。</p></div><button type="button" class="snake-reset" data-snake-reset aria-label="重新开始">↻</button></header><div class="snake-score-row"><span><small>本局分数</small><b data-snake-score>00</b></span><span class="snake-status" data-snake-status><i></i> 正在玩</span></div><div class="snake-board-wrap"><canvas class="snake-board" width="324" height="324" tabindex="0" aria-label="贪吃蛇游戏区域，使用方向键或 WASD 操控"></canvas><div class="snake-overlay" data-snake-overlay hidden><b data-snake-overlay-title>暂停中</b><span data-snake-overlay-copy>准备好后继续</span></div></div><div class="snake-controls"><button type="button" class="snake-toggle" data-snake-toggle>暂停</button><div class="snake-pad" role="group" aria-label="贪吃蛇方向控制"><button type="button" data-snake-dir="up" aria-label="向上">↑</button><button type="button" data-snake-dir="left" aria-label="向左">←</button><button type="button" data-snake-dir="down" aria-label="向下">↓</button><button type="button" data-snake-dir="right" aria-label="向右">→</button></div></div><footer class="snake-footer"><span>自动巡游 · 方向键 / WASD 接管</span><span>吃到 ✦ +10</span></footer></section></div>`;
+    </div>`;
   scroll.appendChild(empty);
   empty.querySelectorAll("[data-quick]").forEach(b => {
     const art=CupboxVisuals.art(({organize:'files',codec:'data',ocr:'vision'})[b.dataset.quick]);b.prepend(art);b.querySelector('.quick-icon').remove();
@@ -1197,7 +1197,7 @@ function clearChatDom() {
   empty.querySelector("[data-open-pet]").addEventListener("click", ()=>openModal("pet"));
   empty.querySelector("#setup-link").addEventListener("click", () => openModal("api"));
   empty.querySelector("#setup-link").hidden = modelReady;
-  homeDashboardCleanup = mountHomeSnake(empty);
+  homeDashboardCleanup = null;
 }
 
 async function newChat() {
@@ -2105,7 +2105,7 @@ async function boot() {
   // 首次进入聚焦输入框
   await startup;
   $("chat-text")?.focus();
-  void maybeShowAnnouncement(); // 开屏公告：每次启动检测 GitHub 上的 announcement.json
+  if(prefs.onboardingCompleted)void maybeShowAnnouncement(); // 开屏公告：每次启动检测 GitHub 上的 announcement.json
   window.cupboxReady = true;
 }
 

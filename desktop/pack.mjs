@@ -42,6 +42,8 @@ const harnessRoot=path.join(ROOT,'desktop','harness-runtime');
 const SKIP_NAMES=new Set(['installer','harness-runtime','pack.mjs','runtime-dependencies.mjs','build-brand.mjs','prompt-test-driver.mjs']);
 const shipDesktop=source=>{
   const relative=path.relative(path.join(ROOT,'desktop'),source);
+  // The toolbox ships the dedicated customer UI. The full bot UI lives in Cupbox-QBOT.
+  if(relative===path.join('ui','qq-bot.html')||relative.startsWith('ui'+path.sep+'qq-')&&!path.basename(relative).startsWith('qq-music-login.'))return false;
   if(!relative||relative.startsWith('..'))return true;
   const parts=relative.split(path.sep),base=parts[parts.length-1];
   if(parts.includes('installer')||parts[0]==='harness-runtime')return false;

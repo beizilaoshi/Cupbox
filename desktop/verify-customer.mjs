@@ -1,0 +1,29 @@
+import {app,BrowserWindow} from 'electron';
+import {mkdir,writeFile,readFile} from 'node:fs/promises';
+import path from 'node:path';import {pathToFileURL} from 'node:url';
+const out=path.resolve('output/customer-1.2.1-review'),home=path.join(out,'home-'+Date.now()),root=process.env.CUPBOX_CUSTOMER_REVIEW_APP||path.resolve('.');
+await mkdir(path.join(home,'.cupbox'),{recursive:true});await writeFile(path.join(home,'.cupbox/desktop.json'),JSON.stringify({startupEnabled:false,petEnabled:false,musicEnabled:false}));
+process.env.CUPBOX_HOME=home;process.env.CUPBOX_UPDATE_DISABLE='1';process.env.CUPBOX_ANNOUNCEMENT_DISABLE='1';app.setPath('userData',path.join(home,'profile'));app.disableHardwareAcceleration();
+const errors=[];let main;app.on('browser-window-created',(_,w)=>{if(!main)main=w;w.show=()=>{};w.showInactive=()=>{};w.webContents.setBackgroundThrottling(false);w.webContents.on('console-message',e=>{if(e.level==='error')errors.push(e.message);});});
+const pause=ms=>new Promise(r=>setTimeout(r,ms)),js=(w,s)=>w.webContents.executeJavaScript(s),check=(v,label)=>{if(!v)throw Error(label);console.log('PASS '+label);};
+async function wait(w,s){for(let i=0;i<1000;i++){try{if(await js(w,s))return;}catch{}await pause(50);}throw Error('Timeout: '+s);}
+setTimeout(()=>{console.error('Customer UI timeout');app.exit(1);},150000).unref();
+await import(pathToFileURL(path.join(root,'desktop/main.js')).href);
+void(async()=>{try{
+ await app.whenReady();while(!main)await pause(50);await wait(main,'window.cupboxReady');await wait(main,"document.querySelector('#onboarding-dialog')?.open");
+ check(await js(main,"document.querySelector('#onboarding-dialog').textContent.includes('专业工具箱')||document.querySelector('#onboarding-dialog').textContent.includes('工具箱')"),'first-run guide is visible and professional');
+ await js(main,"document.querySelector('#onboarding-skip').click();true");await wait(main,"!document.querySelector('#onboarding-dialog').open");check((await js(main,'cupbox.prefsGet()')).onboardingCompleted==='1.2.1','skip persists without starting a bot');
+ await js(main,"document.querySelector('#onboarding-reopen').click();document.querySelector('#onboarding-next').click();true");check(await js(main,'CupboxOnboarding.step===1'),'guide can reopen and advance');await js(main,"document.querySelector('#onboarding-skip').click();true");await wait(main,"!document.querySelector('#onboarding-dialog').open");
+ await js(main,'cupbox.qqOpen()');const bot=BrowserWindow.getAllWindows().find(w=>w!==main&&w.webContents.getURL().includes('customer.html'));if(!bot)throw Error('Customer window missing');await wait(bot,'window.qqBotReady');
+ const s=await js(bot,'qqBot.get()');check(s.settings.customerService&&!s.settings.enabled&&!s.settings.companionEnabled&&!s.settings.qqMusicEnabled,'customer mode locks entertainment and starts with auto-reply off');
+ check(await js(bot,"!document.querySelector('[data-page=romance]')&&document.querySelectorAll('[data-page]').length===6"),'focused navigation replaces entertainment pages');
+ const review=await js(bot,"qqBot.review({customerService:false,qqMusicEnabled:true,romanceMode:'sweet',companionEnabled:true})");await js(bot,`qqBot.save({customerService:false,qqMusicEnabled:true,romanceMode:'sweet',companionEnabled:true},${JSON.stringify(review.token)})`);const locked=await js(bot,'qqBot.get()');check(locked.settings.customerService&&!locked.settings.qqMusicEnabled&&locked.settings.romanceMode==='off','direct settings requests cannot restore legacy entertainment');
+ check(await js(bot,"qqBot.starterEmojis().then(()=>false,e=>e.message.includes('Cupbox-QBOT'))"),'legacy entertainment IPC is denied');
+ await js(bot,"CupboxCustomer.page('products');document.querySelector('#product-new').click();document.querySelector('#product-form [name=name]').value='测试商品';document.querySelector('#product-form [name=price]').value='59元';document.querySelector('#product-form [name=stock]').value='下单前确认库存';document.querySelector('#product-form [name=enabled]').checked=true;document.querySelector('#product-form').requestSubmit();true");await wait(bot,"document.querySelector('#product-list').textContent.includes('59元')");
+ check((await js(bot,'qqBot.customerState()')).products.length===1,'product editor saves through real IPC');
+ for(const [name,width,theme]of [['light',1180,'light'],['dark',1180,'dark'],['compact',960,'light']]){bot.setSize(width,850);await js(bot,`document.documentElement.dataset.theme='${theme}'`);await pause(120);check(await js(bot,"document.querySelector('main').scrollWidth<=document.querySelector('main').clientWidth+2"),name+' has no horizontal overflow');await writeFile(path.join(out,name+'.png'),(await bot.webContents.capturePage()).toPNG());}
+ await js(bot,"CupboxCustomer.page('tasks');true");await writeFile(path.join(out,'tasks.png'),(await bot.webContents.capturePage()).toPNG());
+ await js(bot,"CupboxCustomer.page('connection');true");await writeFile(path.join(out,'connection.png'),(await bot.webContents.capturePage()).toPNG());
+ const reloaded=new Promise(resolve=>bot.webContents.once('did-finish-load',resolve));bot.webContents.reload();await reloaded;await wait(bot,'window.qqBotReady');check((await js(bot,'qqBot.customerState()')).products.length===1,'products survive renderer reload');
+ check(errors.length===0,'no renderer errors');app.exit(0);
+}catch(e){console.error(e);console.error('Windows:',BrowserWindow.getAllWindows().map(w=>w.webContents.getURL()));console.error('Renderer errors:',errors);if(main)console.error('Diagnostics:',await js(main,"JSON.stringify({ready:window.cupboxReady,boot:typeof boot,prefs:typeof prefs==='undefined'?null:prefs,startup:document.querySelector('#startup-screen')?.hidden,overlay:document.querySelector('dialog[open]')?.id,body:document.body.innerText.slice(-1300)})"));app.exit(1);}})();

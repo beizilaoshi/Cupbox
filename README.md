@@ -594,11 +594,11 @@ Cupbox 再次校验并执行操作
 npm install          # 首次会经 npmmirror 镜像下载 Electron 运行时
 npm run desktop      # 开发运行
 npm run pack:exe     # 打包绿色便携 exe → release/Cupbox可视化/Cupbox可视化.exe
-npm run pack:installer # Windows 安装包（需 Inno Setup 6.7+）→ release/Cupbox-Setup-1.2.0-x64.exe
+npm run pack:installer # Windows 安装包（需 Inno Setup 6.7+）→ release/Cupbox-Setup-1.2.1-x64.exe
 ```
 
 安装版提供樱花主题中文引导、深浅色外观、安装位置与快捷方式选择，卸载保留对话和配置。
-侧栏“QQ 机器人”提供独立扫码窗口、自动配置的 NapCat、群聊/私聊规则、共享记忆与受控表情包，见 [QQ 机器人说明](docs/QQ-BOT.md)。
+1.2.1 起，Cupbox 聚焦专业工具箱，新增可跳过的新手引导。侧栏“客服助手”提供账号连接、商品与业务知识、咨询接待、运营通知及定时发送，见 [客服助手说明](docs/CUSTOMER-SUPPORT.md)。完整机器人已独立为 [Cupbox-QBOT](https://github.com/beizilaoshi/Cupbox-QBOT)，并非删除。
 构建、安装与签名说明见 [Windows 安装版](docs/WINDOWS-INSTALLER.md)。
 
 三阶段路线（工具驾驶舱 → ACP 多引擎接入 → 技能市场/调度/多会话）与选型依据见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。

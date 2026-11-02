@@ -19,8 +19,8 @@ app.on('browser-window-created',(_event,win)=>{
     try{
       const js=source=>win.webContents.executeJavaScript(source);
       await js(`new Promise((resolve,reject)=>{let count=0;const timer=setInterval(()=>{if(window.cupboxReady){clearInterval(timer);resolve();}else if(++count>200){clearInterval(timer);reject(Error('UI not ready'));}},50);})`);
-      if(!await js(`document.querySelector('#ver-chip').textContent==='v1.2.0'`))throw Error('Incorrect installed version');
-      console.log('PASS installed application loads with version 1.2.0');
+      if(!await js(`document.querySelector('#ver-chip').textContent==='v1.2.1'`))throw Error('Incorrect installed version');
+      console.log('PASS installed application loads with version 1.2.1');
       if(!await js(`Boolean(document.querySelector('#chat-model-picker')&&document.querySelector('#reasoning-slider'))`))throw Error('Missing picker');
       console.log('PASS installed model picker and effort slider available');
       if(!await js(`Boolean(document.querySelector('#main-plugin-search')&&document.querySelector('#agent-custom-add'))`))throw Error('Missing preset/plugin settings');
@@ -41,7 +41,7 @@ app.on('browser-window-created',(_event,win)=>{
       await mkdir(path.resolve('output/installer-review'),{recursive:true});
       await writeFile(path.resolve('output/installer-review/installed-app.png'),(await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true})).toPNG());
       const pkg=JSON.parse(await readFile(path.join(installed,'resources/app/package.json'),'utf8'));
-      if(pkg.version!=='1.2.0')throw Error('Incorrect package version');
+      if(pkg.version!=='1.2.1')throw Error('Incorrect package version');
       clearTimeout(timeout);app.exit(0);
     }catch(error){console.error(error);clearTimeout(timeout);app.exit(1);}
   });

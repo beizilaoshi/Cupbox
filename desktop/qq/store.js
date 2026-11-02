@@ -1,3 +1,4 @@
+import {customerSettings} from './customer-support.js';
 import {IMAGE_DEFAULTS,validateImage} from './image-settings.js';
 import {MOOD_DEFAULTS,validateMood} from './mood.js';
 import {SPEAK_DEFAULTS,validateSpeak} from './speak-up.js';
@@ -23,7 +24,7 @@ import {WEATHER_DEFAULTS,validateWeather} from './weather.js';
 import {inspectUntrusted,outputRisk} from './security.js';
 export {PERSONAS} from './personas.js';
 export const PERSONA_FIELDS=[...Object.keys(EXPRESSION_DEFAULTS),'whaleFreedom','persona','customPrompt','rolePresentation','roleConsistencyCheck','identityName','identityPersonality','identityRules','participationRules','romanceMode','romanceRole','romanceNickname','romanceScenario','romanceCustomName','romanceCustomIntro','romanceCustomMoments','rolePresentationCustom','romancePace','romanceCustomModeName','romanceCustomModeRules','romanceCustomGain','romanceCustomTrustGain','romanceCustomFamiliarityGain','romanceCustomCooldown','romanceCustomDailyLimit','romanceInGroups'];
-export const DEFAULTS={shortVideoEnabled:false,shortVideoFrames:false,shortVideoAudio:false,shortVideoVisionModelId:'',shortVideoASRModelId:'',shortVideoMaxPerMinute:3,...MODERATION_DEFAULTS,...OFFICIAL_DEFAULTS,...EXTRAS_DEFAULTS,...EXPRESSION_DEFAULTS,...BACKGROUND_DEFAULTS,...MOOD_DEFAULTS,...SPEAK_DEFAULTS,...VOICE_DEFAULTS,...RELATIONSHIP_EVENT_DEFAULTS,...SLEEP_DEFAULTS,...ASR_DEFAULTS,...WEATHER_DEFAULTS,enabled:false,restoreLoginOnOpen:true,mode:'chat',persona:'companion',customPrompt:'',modelId:'default',visionModelId:'',temperature:0.8,
+export const DEFAULTS={customerService:false,shortVideoEnabled:false,shortVideoFrames:false,shortVideoAudio:false,shortVideoVisionModelId:'',shortVideoASRModelId:'',shortVideoMaxPerMinute:3,...MODERATION_DEFAULTS,...OFFICIAL_DEFAULTS,...EXTRAS_DEFAULTS,...EXPRESSION_DEFAULTS,...BACKGROUND_DEFAULTS,...MOOD_DEFAULTS,...SPEAK_DEFAULTS,...VOICE_DEFAULTS,...RELATIONSHIP_EVENT_DEFAULTS,...SLEEP_DEFAULTS,...ASR_DEFAULTS,...WEATHER_DEFAULTS,enabled:false,restoreLoginOnOpen:true,mode:'chat',persona:'companion',customPrompt:'',modelId:'default',visionModelId:'',temperature:0.8,
   companionEnabled:false,emotionEnabled:true,companionDiary:true,openLoopsEnabled:true,companionRoutine:false,memoryDecay:false,wakeHour:7,sleepHour:23,routineNotes:'',
   whaleFreedom:false,followUpWindow:0,maxToolTurns:6,maxToolMessages:4,toolMessageChars:600,faceEnabled:false,reminderEnabled:false,typingDelay:false,
   conversationTuning:true,styleExamples:[],conversationProfiles:[],agentChat:false,plainTextReplies:true,quoteReply:false,pokeEnabled:false,slangEnabled:false,voiceEnabled:false,webFetchEnabled:false,privatePolicy:'all',allowedUsers:[],blockedUsers:[],initialNotes:[],
@@ -37,6 +38,7 @@ export const DEFAULTS={shortVideoEnabled:false,shortVideoFrames:false,shortVideo
 Object.assign(DEFAULTS,IMAGE_DEFAULTS,PLAY_DEFAULTS,{memoryRecallMode:'hybrid',memoryAutoOrganize:false});
 const ids=value=>[...new Set((Array.isArray(value)?value:String(value||'').split(/[\s,，;；]+/)).map(String).map(x=>x.trim()).filter(Boolean))];
 export function validateSettings(input){
+  if(input.customerService)input=customerSettings(input);
   const c={...DEFAULTS};
   for(const key of Object.keys(c))if(key in input)c[key]=input[key];
   if(!('groupPolicy'in input))c.groupPolicy=ids(input.allowedGroups).length?'allow':'all';
@@ -93,12 +95,12 @@ export function validateSettings(input){
   validatePlay(c);validateModeration(c);validateVoice(c);validateBackground(c);validateExpression(c);validateExtras(c);return c;
 }
 export class BotStore{
-  constructor(home){this.home=home;this.root=path.join(home,'qq-bot');this.pending=Promise.resolve();}
+  constructor(home,{customerService=false}={}){this.customerService=customerService;this.home=home;this.root=path.join(home,'qq-bot');this.pending=Promise.resolve();}
   async json(name,fallback){try{return JSON.parse(await readFile(path.join(this.root,name),'utf8'));}catch(e){if(e.code==='ENOENT')return fallback;throw Error('QQ 配置无法读取，请备份后修复');}}
-  async settings(){return validateSettings(await this.json('settings.json',{}));}
+  async settings(){const saved=await this.json('settings.json',{});return validateSettings({...saved,...(this.customerService?{customerService:true,...(!saved.customerService?{enabled:false}:{} )}:{})});}
   async write(name,value){await mkdir(this.root,{recursive:true});const file=path.join(this.root,name),tmp=file+'.'+randomUUID()+'.tmp';await writeFile(tmp,JSON.stringify(value,null,2),{mode:0o600});await rename(tmp,file);}
   change(fn){const task=this.pending.catch(()=>{}).then(fn);this.pending=task;return task;}
-  save(patch){return this.change(async()=>{const next=validateSettings({...await this.settings(),...patch});await this.write('settings.json',next);return next;});}
+  save(patch){return this.change(async()=>{const next=validateSettings({...await this.settings(),...patch,...(this.customerService?{customerService:true}:{})});await this.write('settings.json',next);return next;});}
   async emojis(){const list=await this.json('emojis.json',[]),legacy={'cupbox-cat-wave-v1':'开心','cupbox-cat-ok-v1':'得意','cupbox-cat-heart-v1':'卖萌'};return list.map(e=>!Object.hasOwn(e,'mood')&&legacy[e.starterKey]?{...e,mood:legacy[e.starterKey]}:e);}
   async saveEmoji(draft){return this.change(async()=>{
     const list=await this.emojis(),old=list.find(x=>x.id===draft.id);

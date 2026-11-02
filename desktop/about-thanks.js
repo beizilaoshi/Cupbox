@@ -23,7 +23,7 @@ export function createThanksSync(_home,{fetcher=globalThis.fetch,clock=Date.now}
  let pending=null,verified=null;
  async function run(){
   try{
-   const headers={accept:'application/json','user-agent':'Cupbox/1.2.0','cache-control':'no-cache',...(verified?.etag?{'if-none-match':verified.etag}:{})};
+   const headers={accept:'application/json','user-agent':'Cupbox/1.2.1','cache-control':'no-cache',...(verified?.etag?{'if-none-match':verified.etag}:{})};
    const r=await fetcher(THANKS_ENDPOINT+'?t='+clock(),{signal:AbortSignal.timeout(10000),redirect:'error',headers,cache:'no-store'});
    let entries,etag;
    if(r.status===304&&verified){entries=verified.entries;etag=verified.etag;}

@@ -6,7 +6,7 @@ $taskTarget=[IO.Path]::GetFullPath((Join-Path $taskBase 'Cupbox'))
 if(-not $taskTarget.StartsWith($taskBase+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){throw 'Unsafe fixture target'}
 $taskRegistry='HKCU:/Software/Microsoft/Windows/CurrentVersion/Uninstall/{B9851FE8-90EF-4CB5-A3B2-532FD534AE8F}_is1'
 if(Test-Path $taskRegistry){$entry=Get-ItemProperty $taskRegistry;if($entry.InstallLocation.TrimEnd('\') -ne $taskTarget){throw 'Another layout fixture exists; do not overwrite it'}}
-& (Join-Path $taskRoot 'output/installer-tools/InnoSetup/ISCC.exe') /DAppVersion=1.2.0 /DInstallerTest /DInstallerUIReview (Join-Path $PSScriptRoot 'cupbox.iss')
+& (Join-Path $taskRoot 'output/installer-tools/InnoSetup/ISCC.exe') /DAppVersion=1.2.1 /DInstallerTest /DInstallerUIReview (Join-Path $PSScriptRoot 'cupbox.iss')
 if($LASTEXITCODE -ne 0){throw 'Layout fixture compile failed'}
 $taskData=Join-Path $taskBase 'data/.cupbox/sessions';[IO.Directory]::CreateDirectory($taskData)|Out-Null
 $taskKeep=Join-Path $taskData 'keep.json';[IO.File]::WriteAllText($taskKeep,'{"text":"layout-test-memory"}')

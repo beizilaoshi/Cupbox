@@ -14,10 +14,10 @@ if (Test-Path $regPath) {
 $compilerFile = $env:ISCC_PATH
 if (-not $compilerFile) { $compilerFile = Join-Path $projectRoot 'output\installer-tools\InnoSetup\ISCC.exe' }
 if (-not $SkipCompile) {
-  & $compilerFile '/DAppVersion=1.2.0' '/DInstallerTest' (Join-Path $PSScriptRoot 'cupbox.iss')
+  & $compilerFile '/DAppVersion=1.2.1' '/DInstallerTest' (Join-Path $PSScriptRoot 'cupbox.iss')
   if ($LASTEXITCODE -ne 0) { throw 'Test installer compile failed' }
 }
-$setupFile = Join-Path $projectRoot 'output\installer-review\Cupbox-Setup-1.2.0-x64-test.exe'
+$setupFile = Join-Path $projectRoot 'output\installer-review\Cupbox-Setup-1.2.1-x64-test.exe'
 $testHome = Join-Path $testRoot 'data'
 $dataDir = Join-Path $testHome '.cupbox'
 New-Item -ItemType Directory -Force $dataDir,(Join-Path $dataDir 'sessions') | Out-Null
@@ -44,10 +44,10 @@ try {
   if (-not (Test-Path -LiteralPath (Join-Path $installedRoot 'Cupbox可视化.exe'))) { throw 'Application missing' }
   Write-Output 'PASS offline installation into a Unicode path containing spaces'
   $installedMetadata = Get-Content -LiteralPath (Join-Path $installedRoot 'resources\app\package.json') -Raw | ConvertFrom-Json
-  if ($installedMetadata.version -ne '1.2.0') { throw 'Version mismatch' }
+  if ($installedMetadata.version -ne '1.2.1') { throw 'Version mismatch' }
   $entry = Get-ItemProperty -LiteralPath $regPath
-  if ($entry.DisplayVersion -ne '1.2.0' -or $entry.InstallLocation.TrimEnd('\') -ne $installedRoot) { throw 'Uninstall registration mismatch' }
-  Write-Output 'PASS per-user uninstall registration and version 1.2.0'
+  if ($entry.DisplayVersion -ne '1.2.1' -or $entry.InstallLocation.TrimEnd('\') -ne $installedRoot) { throw 'Uninstall registration mismatch' }
+  Write-Output 'PASS per-user uninstall registration and version 1.2.1'
   if ((Get-FileHash -LiteralPath $config).Hash -ne $before) { throw 'Install changed configuration' }
   $note = Join-Path $installedRoot 'user-note.txt'
   Set-Content -LiteralPath $note -Value 'not owned by installer'

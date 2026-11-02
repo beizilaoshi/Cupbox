@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > 📖 **中文文档（默认）：[CHANGELOG.md](./CHANGELOG.md)**
 
+## [1.2.1] - 2026-11-02
+
+### Product focus and standalone bot
+
+- Cupbox focuses on professional tools. The full bot has become the standalone [Cupbox-QBOT](https://github.com/beizilaoshi/Cupbox-QBOT) project; it has not been deleted. Users seeking complete personas, companionship, entertainment and bot extensions should visit that project for documentation and downloads.
+- The included assistant now focuses on customer service: accounts, reception, products, scoped business knowledge, operations/schedules, and logs.
+- Added editable product names, price and stock descriptions, variants, HTTPS purchase links, after-sales policies and listing controls. Customer responses use listed products, store policies, scoped knowledge and configured human contact details.
+- Added confirmed manual notices and persistent one-time/daily/weekly schedules. Proactive notices currently require personal QQ/NapCat, an online account, enabled replies and permitted recipients. Missed windows are not replayed, and uncertain deliveries are not automatically retried.
+- Legacy entertainment, romance, companionship and music settings are locked off server-side; their management endpoints are unavailable in the included assistant. Existing user files are preserved. Auto-replies are disabled on first migration until the user reviews the recipient scope.
+
+### Professional toolbox and onboarding
+
+- Added optional five-step onboarding for tools, workspaces/permissions, models, a first task and customer support. It can be skipped, remembered and reopened, without automatically connecting accounts or sending messages.
+- Updated navigation and removed the auto-running homepage arcade; file, Office, developer and workflow tools and mascot settings remain available.
+- Updated application/installer metadata to 1.2.1, with GitHub release notes and an in-app announcement linking the standalone bot.
+
 ## [1.2.0] - 2026-10-28
 
 > 1.1.1 was never published on its own; its changes ship together with everything after 1.1.0 in 1.2.0.
