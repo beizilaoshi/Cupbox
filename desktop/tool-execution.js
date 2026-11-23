@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, realpath } from 'node:fs/promises';
 import { TOOL_DEFS, runTool } from '../dist/core/toolkit.js';
 import { classifyTool, needsApproval, sandboxArgs } from './execution-policy.js';
+import {safeRun} from '../dist/core/run.js';
 const desktop=path.dirname(fileURLToPath(import.meta.url));
 const root=path.dirname(desktop);
 
@@ -52,13 +53,13 @@ export function createToolExecution({getPrefs,home,audit,onApproval}) {
       if(target){try{const base=directory?await realpath(directory):null;const resolved=await realpath(target);const relative=base?path.relative(base,resolved):'..';outsideRead=!base||relative==='..'||relative.startsWith(`..${path.sep}`)||path.isAbsolute(relative);}catch{outsideRead=true;}}
     }
     signal?.throwIfAborted();
-    if(((actor!=='manual'&&['run','memory_remember','memory_manage','memory_profile'].includes(tool)&&!(tool==='memory_profile'&&!Object.hasOwn(args,'content'))&&!(tool==='memory_manage'&&!args.forget))||needsApproval(approval,tool,args)||(approval==='smart'&&outsideRead)) && !await requestApproval(sender,payload))throw new Error('用户未批准此操作，已取消执行');
+    if(approval!=='full'&&((actor!=='manual'&&['run','memory_remember','memory_manage','memory_profile'].includes(tool)&&!(tool==='memory_profile'&&!Object.hasOwn(args,'content'))&&!(tool==='memory_manage'&&!args.forget))||needsApproval(approval,tool,args)||(approval==='smart'&&outsideRead)) && !await requestApproval(sender,payload))throw new Error('用户未批准此操作，已取消执行');
     if(sender.isDestroyed())throw new Error('窗口已关闭');
     signal?.throwIfAborted();
     if(environment==='sandbox') args=(await sandboxArgs(tool,args,sandboxRoot())).args;
     sender.send('execution:progress',{...payload,state:'running'});
     try {
-      const result=environment==='sandbox'?await restrictedRun(tool,args,directory):await runTool(tool,args);
+      const result=environment==='sandbox'?await restrictedRun(tool,args,directory):tool==='run'&&approval==='full'?await safeRun(String(args.command||''),{cwd:args.cwd||directory||undefined,timeoutMs:args.timeoutMs,maxOutputChars:args.maxOutputChars}):await runTool(tool,args);
       sender.send('execution:progress',{tool,state:'completed',environment});
       return result;
     } catch(e){if(!sender.isDestroyed())sender.send('execution:progress',{tool,state:'failed',environment,error:e.message});throw e;}
@@ -74,7 +75,7 @@ export function createToolExecution({getPrefs,home,audit,onApproval}) {
     signal?.throwIfAborted();if(sender.isDestroyed())throw Error('窗口已关闭');sender.send('execution:progress',{...payload,state:'running'});
     try{const result=await invoke();sender.send('execution:progress',{...payload,state:'completed'});return result;}catch(e){if(!sender.isDestroyed())sender.send('execution:progress',{...payload,state:'failed',error:e.message});throw e;}
   }
-  async function authorizeAdvanced(sender,payload){const p=await getPrefs();return requestApproval(sender,{actor:'agent',environment:p.executionEnvironment==='native'?'native':'sandbox',...payload});}
+  async function authorizeAdvanced(sender,payload){if(sender.isDestroyed())return false;const p=await getPrefs();if(p.approvalMode==='full')return true;return requestApproval(sender,{actor:'agent',environment:p.executionEnvironment==='native'?'native':'sandbox',...payload});}
   return {execute,executeFilesystem,authorizeAdvanced,respond,sandboxRoot,cancel};
 }
 

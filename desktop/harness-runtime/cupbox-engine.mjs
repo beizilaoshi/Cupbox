@@ -8,12 +8,14 @@ export function apply(ctx,config={}){
   if(message?.type==='cupbox:engine-inspect'){try{const value=await ctx.sessionQuery.readSession(message.sessionId);process.send?.({type:'cupbox:engine-inspected',id:message.id,value});}catch(e){process.send?.({type:'cupbox:engine-inspected',id:message.id,error:e.message});}}
  };
  ctx.effect(()=>{process.on('message',receive);return()=>{process.off('message',receive);for(const p of [...pending.values()])p.reject(Error('工作引擎已停止'));};});
- ctx.on('approval/request',async req=>await ask('approval',{name:req.toolName,reason:req.displayReason?.zh||req.reason||'',sessionId:req.agent.session.id},req.signal)?'allowed-once':'rejected');
+ ctx.on('approval/request',async req=>config.approvalMode==='full'||await ask('approval',{name:req.toolName,reason:req.displayReason?.zh||req.reason||'',sessionId:req.agent.session.id},req.signal)?'allowed-once':'rejected');
  ctx.on('user-questions/request',req=>ask('question',{questions:req.questions},req.signal));
  const readOnly=new Set(['read','read_image','glob','grep','job_output','job_list','todo_read','todo_write','get_goal','list_skills','read_skill','list_mcp_resources','list_mcp_resource_templates','read_mcp_resource','ask_user_question','enter_plan_mode','exit_plan_mode']);
  ctx.on('tools/pre-execute',async(exec,next)=>{
   await ask('guard',{name:exec.name,args:exec.arguments,sessionId:exec.agent?.session.id},exec.signal);
-  if(native.has(exec.name)||readOnly.has(exec.name))return next();
+  const session=exec.agent?.session,policy=ctx.get('sandboxPolicy');
+  if(session&&policy&&config.sandboxMode&&policy.resolve({session}).mode!==config.sandboxMode)session.append('sandbox/mode',{mode:config.sandboxMode});
+  if(config.approvalMode==='full'||native.has(exec.name)||readOnly.has(exec.name))return next();
   const allowed=await ask('approval',{name:exec.name,args:exec.arguments,sessionId:exec.agent?.session.id},exec.signal);
   return allowed?next():{kind:'deny',reason:'用户未批准本次操作。'};
  });

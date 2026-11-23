@@ -1,7 +1,7 @@
 {
-  "publishedAt": "2026-11-02",
-  "title": "Cupbox 1.2.1 · 专业工具箱与客服助手",
-  "id": "2026-11-02-v1.2.1",
-  "body": "Cupbox 1.2.1\n\n· 主项目聚焦专业工具箱，新增五步新手上手引导，可跳过并重新打开。\n· 内置客服助手：商品管理、业务知识、咨询接待、运营通知和定时发送。\n· 首次迁移默认关闭自动回复，请审核商品、模型和接收范围后再开启。\n· 主动运营消息目前仅支持个人QQ/NapCat，需软件运行且账号在线。\n\n完整机器人已独立为 Cupbox-QBOT，并非删除：\nhttps://github.com/beizilaoshi/Cupbox-QBOT\n\n完整更新日志与安装包见本版发布页。",
-  "url": "https://github.com/beizilaoshi/Cupbox/releases/tag/v1.2.1"
+  "publishedAt": "2026-11-23",
+  "title": "Cupbox 1.2.2 · 全自动工作模式与工具修复",
+  "id": "2026-11-23-v1.2.2",
+  "body": "Cupbox 1.2.2\n\n· 工作模式运行中可继续补充要求，当前步骤不中断，补充消息保存在同一任务记录。\n· 完全控制下已启用工具全自动执行，不再逐次审批。选择时需勾选“我清楚自己在做什么，并且完全同意”。\n· 修复命令、进程和记忆工具的参数定义与执行入口不一致。\n· 修复本机 PowerShell 的 Windows ACL 沙箱错误，以及旧命令白名单造成的执行失败。\n· QQ 客服新增消息撤回感知，避免撤回内容继续进入上下文与自动事实。\n· 保留工具开关、预览校验、私有存储保护；可随时停止任务或切换审批方式。\n\n专业工具箱与客服助手保持可用。完整机器人独立项目：\nhttps://github.com/beizilaoshi/Cupbox-QBOT",
+  "url": "https://github.com/beizilaoshi/Cupbox/releases/tag/v1.2.2"
 }

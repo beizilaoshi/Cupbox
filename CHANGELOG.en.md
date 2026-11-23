@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.2.2] - 2026-11-23
+
+- Work mode accepts follow-up instructions while a task is running. They continue in the same work session without stopping the current tool step and remain in conversation history.
+- QQ customer service now handles message recalls per account, chat and sender, removing recalled content from pending context and derived facts without triggering a reply.
+
+- Full control now runs enabled tools without per-call approvals, including commands, file changes, network requests and memory updates. Selecting it requires an explicit acknowledgement.
+- Fixed conflicting schemas for duplicated native and workspace tools, including command, process and memory tools.
+- Fixed native PowerShell execution incorrectly entering the Windows ACL sandbox and failing with `SetNamedSecurityInfoW failed (Win32 5)`. Resumed sessions adopt the current execution policy.
+- Removed conflicting command allowlist and approval requirements in full control while retaining disabled tools, sandbox boundaries, preview tokens, private storage protection and execution records.
+- Updated project, desktop and client versions to 1.2.2.
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),

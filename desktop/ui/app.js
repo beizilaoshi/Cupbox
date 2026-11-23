@@ -180,6 +180,7 @@ let toolIndex = 0;
 let bootstrapped = false;
 let sessionId = null;   // 当前会话（null = 尚未落盘的新会话）
 let sending = false;
+let activeWorkRunId = null;
 let drawerOpen = false;
 let modalOpen = false;
 let updOpen = false;    // 更新公告弹窗
@@ -975,23 +976,31 @@ function stopLiveTrace(finalized) {
 }
 
 async function sendChat(options = {}) {
-
-  if (sending) return;
   const ta = $("chat-text");
   const text = options.retry?.prompt || ta.value.trim();
   if (!text) return;
+  if(sending){
+    if(prefs.mode!=="agent"||!activeWorkRunId)return;
+    const message=pushMsg("user",{text,time:`${chatTime()} · 补充中`});
+    ta.value="";ta.style.height="auto";$("btn-send").disabled=true;
+    try{const response=await api.chatInterject({runId:activeWorkRunId,text});if(!response?.ok)throw Error(response?.error||"插话未送达");message?.querySelector(".msg-meta")?.replaceChildren(document.createTextNode(`${chatTime()} · 已加入任务`));}
+    catch(error){message?.remove();ta.value=text;$("btn-send").disabled=false;toast(error.message);}
+    ta.focus();return;
+  }
   if (!modelReady) { toast("先配置一个 AI 模型，就可以开始对话了"); openModal("api"); return; }
 
   let selection;
   try { selection=CupboxModels.payload(options.retry); } catch(e) { toast(e.message); return; }
   CupboxModels.setBusy(true);
   sending = true;
+  activeWorkRunId=prefs.mode==="agent"?selection.runId:null;
   const btn = $("btn-send");
   btn.disabled = true;
   btn.classList.add("loading");
   ta.value = "";
   ta.style.height = "auto";
-  ta.disabled = true;
+  ta.disabled = prefs.mode!=="agent";
+  if(prefs.mode==="agent")ta.placeholder="任务进行中可继续补充要求，不会打断当前步骤";
   $("btn-new-chat").disabled = true;
   $("btn-clear").disabled = true;
 
@@ -1043,10 +1052,12 @@ async function sendChat(options = {}) {
     pushMsg("assistant", { text: String((e && e.message) || e), err: true });
   } finally {
     sending = false;
+    activeWorkRunId=null;
     offTool?.();offText?.();
     stopLiveTrace();
     CupboxModels.finished(false);
     ta.disabled = false;
+    ta.placeholder="有什么想一起完成的？";
     $("btn-new-chat").disabled = false;
     $("btn-clear").disabled = false;
     btn.disabled = !ta.value.trim();
@@ -1949,7 +1960,7 @@ async function boot() {
     }
   });
   ta.addEventListener("input", () => {
-    $("btn-send").disabled = sending || !ta.value.trim();
+    $("btn-send").disabled = (sending&&prefs.mode!=="agent") || !ta.value.trim();
     ta.style.height = "auto";
     ta.style.height = `${Math.min(ta.scrollHeight, 150)}px`;
   });

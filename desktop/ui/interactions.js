@@ -25,7 +25,7 @@ window.CupboxUX = (() => {
   function confirm(message,options={}){
     confirmation?.finish(false);closeNotices();const profile=CupboxRisk.describe(options.tool||'删除记录',options.args||{},options.risk),screen=$('ux-confirm');screen.dataset.level=profile.level;
     $('ux-confirm-title').textContent=options.title||profile.title;$('ux-confirm-message').textContent=message;$('ux-confirm-consequence').textContent=options.consequence||profile.consequence;
-    $('ux-confirm-yes').textContent=options.action||profile.action;$('ux-confirm-check').checked=false;$('ux-confirm-ack').hidden=!profile.ack;$('ux-confirm-yes').disabled=profile.ack;screen.hidden=false;
+    $('ux-confirm-yes').textContent=options.action||profile.action;$('ux-confirm-check').checked=false;const acknowledgement=$('ux-confirm-ack');acknowledgement.hidden=!profile.ack;let label=acknowledgement.querySelector('[data-ack-label]');if(!label){label=document.createElement('span');label.dataset.ackLabel='';for(const child of [...acknowledgement.childNodes])if(child.nodeType===Node.TEXT_NODE)child.remove();acknowledgement.append(label);}label.textContent=options.acknowledgement||'我已了解影响，确认继续';$('ux-confirm-yes').disabled=profile.ack;screen.hidden=false;
     const focus=document.activeElement,surfaces=[...document.querySelectorAll('#app,.modal,.drawer,#notice-panel')].map(el=>[el,el.inert]);surfaces.forEach(([el])=>el.inert=true);
     return new Promise(resolve=>{confirmation={finish(value){screen.hidden=true;surfaces.forEach(([el,was])=>el.inert=was);confirmation=null;if(focus?.isConnected)focus.focus();resolve(value);}};$('ux-confirm-no').focus();});
   }

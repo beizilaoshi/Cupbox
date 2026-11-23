@@ -594,7 +594,7 @@ Cupbox 再次校验并执行操作
 npm install          # 首次会经 npmmirror 镜像下载 Electron 运行时
 npm run desktop      # 开发运行
 npm run pack:exe     # 打包绿色便携 exe → release/Cupbox可视化/Cupbox可视化.exe
-npm run pack:installer # Windows 安装包（需 Inno Setup 6.7+）→ release/Cupbox-Setup-1.2.1-x64.exe
+npm run pack:installer # Windows 安装包（需 Inno Setup 6.7+）→ release/Cupbox-Setup-1.2.2-x64.exe
 ```
 
 安装版提供樱花主题中文引导、深浅色外观、安装位置与快捷方式选择，卸载保留对话和配置。

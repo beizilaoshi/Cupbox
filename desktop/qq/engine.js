@@ -2,6 +2,7 @@ import {researchConfig,researchAllowed} from './research-policy.js';
 import {livingVoicePrompt} from './living-voice.js';
 import {sleeping,sleepReply} from './sleep.js';
 import {isPokeMessage} from './poke.js';
+import {recallTarget} from './recall.js';
 import {setTimeout as deliveryDelay} from 'node:timers/promises';
 import {explicitMemeRequest,experimentalSeriousReply} from './emoji-experimental.js';
 import {conversationSettings,examplePrompt,flowPrompt} from './conversation-tuning.js';
@@ -56,6 +57,7 @@ export class BotEngine{
   rule(event){const c=conversationSettings(event,this.config),rule=ruleFor(event,c);if(rule.reply||!rule.collect||!c.naturalConversation||!c.listenContext||!c.contextCount||c.mode!=='chat'||!c.followUpWindow||event.message_type!=='group')return rule;const key=conversationId(event)+':'+event.user_id,until=this.followups?.get(key)||0,segments=Array.isArray(event.message)?event.message:[];if(until>this.clock()&&!segments.some(s=>s.type==='at'&&String(s.data?.qq)!==String(event.self_id))&&(!event.quote||event.quote.speaker===String(event.self_id))&&!segments.some(s=>s.type==='reply'&&!event.quote))return{...rule,reply:true,followUp:true,reason:'同一人的自然接话'};return rule;}
   log(type,message,extra={}){this.onActivity({type,message,at:this.clock(),...extra});}
   remember(key,item,c){if(!c.contextCount)return;const list=this.histories.get(key)||[];list.push(item);this.histories.delete(key);this.histories.set(key,list.slice(-c.contextCount));while(this.histories.size>100)this.histories.delete(this.histories.keys().next().value);}
+  recall(notice){const target=recallTarget(notice);if(!target)return false;const key=target.message_type+':'+(target.group_id||target.user_id),list=this.histories.get(key)||[];let changed=false;for(const item of list)if(item.role==='user'&&item.name==='qq_'+target.user_id&&String(item.messageId)===target.message_id){item.text='[消息已撤回]';changed=true;}return changed;}
   receive(event,{proactive=false,scheduledWake=false,sleepingAtReceipt=false}={}){
     const c=conversationSettings(event,this.config),rule=this.rule(event);if(!rule.collect){if(rule.security?.blocked)this.log('security','已隔离疑似注入或越权请求，不调用模型、不写入记忆',{code:rule.security.codes.join(',')});if(event.post_type==='message')this.log('debug','消息未进入回复流程',{reason:rule.reason,...(/^\d{5,16}$/.test(String(event.group_id))?{conversation:'group:'+event.group_id}:{})});return Promise.resolve({skipped:rule.reason});}
     if(proactive){if(!c.naturalConversation||!c.proactiveEnabled||c.mode!=='chat'||!c.listenContext||!c.contextCount||event.message_type!=='group'||!c.proactiveGroups.includes(String(event.group_id)))return Promise.resolve({skipped:'未授权主动插话'});rule.reply=true;rule.proactive=true;rule.reason='主动插话判断';}
@@ -73,7 +75,7 @@ export class BotEngine{
     this.log(rule.reply?'trigger':'debug',rule.reply?'收到触发消息，已加入处理队列':'未触发消息仅用于临时上下文',{conversation:key,reason:rule.reason,characters:rule.text?.length||0});
     const prompt=rule.text||'[图片]';
     const sender={qq:String(event.user_id),nickname:String(event.sender?.card||event.sender?.nickname||'').slice(0,80)};
-    if(!rule.reply){this.remember(key,{role:'user',text:prompt,name:'qq_'+sender.qq,sender},c);return Promise.resolve({collected:true});}
+    if(!rule.reply){this.remember(key,{role:'user',text:prompt,name:'qq_'+sender.qq,sender,messageId:String(event.message_id||'')},c);return Promise.resolve({collected:true});}
     if(this.queued>=12){this.log('skipped','消息队列已满，已跳过');return Promise.resolve({skipped:'繁忙'});}
     const generation=this.generation;this.queued++;
     const previous=this.queues.get(key)||Promise.resolve();
@@ -158,7 +160,7 @@ export class BotEngine{
       this.log(requestedImage?'emoji':'thinking',requestedImage?'直接处理本次表情请求，不调用模型':'正在生成回复',{conversation:key,trigger:rule.reason});
       const result=requestedImage||await this.respond({event,prompt,sender,system,history,contextSession:saved.sessionId,whaleSource:upstreamWhale(c),roleGuard:roleGuardEnabled(c),memeTools,chatTools,romanceTurn,proactive:rule.proactive===true,images:c.visionEnabled?rule.images:[],config:c,signal:controller.signal,...(writer?{onTextDelta:delta=>writer.push(delta)}:{})});
       controller.signal.throwIfAborted();if(generation!==this.generation||!this.config.enabled)return{skipped:'已停止'};
-      if(chatTools.skipped){if(c.retainDialogue&&this.persistentMemory)await this.persistentMemory.append(event,[{role:'user',text:prompt,name:'qq_'+sender.qq,sender}],memoryEpoch,c);if(!rule.proactive&&(c.retainDialogue||c.listenContext))this.remember(key,{role:'user',text:prompt,name:'qq_'+sender.qq,sender},c);return{skipped:'模型选择保持安静',sent:false};}
+      if(chatTools.skipped){if(c.retainDialogue&&this.persistentMemory)await this.persistentMemory.append(event,[{role:'user',text:prompt,name:'qq_'+sender.qq,sender}],memoryEpoch,c);if(!rule.proactive&&(c.retainDialogue||c.listenContext))this.remember(key,{role:'user',text:prompt,name:'qq_'+sender.qq,sender,messageId:String(event.message_id||'')},c);return{skipped:'模型选择保持安静',sent:false};}
       if(outputRisk(result.text||'')){this.log('security','完整回复命中敏感信息保护，已阻止发送',{code:'OUTPUT_SECRET'});return{skipped:'安全检查阻止发送'};}
       const visible=chatTools.sent?chatTools.deliveredText:c.plainTextReplies?mdToPlain(result.text||''):result.text||'';
       const picked=innovative?{clean:stripWhaleMarkers(stripEmojiMarkers(visible)),selected:experimental?undefined:innovationPick?.selected,reason:innovationPick?.reason||'innovation_skip',explanation:innovationPick?.selected?'创新表情视觉复核通过，等待发送':'创新表情本轮不发图'}:chatTools.sent?{clean:visible,reason:'agent-delivered',explanation:'自主工具已实际发送，最终文字不重复投递'}:upstreamWhale(c)?pickWhaleEmoji(visible,rule.text,emojis,c,this.emojiLast.get(key)||0,this.clock()):pickEmoji(visible,rule.text,emojis,c.emojiEnabled,this.emojiLast.get(key)||0,this.clock(),c.emojiCooldown);
@@ -172,7 +174,7 @@ export class BotEngine{
       if(selected&&deliveredEmoji)this.emojiLast.set(key,this.clock());
       if(romanceTurn.pending&&emittedCount&&this.persistentMemory)try{await this.persistentMemory.saveRomance(event,romanceKey,romanceTurn.pending,memoryEpoch);}catch{this.log('error','消息已发送，但相处记录未能保存；请检查记忆目录');}
       const delivery=innovationDelivery||memeTools.outcome||(selected?{status:deliveredEmoji?'accepted':'cancelled',id:selected.id,meaning:selected.meaning}:null),assistant={role:'assistant',text:contextText(text,delivery),...(delivery?{delivery}:{})};
-      if(c.retainDialogue||c.listenContext){this.remember(key,{role:'user',text:prompt,name:'qq_'+sender.qq,sender},c);this.remember(key,assistant,c);}
+      if(c.retainDialogue||c.listenContext){this.remember(key,{role:'user',text:prompt,name:'qq_'+sender.qq,sender,messageId:String(event.message_id||'')},c);this.remember(key,assistant,c);}
       if(c.retainDialogue&&this.persistentMemory)try{await this.persistentMemory.append(event,[{role:'user',text:prompt,name:'qq_'+sender.qq,sender},assistant],memoryEpoch,c);}catch{this.log('error','回复已发送，但自动记忆保存失败；请检查文档目录权限和剩余空间');}
       if(c.ttsEnabled&&deliveredText.trim()&&this.speakReply)try{await this.speakReply({event,text:deliveredText,userText:prompt,config:c,signal:controller.signal,deliver:async segments=>{
         controller.signal.throwIfAborted();if(generation!==this.generation||!this.config.enabled||!this.config.ttsEnabled)throw Error('Voice stopped');
@@ -183,7 +185,7 @@ export class BotEngine{
       this.log('reply',writer?`已发送 ${writer.count} 段回复`:'回复处理完成',{conversation:key,characters:text.length,emoji:deliveredEmoji});return{sent:emittedCount>0,parts:writer?.count||emittedCount};
     }catch(error){
       const partial=writer?.count||emittedCount,assistant={role:'assistant',text:contextText(writer?.delivered||deliveredText||'',innovationDelivery),...((innovationDelivery||memeTools?.outcome)?{delivery:innovationDelivery||memeTools.outcome}:{})};
-      if((partial||innovationDelivery||memeTools?.outcome)&&generation===this.generation&&(c.retainDialogue||c.listenContext)){this.remember(key,{role:'user',text:prompt,name:'qq_'+sender.qq,sender},c);this.remember(key,assistant,c);}
+      if((partial||innovationDelivery||memeTools?.outcome)&&generation===this.generation&&(c.retainDialogue||c.listenContext)){this.remember(key,{role:'user',text:prompt,name:'qq_'+sender.qq,sender,messageId:String(event.message_id||'')},c);this.remember(key,assistant,c);}
       if((partial||innovationDelivery||memeTools?.outcome)&&c.retainDialogue&&this.persistentMemory)try{await this.persistentMemory.append(event,[{role:'user',text:prompt,name:'qq_'+sender.qq,sender},assistant],memoryEpoch,c);}catch{this.log('error','已发送的部分回复未能写入自动记忆');}
       const message=rule.sleeping||sleeping(c,now)?'睡眠固定回复未能发送；请检查 QQ 连接与输出检测，本轮没有请求模型。':partial?`已发送 ${partial} 段后${controller.signal.aborted?'停止':'中断'}；后续未发送，已发内容无法自动撤回`:(controller.signal.aborted?'本次回复已停止':error.publicMessage||'回复失败；请检查模型连接。若接口不支持流式，可关闭分段式流式回复后重试。');
       this.log(controller.signal.aborted?'stopped':'error',message,{conversation:key,partial});return{error:message,parts:partial};

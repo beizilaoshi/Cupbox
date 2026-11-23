@@ -2,11 +2,13 @@ import {researchAllowed} from './research-policy.js';
 import {conversationSettings} from './conversation-tuning.js';
 // Independent adaptation of Amadeus's debounce/batch participation architecture.
 import { ruleFor,parseMessage } from './engine.js';
+import {recallTarget} from './recall.js';
 export function canParticipate(event,c){c=conversationSettings(event,c);return c.enabled&&c.mode==='chat'&&c.naturalConversation&&c.proactiveEnabled&&c.listenContext&&c.contextCount>0&&event.message_type==='group'&&c.proactiveGroups.includes(String(event.group_id))&&ruleFor(event,c).collect;}
 const conversation=e=>`${e.self_id}:${e.message_type}:${e.message_type==='group'?e.group_id:e.user_id}`;
 export class ChatScheduler{
   constructor({engine,settings,log=()=>{},clock=Date.now}){Object.assign(this,{engine,settings,log,clock});this.pending=new Map();this.seen=new Set();this.last=new Map();this.running=new Set();this.epoch=0;}
   stop(){this.epoch++;for(const slot of this.pending.values())clearTimeout(slot.timer);this.pending.clear();this.seen.clear();this.last.clear();}
+  recall(notice){const target=recallTarget(notice);if(!target)return 0;let removed=0;for(const [key,slot] of this.pending){const before=slot.events.length;slot.events=slot.events.filter(e=>!(String(e.self_id)===String(target.self_id)&&e.message_type===target.message_type&&String(e.group_id||e.user_id)===String(target.group_id||target.user_id)&&String(e.user_id)===String(target.user_id)&&String(e.message_id)===target.message_id));removed+=before-slot.events.length;if(!slot.events.length){clearTimeout(slot.timer);this.pending.delete(key);}}return removed;}
   receive(event){
     const c=conversationSettings(event,this.settings()),rule=this.engine.rule?.(event)||ruleFor(event,c);if(!rule.collect)return this.engine.receive(event);
     // A poke is an explicit interaction, not part of a buffered text turn.

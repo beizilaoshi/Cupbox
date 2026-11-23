@@ -39,6 +39,7 @@ contextBridge.exposeInMainWorld('cupbox', {
   freemodelGet:()=>ipcRenderer.invoke('freemodel:get'),
   chatImages:()=>ipcRenderer.invoke('chat:images'),
   chatCancel:()=>ipcRenderer.invoke('chat:cancel'),
+  chatInterject:payload=>ipcRenderer.invoke('chat:interject',payload),
   chatExport:id=>ipcRenderer.invoke('chat:export',id),
   onChatProgress:callback=>{const fn=(_e,value)=>callback(value);ipcRenderer.on('chat:progress',fn);return()=>ipcRenderer.removeListener('chat:progress',fn);},
   onChatText:callback=>{const fn=(_e,value)=>callback(value);ipcRenderer.on('chat:text',fn);return()=>ipcRenderer.removeListener('chat:text',fn);},

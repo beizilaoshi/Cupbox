@@ -23,6 +23,7 @@ import {factId} from './memory-consolidation.js';
 import {DiagnosticArchive,diagnosticSummary} from './diagnostics.js';
 import {WeatherClient} from './weather.js';
 import {isPokeNotice,normalizePoke} from './poke.js';
+import {recallTarget} from './recall.js';
 import {QQExtras} from './extras.js';
 import {livingVoicePrompt,roughLanguageAllowed} from './living-voice.js';
 import {QQBackground,backgroundTime} from './background.js';
@@ -84,6 +85,14 @@ export class QQService{
   async pluginSave(p){this.moderation?.cancel();this.extras?.cancel();this.background?.cancel();this.mood?.cancel();this.scheduler.stop();this.engine.stop();const state=await this.plugins.save(p);this.log('info','plugin','插件配置已保存，待发 QQ 回复已取消',{action:p.id,status:p.enabled?'enabled':'disabled'});return state;}
   async receive(event){
     if(!event||typeof event!=='object')return{skipped:'无效事件'};
+    if(event.post_type==='notice'&&['group_recall','friend_recall'].includes(event.notice_type)){
+      const target=recallTarget(event);
+      if(!target||!ruleFor({...target,post_type:'message',message:[]},{...this.config,listenContext:true,contextCount:1}).collect)return{skipped:'撤回通知不在允许会话内'};
+      const buffered=this.scheduler.recall(event),recalled=this.engine.inbox.recall(event),recent=this.engine.recall(event);
+      const saved=await this.autoMemory.recallMessage(event);
+      if(recalled||buffered||saved||recent)this.log('info','context','已同步 QQ 消息撤回，不主动回复',{conversation:target.message_type+':'+(target.group_id||target.user_id),messageId:target.message_id,buffered});
+      return{recalled:recalled||buffered>0||saved||recent,buffered};
+    }
     if(event.post_type==='message'){const {quote:unverifiedQuote,...rawEvent}=event;event={...rawEvent,message:messageParts(rawEvent.message)};}
     if(event.post_type==='message')this.metrics&&(this.metrics.received++);
     if(this.config.gmEnabled){try{const result=await this.moderation.receive(event);if(result)return result;}catch(error){this.log('warn','moderation','群管处理未完成',{reason:error.message});return{skipped:'群管处理未完成，请查看记录或日志'};}}
@@ -145,7 +154,7 @@ export class QQService{
   async starterEmojis(){const result=await installStarterMemes(this.store);this.scheduler.stop();this.engine.update(this.config);this.log('info','emoji','原创猫咪表情包已添加；保留已有图片设定',{count:result.added});return{...result,emojis:this.customerService?[]:await this.publicEmojis()};}
   clearContext(){this.chatLab?.reset();this.moderation?.cancel();this.extras?.cancel();this.background?.cancel();this.mood?.cancel();this.scheduler.stop();this.engine.clear();}
   log(level,stage,message,details={}){const entry=this.logger.add(level,stage,message,details);void this.diagnosticArchive.append(entry);if(level!=='debug'){this.events.unshift({at:entry.at,type:level,message:entry.message,conversation:entry.details.conversation});this.events=this.events.slice(0,100);this.emit();}return entry;}
-  snapshot(){return{repliesEnabled:this.config?.enabled===true,health:this.health.snapshot(),connectionMode:this.config?.connectionMode||'napcat',uptimeSeconds:this.started?Math.max(0,Math.floor((Date.now()-(this.startedAt||Date.now()))/1000)):0,metrics:{...this.metrics},version:'1.2.1',build:'1026 私聊识别入口修复',running:this.started,phase:this.phase,connection:this.connectionState,progress:this.progress,qr:this.qr||'',loginPhase:this.loginPhase||'',loginRestore:this.loginRestore||'none',rememberedAccount:this.rememberedAccount||'',online:this.online===true,error:this.error||'',events:this.events,active:this.engine?.active||0,queued:this.engine?.queued||0,buffered:this.scheduler?.pending.size||0};}
+  snapshot(){return{repliesEnabled:this.config?.enabled===true,health:this.health.snapshot(),connectionMode:this.config?.connectionMode||'napcat',uptimeSeconds:this.started?Math.max(0,Math.floor((Date.now()-(this.startedAt||Date.now()))/1000)):0,metrics:{...this.metrics},version:'1.2.2',build:'1026 私聊识别入口修复',running:this.started,phase:this.phase,connection:this.connectionState,progress:this.progress,qr:this.qr||'',loginPhase:this.loginPhase||'',loginRestore:this.loginRestore||'none',rememberedAccount:this.rememberedAccount||'',online:this.online===true,error:this.error||'',events:this.events,active:this.engine?.active||0,queued:this.engine?.queued||0,buffered:this.scheduler?.pending.size||0};}
   emit(){if(this.notifyTimer)return;this.notifyTimer=setTimeout(()=>{this.notifyTimer=null;this.notify(this.snapshot());},60);this.notifyTimer.unref?.();}
   async state(){return{...this.snapshot(),settings:this.config,channelAuth:isExtraChannel(this.config.connectionMode)?await this.channelCredentials?.status(this.config.connectionMode)||{configured:false,id:''}:null,officialAuth:await this.officialCredentials?.status()||{configured:false,appId:''},presets:this.customerService?[]:presetCatalogue(),romanceScenarios:SCENARIOS,rolePresentations:ROLE_PRESENTATIONS,chatRhythms:CHAT_RHYTHMS,romanceModes:ROMANCE_MODES,romancePaces:ROMANCE_PACES,emojis:this.customerService?[]:await this.publicEmojis(),installed:await this.napcat.installed()};}
   async review(patch){await this.settingChanges.catch(()=>{});const next=validateSettings({...this.config,...patch,...(this.customerService?{customerService:true}:{})}),risks=risksFor(this.config,next),token=randomUUID();this.reviews.set(token,{digest:createHash('sha256').update(JSON.stringify(next)).digest('hex'),revision:this.revision,expires:Date.now()+300000});while(this.reviews.size>20)this.reviews.delete(this.reviews.keys().next().value);return{token,risks,scope:scopeLabel(next),privateEnabled:next.privateEnabled,enabled:next.enabled};}

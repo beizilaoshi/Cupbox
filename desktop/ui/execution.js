@@ -9,10 +9,10 @@ window.CupboxExecution=(()=>{
     document.querySelectorAll('[data-execution-environment]').forEach(b=>{b.classList.toggle('active',b.dataset.executionEnvironment===env);b.setAttribute('aria-pressed',String(b.dataset.executionEnvironment===env));});
     document.documentElement.dataset.approvalMode=mode;
     $('execution-risk-banner').hidden=mode!=='full';
-    document.querySelectorAll('.runtime-approval').forEach(b=>{b.textContent=modes[mode];b.title=mode==='full'?'普通文件修改可自动执行，点击调整权限':'点击调整批准方式';});
+    document.querySelectorAll('.runtime-approval').forEach(b=>{b.textContent=modes[mode];b.title=mode==='full'?'已启用工具全自动执行，点击调整权限':'点击调整批准方式';});
     document.querySelectorAll('.runtime-environment').forEach(b=>b.textContent=env==='native'?'本机运行':'沙箱运行');
     $('execution-directory').textContent=env==='native'?(p.workspace||(context.sandbox?context.sandbox+'（默认文件交付目录）':'默认文件交付目录')):context.sandbox||'沙箱目录';
-    $('execution-environment-note').textContent=env==='native'?'直接操作本机文件；已批准的命令可影响整个系统。Shell、敏感访问与策略变更仍需单独批准。':'只处理隔离目录中的文件，拒绝路径与链接越界；终端、进程、Git 和剪贴板不可用。联网请求仍需域名授权，且拒绝私网地址。此模式不是虚拟机。';
+    $('execution-environment-note').textContent=env==='native'?(mode==='full'?'已启用工具全自动执行，不再逐次审批。文件和命令直接作用于本机，可随时停止任务或切回请求批准。':'直接操作本机文件；命令、敏感访问与策略变更按当前审批方式处理。'):'只处理隔离目录中的文件，拒绝路径与链接越界；终端、进程、Git 和剪贴板不可用。此模式不是虚拟机。';
     document.querySelectorAll('.sandbox-actions').forEach(el=>el.hidden=env!=='sandbox'&&Boolean(p.workspace));
     document.querySelectorAll('.open-sandbox').forEach(el=>el.textContent=env==='native'?'打开默认目录':'打开沙箱');
     document.querySelectorAll('.import-sandbox').forEach(el=>el.textContent=env==='native'?'导入到默认目录':'导入文件到沙箱');
@@ -47,7 +47,7 @@ window.CupboxExecution=(()=>{
   }
   async function changePreference(key,value){
     if(changing)return;changing=true;try{const p=hooks.getPrefs();if(p[key]===value)return;
-      if(key==='approvalMode'&&value==='full'&&!await CupboxUX.confirm('开启后，普通文件修改可能直接执行。',{tool:'permission_full'}))return;
+      if(key==='approvalMode'&&value==='full'&&!await CupboxUX.confirm('我清楚自己在做什么，并且完全同意由 AI 自动执行已启用工具。',{tool:'permission_full',acknowledgement:'我清楚自己在做什么，并且完全同意'}))return;
       if(key==='executionEnvironment'&&value==='native'&&!await CupboxUX.confirm('请确认当前工作目录，只运行你信任的任务。',{tool:'environment_native'}))return;
       const saved=await hooks.save({[key]:value});sync(hooks.getPrefs());if(saved===false)return;hooks.toast(key==='approvalMode'?'批准方式已更新':'运行环境已切换');
     }finally{changing=false;}
